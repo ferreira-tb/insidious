@@ -1,0 +1,16 @@
+@charset "UTF-8";
+
+#insidious_menuArea {
+    max-width: 500px;
+    overflow-x: hidden;
+    overflow-wrap: break-word;
+
+    margin-bottom: 15px;
+
+    border-width: 2px;
+    border-style: solid;
+}
+
+.insidious_actionArea_coords {
+    margin-right: 5px;
+}
