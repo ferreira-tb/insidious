@@ -8,13 +8,15 @@ class TWMap {
 
             // Elementos da extensão.
             const menuArea = document.createElement('div');
-            menuArea.setAttribute('id', 'insidious_menuArea');
+            menuArea.setAttribute('id', 'insidious_mapMenuArea');
             mapBig?.insertBefore(menuArea, mapLegend);
 
             const buttonArea = document.createElement('div');
+            buttonArea.setAttribute('id', 'insidious_mapButtonArea');
             menuArea.appendChild(buttonArea);
 
             const actionArea = document.createElement('div');
+            actionArea.setAttribute('id', 'insidious_mapActionArea');
             menuArea.appendChild(actionArea);
 
             const getBBCoordsBtn = document.createElement('button');
@@ -29,7 +31,6 @@ class TWMap {
             // Ações.
             getBBCoordsBtn.addEventListener('click', () => {
                 clearActionArea();
-                const coordSpanCtrl = new AbortController();
                 
                 // Vasculha os elementos do mapa e retorna aqueles que são aldeias.
                 Promise.all(this.#getVillagesID().map((id) => {
@@ -39,16 +40,29 @@ class TWMap {
                             .then((result) => {
                                 if (result[village]?.player === 0) {
                                     const coords = document.createElement('span');
-                                    coords.setAttribute('class', 'insidious_actionArea_coords');
+                                    coords.setAttribute('class', 'insidious_mapActionArea_coords');
                                     coords.innerText = `${result[village].x}\|${result[village].y}`;
                                     actionArea.appendChild(coords);
+
+                                    coords.addEventListener('click', () => {
+                                        const range = document.createRange();
+                                        range.selectNodeContents(coords);
+
+                                        const selection = window.getSelection();
+                                        selection.removeAllRanges();
+                                        selection.addRange(range);
+
+                                        navigator.clipboard.writeText(coords.innerText)
+                                            .catch((err) => console.error(err));
+                                    });
                                 };
 
                                 resolve();
                             })
                             .catch((err) => reject(err));
                     });
-                }));
+
+                })).catch((err) => console.error(err));
             });
             
 
