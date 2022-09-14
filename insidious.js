@@ -25,23 +25,12 @@ class Insidious {
         Object.freeze(this.#storage);
 
         if (location.pathname === '\/game.php') {
-            try {
-                // Faz download dos dados necessários para executar a extensão.
-                await this.#fetch();
+            // Faz download dos dados necessários para executar a extensão.
+            await this.#fetch();
                 
-                const fields = (location.search.replace('\?', '')).split('\&');
-                const screen = () => {
-                    for (const item of fields) {
-                        if (item.includes('screen=')) return item.replace('screen=', '');
-                    };
-                };
-
-                // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
-                if (screen().startsWith('map')) TWMap.open();
-
-            } catch (err) {
-                console.error(err);
-            }; 
+            // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
+            const currentScreen = Utils.currentScreen();
+            if (currentScreen.startsWith('map')) TWMap.open();
         };
     };
 
@@ -50,7 +39,6 @@ class Insidious {
             // Verifica qual foi a hora do último fetch.
             const result = await this.#storage.get('lastFetch');
             const now = new Date().getTime();
-            console.log(await this.#storage.get('village16799'));
 
             // Caso não haja registro ou ele tenha sido feito há mais de três horas, faz um novo fetch.
             if (!result.lastFetch || now - result.lastFetch > (3600000 * 3)) {
@@ -90,6 +78,30 @@ class Insidious {
 
     static get storage() {return this.#storage};
     static get start() {return this.#start};
+};
+
+// Usado quando um elemento do DOM original não está mais acessível.
+// Isso pode ocorrer devido a mudanças feitas pelos desenvolvedores do jogo.
+class ElementError extends Error {
+    constructor(options) {
+        super();
+
+        this.name = 'ElementError';
+        this.tag = options.tag ?? '###';
+        this.id = options.id ?? '###';
+        this.class = options.class ?? '###';
+
+        this.message = `TAG: ${this.tag}, ID: ${this.id}, CLASS: ${this.class}`;
+    };
+};
+
+class InsidiousError extends Error {
+    constructor(message) {
+        super();
+
+        this.name = 'InsidiousError';
+        this.message = message;
+    };
 };
 
 Insidious.start();

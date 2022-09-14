@@ -1,7 +1,8 @@
 @charset "UTF-8";
 
+/* MAPA */
 #insidious_mapMenuArea {
-    max-width: 500px;
+    max-width: 700px;
 
     padding: 5px 5px 5px 5px;
     margin-bottom: 15px;
@@ -17,3 +18,34 @@
 .insidious_mapActionArea_coords {
     margin-right: 5px;
 }
+
+.insidious_map_glow {
+    animation: glow 1s infinite alternate;
+}
+
+.insidious_map_villageCustomTag {
+    position: absolute;
+    right: 0px;
+    z-index: 4;
+
+    background-color: white;
+
+    width: fit-content;
+    max-width: 53px;
+    height: 14px;
+}
+
+@keyframes glow {
+    0% {
+        filter: brightness(100%);
+    }
+    100% {
+        filter: brightness(150%);
+    }
+}
+
+/*
+
+style="position: absolute; right: 0px; z-index: 4; width: 14px; height: 14px; margin-top: 0px; margin-left: 34px; left: 106px; top: 76px;"
+
+*/
