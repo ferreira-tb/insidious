@@ -9,9 +9,6 @@ class TWMap {
             const mapBig = document.querySelector('#map_big');
             if (!mapBig) throw new ElementError({ id: 'map_big' });
 
-            const mapContainer = document.querySelector('#map_container');
-            if (!mapContainer) throw new ElementError({ id: 'map_container' });
-
             // Elementos da extensão.
             const menuArea = document.createElement('div');
             menuArea.setAttribute('id', 'insidious_mapMenuArea');
@@ -27,35 +24,50 @@ class TWMap {
 
             ////// BOTÕES
             const getBBCoordsBtn = document.createElement('button');
+            getBBCoordsBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
             getBBCoordsBtn.innerText = 'Coordenadas BB';
             buttonArea.appendChild(getBBCoordsBtn);
 
             const showPointsBtn = document.createElement('button');
+            showPointsBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
             showPointsBtn.innerText = 'Pontos';
             buttonArea.appendChild(showPointsBtn);
 
             const showBBPointsBtn = document.createElement('button');
+            showBBPointsBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
             showBBPointsBtn.innerText = 'Pontos BB';
             buttonArea.appendChild(showBBPointsBtn);
 
             const showTimeBtn = document.createElement('button');
-            showTimeBtn.innerText = 'Tempo';
+            showTimeBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
+            showTimeBtn.innerText = '??Tempo';
             buttonArea.appendChild(showTimeBtn);
 
             const showDistanceBtn = document.createElement('button');
+            showDistanceBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
             showDistanceBtn.innerText = 'Distância';
             buttonArea.appendChild(showDistanceBtn);
 
+            const clearTagsBtn = document.createElement('button');
+            clearTagsBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
+            clearTagsBtn.innerText = 'Limpar';
+            buttonArea.appendChild(clearTagsBtn);
+
             ////// FUNÇÕES
-            const mapTarget = new EventTarget();
+            const mapEventTarget = new EventTarget();
 
             const clearActionArea = () => {
-                mapTarget.dispatchEvent(new Event('clearactionarea'));
+                mapEventTarget.dispatchEvent(new Event('clearactionarea'));
                 while (actionArea.firstChild) actionArea.removeChild(actionArea.firstChild);
             };
 
             const addCustomTags = (tagType) => {
-                mapTarget.dispatchEvent(new Event('stopmapobserver'));
+                // Desconecta qualquer observer que esteja ativo no mapa.
+                mapEventTarget.dispatchEvent(new Event('stopmapobserver'));
+
+                // Salva no registro a última tag utilizada, para que seja ativada automaticamente na próxima vez.
+                Insidious.storage.set({ lastCustomTag: tagType })
+                    .catch((err) => console.error(err));
 
                 // Analisa as tags já existentes e remove aquelas que são diferentes do tipo escolhido ao chamar essa função.
                 // Além disso, recolhe os IDs das tags que não foram removidas.
@@ -71,6 +83,8 @@ class TWMap {
                         };
                     });
                 };
+
+                if (tagType === 'clear') return;
 
                 // Vasculha os elementos do mapa e retorna aqueles que são aldeias.
                 // Em seguida, remove aquelas que já possuem tags.
@@ -116,6 +130,14 @@ class TWMap {
 
                                         if (coords.includes(undefined)) throw new InsidiousError('Não foi possível obter as coordenadas.');
                                         villageCustomTag.innerText = Utils.calcDistance(...coords);
+
+                                    } else if (tagType === 'points') {
+                                        if (!result[village]?.points) throw new InsidiousError('Aldeia não encontrada no registro.');
+                                        villageCustomTag.innerText = result[village].points;
+
+                                    } else if (tagType === 'bbpoints') {
+                                        if (!result[village]?.points) throw new InsidiousError('Aldeia não encontrada no registro.');
+                                        if (result[village]?.player === 0) villageCustomTag.innerText = result[village].points;
                                     };
                                 };
 
@@ -125,29 +147,36 @@ class TWMap {
                     });
 
                 })).then(() => {
+                    const mapContainer = document.querySelector('#map_container');
+                    if (!mapContainer) throw new ElementError({ id: 'map_container' });
+
                     // Verifica se houve mudança no DOM decorrente da movimentação do mapa.
                     // Em caso positivo, dispara a função novamente.
                     const observeMap = new MutationObserver(() => addCustomTags(tagType));
                     observeMap.observe(mapContainer, { subtree: true, childList: true });
 
                     const customTagsCtrl = new AbortController();
-                    mapTarget.addEventListener('stopmapobserver', () => {             
+                    mapEventTarget.addEventListener('stopmapobserver', () => {             
                         observeMap.disconnect();
                         customTagsCtrl.abort();
                     }, { signal: customTagsCtrl.signal });
-                });
+
+                }).catch((err) => console.error(err));
             };
 
             ////// EVENTOS
             showTimeBtn.addEventListener('click', () => addCustomTags('time'));
             showDistanceBtn.addEventListener('click', () => addCustomTags('distance'));
+            showPointsBtn.addEventListener('click', () => addCustomTags('points'));
+            showBBPointsBtn.addEventListener('click', () => addCustomTags('bbpoints'));
+            clearTagsBtn.addEventListener('click', () => addCustomTags('clear'));
 
             // Coleta as coordenadas das aldeias bárbaras no mapa.
             getBBCoordsBtn.addEventListener('click', () => {
                 clearActionArea();
 
                 const getBBCoordsCtrl = new AbortController();
-                mapTarget.addEventListener('clearactionarea', () => {
+                mapEventTarget.addEventListener('clearactionarea', () => {
                     getBBCoordsCtrl.abort();
                 }, { signal: getBBCoordsCtrl.signal });
 
@@ -226,8 +255,39 @@ class TWMap {
 
                 })).catch((err) => console.error(err));
             });
-            
 
+            // CONFIGURAÇÕES
+            // Ativa a última tag utilizada.
+            Insidious.storage.get('lastCustomTag')
+                .then(async (result) => {
+                    if (result.lastCustomTag && result.lastCustomTag !== 'clear') {
+                        // O jogo comumente demora a carregar o #map_container, o que impede o carregamento das tags.
+                        if (!document.querySelector('#map_container')) {
+                            await delayCustomTags(result.lastCustomTag);
+
+                        } else {
+                            addCustomTags(result.lastCustomTag);
+                        };
+                    };
+
+                }).catch((err) => console.error(err));
+
+            function delayCustomTags(lastCustomTag) {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        // Caso #map_container ainda não exista, rejeita a promise.
+                        // Isso porquê o problema pode já não ser relacionado ao carregamento da página.
+                        if (!document.querySelector('#map_container')) {
+                            reject(new ElementError({ id: 'map_container' }));
+                            
+                        } else {
+                            addCustomTags(lastCustomTag);
+                            resolve();
+                        };
+                    }, 500);
+                });
+            };
+            
         } catch (err) {
             console.error(err);
         };

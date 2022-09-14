@@ -8,6 +8,10 @@
     margin-bottom: 15px;
 }
 
+.insidious_mapButtonArea_Btn {
+    margin-right: 5px;
+}
+
 #insidious_mapActionArea {
     overflow-x: hidden;
     overflow-wrap: break-word;
