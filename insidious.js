@@ -30,7 +30,14 @@ class Insidious {
                 
             // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
             const currentScreen = Utils.currentScreen();
-            if (currentScreen.startsWith('map')) TWMap.open();
+            if (currentScreen.startsWith('map')) {
+                TWMap.open();             
+            } else {
+                switch (currentScreen) {
+                    case 'am_farm': TWFarm.open();
+                        break;
+                };
+            };
         };
     };
 

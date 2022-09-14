@@ -30,6 +30,7 @@
             "js": [
                 "modules/utils.js",
                 "modules/map.js",
+                "modules/farm.js",
                 "insidious.js"
             ]  
         }
