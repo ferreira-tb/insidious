@@ -133,7 +133,7 @@ class TWMap {
 
                                     } else if (tagType === 'points') {
                                         if (!result[village]?.points) throw new InsidiousError('Aldeia não encontrada no registro.');
-                                        villageCustomTag.innerText = result[village].points;
+                                        if (result[village]?.player !== 0) villageCustomTag.innerText = result[village].points;
 
                                     } else if (tagType === 'bbpoints') {
                                         if (!result[village]?.points) throw new InsidiousError('Aldeia não encontrada no registro.');

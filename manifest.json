@@ -2,7 +2,11 @@
     "manifest_version": 3,
     "name": "Insidious",
     "version": "1.0",
-
+    "developer": {
+        "name": "ferreira-tb",
+        "url": "https://github.com/ferreira-tb"
+    },
+    
     "permissions": [
         "storage",
         "unlimitedStorage"
@@ -28,11 +32,23 @@
             "matches": ["*://*.tribalwars.com.br/*"],
             "css": ["global.css"],
             "js": [
+                "modules/assets.js",
                 "modules/utils.js",
                 "modules/map.js",
                 "modules/farm.js",
                 "insidious.js"
             ]  
+        }
+    ],
+
+    "web_accessible_resources": [
+        {
+            "matches": ["*://*.tribalwars.com.br/*"],
+            "resources": [
+                "test/config.xml",
+                "test/building.xml",
+                "test/unit.xml"
+            ]
         }
     ]
 }

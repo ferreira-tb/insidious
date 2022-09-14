@@ -15,6 +15,11 @@ browser.runtime.onMessage.addListener((message) => {
                         .then((result) => resolve(result))
                         .catch((err) => reject(err));
                     break;
+                case 'remove':
+                    browser.storage.local.remove(message.key)
+                        .then(() => resolve())
+                        .catch((err) => reject(err));
+                    break;
             };
         };
     });
