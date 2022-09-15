@@ -51,6 +51,10 @@ class Insidious {
 
     static async #fetch() {
         try {
+            // Caso o plunder esteja ativo, impede que a função continue.
+            const plunderStatus = await this.#storage.get('isPlunderActive');
+            if (plunderStatus.isPlunderActive === true) return;
+
             // Verifica qual foi a hora do último fetch.
             const now = new Date().getTime();
             const lastFetch = [
@@ -58,6 +62,18 @@ class Insidious {
                 await this.#storage.get('worldDataFetch')
             ];
 
+            // Informa a data do último fetch na barra inferior, onde se encontra a hora do servidor.
+            if (lastFetch[1].worldDataFetch) {
+                const lastFetchInfo = document.createElement('span');
+                lastFetchInfo.setAttribute('id', 'insidious_lastFetchInfo');
+                const hourFormat = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+                lastFetchInfo.innerText = `Insidious: ${new Date(lastFetch[1].worldDataFetch).toLocaleDateString('pt-br', hourFormat)} @ `;
+
+                const serverInfo = document.querySelector('p.server_info:not(#insidious_lastFetchInfo)');
+                if (!serverInfo) throw new ElementError({ class: 'p.server_info' });
+                serverInfo.insertBefore(lastFetchInfo, serverInfo.firstChild);
+            };
+            
             // Salva as configurações do mundo, caso ainda não estejam.
             if (!lastFetch[0].worldConfigFetch) {
                 await this.#storage.set({ worldConfigFetch: now });
@@ -100,7 +116,7 @@ class Insidious {
                 });
             };
             
-            // Caso não haja registro ou ele tenha sido feito há mais de três horas, faz um novo fetch.
+            // Caso o registro seja antigo ou não exista, faz um novo fetch.
             if (!lastFetch[1].worldDataFetch || now - lastFetch[1].worldDataFetch > (3600000 * 3)) {
                 await this.#storage.set({ worldDataFetch: now });
 
@@ -111,7 +127,7 @@ class Insidious {
                         .catch((err) => reject(err));
                 });
 
-                await Promise.all(villages.map((village) => {
+                Promise.allSettled(villages.map((village) => {
                     return new Promise((resolve, reject) => {
                         const thisID = village.slice(0, village.indexOf(','));
                         const otherData = (village.replace(thisID + ',', '')).split(',');

@@ -75,11 +75,11 @@ class TWMap {
                 const oldCustomTags = document.querySelectorAll('.insidious_map_villageCustomTag');
                 if (oldCustomTags.length > 0) {
                     oldCustomTags.forEach((customTag) => {
-                        if (customTag.getAttribute('insidious') !== tagType) {
+                        if (customTag.dataset.insidiousTagType !== tagType) {
                             customTag.parentNode.removeChild(customTag);
 
                         } else {
-                            oldTagsID.push(customTag.getAttribute('village'));
+                            oldTagsID.push(customTag.dataset.insidiousVillage);
                         };
                     });
                 };
@@ -104,8 +104,8 @@ class TWMap {
                                 if (id !== currentVillageID) {
                                     const villageCustomTag = document.createElement('div');
                                     villageCustomTag.setAttribute('class', 'insidious_map_villageCustomTag');
-                                    villageCustomTag.setAttribute('insidious', tagType);
-                                    villageCustomTag.setAttribute('village', id);
+                                    villageCustomTag.setAttribute('data-insidious-tag-type', tagType);
+                                    villageCustomTag.setAttribute('data-insidious-village', id);
 
                                     const villageElement = document.querySelector('#map_village_' + id);
                                     if (!villageElement) throw new ElementError({ id: '#map_village_' + id });

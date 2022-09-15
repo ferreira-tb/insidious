@@ -1,5 +1,11 @@
 @charset "UTF-8";
 
+/* ANIMAÇÕES */
+@keyframes glow {
+    0% {filter: brightness(100%);}
+    100% {filter: brightness(150%);}
+}
+
 /* MAPA */
 #insidious_mapMenuArea {
     max-width: 700px;
@@ -39,17 +45,9 @@
     height: 14px;
 }
 
-@keyframes glow {
-    0% {
-        filter: brightness(100%);
-    }
-    100% {
-        filter: brightness(150%);
-    }
+/* FARM */
+#insidious_farmButtonArea {
+    text-align: center;
+    margin-top: 2px;
+    margin-bottom: 2px;
 }
-
-/*
-
-style="position: absolute; right: 0px; z-index: 4; width: 14px; height: 14px; margin-top: 0px; margin-left: 34px; left: 106px; top: 76px;"
-
-*/
