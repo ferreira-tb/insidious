@@ -156,7 +156,7 @@ class TWMap {
                     observeMap.observe(mapContainer, { subtree: true, childList: true });
 
                     const customTagsCtrl = new AbortController();
-                    mapEventTarget.addEventListener('stopmapobserver', () => {             
+                    mapEventTarget.addEventListener('stopmapobserver', () => {
                         observeMap.disconnect();
                         customTagsCtrl.abort();
                     }, { signal: customTagsCtrl.signal });
