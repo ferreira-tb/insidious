@@ -33,7 +33,7 @@ class Utils {
     // Calcula distância em campos entre duas coordenadas.
     static #calcDistance(originX, originY, destinationX, destinationY) {
         const distance = Math.sqrt(((destinationX - originX) ** 2) + ((destinationY - originY) ** 2));
-        return Number(distance.toFixed(2));
+        return Number(distance.toFixed(1));
     };
 
     static #decipherDate(date) {
@@ -52,6 +52,31 @@ class Utils {
         return 'unknown';
     };
 
+    static #modal(modalTitle) {
+        const blurBG = document.createElement('div');
+        blurBG.setAttribute('id', 'insidious_blurBG');
+        document.body.appendChild(blurBG);
+
+        const modalWindow = document.createElement('div');
+        modalWindow.setAttribute('id', 'insidious_modal');
+        document.body.appendChild(modalWindow);
+
+        const modalCtrl = new AbortController();
+        blurBG.addEventListener('closemodal', () => {
+            modalCtrl.abort();
+            document.body.removeChild(modalWindow);
+            document.body.removeChild(blurBG);
+        }, {signal: modalCtrl.signal});
+
+        const titleContainer = document.createElement('h1');
+        modalWindow.appendChild(titleContainer);
+
+        const h1Title = document.createElement('h1');
+        h1Title.setAttribute('id', 'insidious_modal_h1');
+        h1Title.innerText = modalTitle;
+        titleContainer.appendChild(h1Title);
+    };
+
     static get currentScreen() {return this.#currentScreen};
     static get currentVillage() {return this.#currentVillage};
     static get currentPlayer() {return this.#currentPlayer};
@@ -59,4 +84,5 @@ class Utils {
     static get urlDecode() {return this.#urlDecode};
     static get calcDistance() {return this.#calcDistance};
     static get decipherDate() {return this.#decipherDate};
+    static get modal() {return this.#modal};
 };

@@ -1,4 +1,5 @@
 'use strict';
+////// EVENTOS
 browser.runtime.onMessage.addListener((message) => {
     return new Promise((resolve, reject) => {
         if (message.name?.startsWith('storage-')) {
@@ -27,3 +28,8 @@ browser.runtime.onMessage.addListener((message) => {
 
 browser.action.onClicked.addListener(() => browser.storage.local.clear());
 browser.storage.onChanged.addListener((changes) => console.log(changes));
+
+let currentTab;
+browser.tabs.onActivated.addListener(async () => {
+    currentTab = await browser.tabs.query({ currentWindow: true, active: true, url: '*://*.tribalwars.com.br/*' });
+});

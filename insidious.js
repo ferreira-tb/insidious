@@ -35,7 +35,7 @@ class Insidious {
         if (location.pathname === '\/game.php') {
             // Faz download dos dados necessários para executar a extensão.
             await this.#fetch();
-                
+            
             // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
             const currentScreen = Utils.currentScreen();
             if (currentScreen.startsWith('map')) {
@@ -69,9 +69,9 @@ class Insidious {
                 const hourFormat = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
                 lastFetchInfo.innerText = `Insidious: ${new Date(lastFetch[1].worldDataFetch).toLocaleDateString('pt-br', hourFormat)} @ `;
 
-                const serverInfo = document.querySelector('p.server_info:not(#insidious_lastFetchInfo)');
+                const serverInfo = document.querySelector('p.server_info');
                 if (!serverInfo) throw new ElementError({ class: 'p.server_info' });
-                serverInfo.insertBefore(lastFetchInfo, serverInfo.firstChild);
+                serverInfo.insertBefore(lastFetchInfo, serverInfo.firstChild);  // Não se deve usar firstElementChild aqui.
             };
             
             // Salva as configurações do mundo, caso ainda não estejam.
@@ -120,6 +120,13 @@ class Insidious {
             if (!lastFetch[1].worldDataFetch || now - lastFetch[1].worldDataFetch > (3600000 * 3)) {
                 await this.#storage.set({ worldDataFetch: now });
 
+                Utils.modal('Aguarde');
+                const progressInfo = document.createElement('div');
+                progressInfo.setAttribute('id', 'insidious_progressInfo');
+                progressInfo.setAttribute('style', 'cursor: wait;');
+                progressInfo.innerText = 'Obtendo dados do servidor.';
+                document.querySelector('#insidious_modal').appendChild(progressInfo);
+
                 const villages = await new Promise((resolve, reject) => {
                     fetch(TWAssets.world.village)
                         .then((raw) => raw.text())
@@ -131,8 +138,10 @@ class Insidious {
                     return new Promise((resolve, reject) => {
                         const thisID = village.slice(0, village.indexOf(','));
                         const otherData = (village.replace(thisID + ',', '')).split(',');
+                        
+                        const villageName = Utils.urlDecode(otherData[0]);
                         const villageInfo = {
-                            name: Utils.urlDecode(otherData[0]),
+                            name: villageName,
                             x: Number(otherData[1]),
                             y: Number(otherData[2]),
                             player: Number(otherData[3]),
@@ -141,10 +150,37 @@ class Insidious {
                         };
 
                         this.#storage.set({ ['village' + thisID]: villageInfo })
-                            .then(() => resolve())
-                            .catch((err) => reject(err));
+                            .then(() => {
+                                if (!document.querySelector('#insidious_progressInfo')) {
+                                    const updatedProgressInfo = document.createElement('div');
+                                    updatedProgressInfo.setAttribute('id', 'insidious_progressInfo');
+                                    document.querySelector('#insidious_modal').setAttribute('style', 'cursor: wait;');
+                                    document.querySelector('#insidious_modal').appendChild(updatedProgressInfo);
+                                };
+                            
+                                document.querySelector('#insidious_progressInfo').innerText = `${villageName} (${otherData[1]}|${otherData[2]})`;
+                                resolve();
+
+                            }).catch((err) => reject(err));
                     });
-                }));
+
+                })).then((results) => {
+                    document.querySelector('#insidious_modal').removeAttribute('style');
+                    document.querySelector('#insidious_modal_h1').innerText = 'Concluído';
+
+                    const villageProgressInfo = document.querySelector('#insidious_progressInfo');
+                    villageProgressInfo.removeAttribute('style');
+                    villageProgressInfo.innerText = `${results.length} aldeias processadas.`;
+
+                    const closeButton = document.createElement('button');
+                    closeButton.setAttribute('style', 'margin-top: 10px;');
+                    closeButton.innerText = 'Fechar';
+                    document.querySelector('#insidious_modal').appendChild(closeButton);
+                    closeButton.addEventListener('click', () => {
+                        document.querySelector('#insidious_blurBG').dispatchEvent(new Event('closemodal'));
+                    });
+
+                });
             };
 
         } catch (err) {

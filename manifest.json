@@ -12,8 +12,13 @@
         "unlimitedStorage"
     ],
 
+    "host_permissions": [
+        "*://*.tribalwars.com.br/*"
+    ],
+
     "icons": {
-        "48": "assets/insidious-48.png"
+        "48": "assets/insidious-48.png",
+        "60": "assets/insidious-60.png"
     },
 
     "action": {

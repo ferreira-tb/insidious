@@ -1,21 +1,21 @@
 class TWAssets {
     static #world = {
-        village: location.origin + '\/map\/village.txt',
-        player: location.origin + '\/map\/player.txt',
-        ally: location.origin + '\/map\/ally.txt',
-        conquer: location.origin + '\/map\/conquer.txt',
+        village: location.origin + '/map/village.txt',
+        player: location.origin + '/map/player.txt',
+        ally: location.origin + '/map/ally.txt',
+        conquer: location.origin + '/map/conquer.txt',
 
-        get_config: location.origin + '\/interface.php?func=get_config',
-        get_building_info: location.origin + '\/interface.php?func=get_building_info',
-        get_unit_info: location.origin + '\/interface.php?func=get_unit_info',
+        get_config: location.origin + '/interface.php?func=get_config',
+        get_building_info: location.origin + '/interface.php?func=get_building_info',
+        get_unit_info: location.origin + '/interface.php?func=get_unit_info',
 
-        kill_all: location.origin + '\/map\/kill_all.txt',
-        kill_att: location.origin + '\/map\/kill_att.txt',
-        kill_def: location.origin + '\/map\/kill_def.txt',
+        kill_all: location.origin + '/map/kill_all.txt',
+        kill_att: location.origin + '/map/kill_att.txt',
+        kill_def: location.origin + '/map/kill_def.txt',
 
-        kill_all_tribe: location.origin + '\/map\/kill_all_tribe.txt',
-        kill_att_tribe: location.origin + '\/map\/kill_att_tribe.txt',
-        kill_def_tribe: location.origin + '\/map\/kill_def_tribe.txt'
+        kill_all_tribe: location.origin + '/map/kill_all_tribe.txt',
+        kill_att_tribe: location.origin + '/map/kill_att_tribe.txt',
+        kill_def_tribe: location.origin + '/map/kill_def_tribe.txt'
     };
 
     static #image = {

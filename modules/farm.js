@@ -19,8 +19,18 @@ class TWFarm {
         ////// BOTÕES
         const startPlunderBtn = document.createElement('button');
         startPlunderBtn.setAttribute('class', 'insidious_farmButtonArea_Btn');
-        startPlunderBtn.innerText = 'Saquear';
-        buttonArea.appendChild(startPlunderBtn);
+        Insidious.storage.get('isPlunderActive')
+            .then((result) => {
+                buttonArea.appendChild(startPlunderBtn);
+                if (result.isPlunderActive === true) {
+                    startPlunderBtn.innerText = 'Parar';
+                } else if (result.isPlunderActive === false) {
+                    startPlunderBtn.innerText = 'Saquear';
+                } else if (result.isPlunderActive === undefined) {
+                    Insidious.storage.set({ isPlunderActive: false });
+                };
+
+            }).catch((err) => console.error(err));
 
         ////// DADOS
         this.#info();
@@ -52,14 +62,35 @@ class TWFarm {
             .catch((err) => console.error(err));
 
         ////// EVENTOS
-        startPlunderBtn.addEventListener('click', () => this.#plunder());
+        const plunderBtnEvents = async () => {
+            startPlunderBtn.removeEventListener('click', plunderBtnEvents);
+            try {
+                // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
+                const result = await Insidious.storage.get('isPlunderActive');
+                if (result.isPlunderActive === true) {
+                    await Insidious.storage.set({ isPlunderActive: false });
+                    startPlunderBtn.innerText = 'Saquear';
+                    console.log('parar');
 
-    }; 
+                } else if (result.isPlunderActive === false) {
+                    await Insidious.storage.set({ isPlunderActive: true });
+                    startPlunderBtn.innerText = 'Parar';
+                    this.#plunder();
+                };
 
-    static async #plunder() {
-        // Impede que o Insidious faça fetch enquanto o plunder estiver ativo.
-        // await Insidious.storage.set({ isPlunderActive: true });
-        console.log('plunder');
+            } catch (err) {
+                console.error(err);
+
+            } finally {
+                startPlunderBtn.addEventListener('click', plunderBtnEvents);
+            };
+        };
+
+        startPlunderBtn.addEventListener('click', plunderBtnEvents);
+    };
+
+    static #plunder() {
+        console.log('plunder start');
     };
 
     static #info() {
