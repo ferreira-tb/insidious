@@ -243,7 +243,10 @@ class TWFarm {
 
                     const plunderTimeoutID = setTimeout(async () => {
                         const plunderStatus = await Insidious.storage.get('isPlunderActive');
-                        if (plunderStatus.isPlunderActive === false) reject();
+                        if (plunderStatus.isPlunderActive === false) {
+                            reject();
+                            return;
+                        };
 
                         // Interrompe qualquer atividade no plunder e inicia a preparação para o recarregamento.
                         plunderEventTarget.dispatchEvent(new Event('stopplundering'));
