@@ -36,6 +36,10 @@ class Utils {
         return Number(distance.toFixed(1));
     };
 
+    static #generateIntegerBetween(min, max) {
+        return Math.floor(Math.random() * (max - min) + min);
+    };
+
     static #decipherDate(date) {
         const writtenDate = String(date).toLowerCase();
         let sanitizedDate = writtenDate.split(' ').pop();
@@ -50,6 +54,34 @@ class Utils {
         }
 
         return 'unknown';
+    };
+
+    static #portugueseName = (word) => {
+        switch (word) {
+            case 'wood': return 'Madeira';
+            case 'stone': return 'Argila';
+            case 'iron': return 'Ferro';
+            
+            default: return 'PALAVRA INVÁLIDA';
+        };
+    }
+
+    static #createResourceSpan(resource) {
+        const resourceSpan = document.createElement('span');
+        resourceSpan.setAttribute('class', `icon header ${resource}`);
+        resourceSpan.setAttribute('data-insidious-custom', 'true');
+        resourceSpan.setAttribute('data-title', this.#portugueseName(resource));
+
+        return resourceSpan;
+    };
+
+    static #createResourceSpanLabel(resource) {
+        const resourceSpanLabel = document.createElement('span');
+        resourceSpanLabel.setAttribute('class', 'res');
+        resourceSpanLabel.setAttribute('data-insidious-custom', 'true');
+        resourceSpanLabel.setAttribute('data-title', this.#portugueseName(resource));
+
+        return resourceSpanLabel;
     };
 
     static #modal(modalTitle) {
@@ -77,12 +109,22 @@ class Utils {
         titleContainer.appendChild(h1Title);
     };
 
+    // ELEMENTOS
+    static get createResourceSpan() {return this.#createResourceSpan};
+    static get createResourceSpanLabel() {return this.#createResourceSpanLabel};
+
+    // DADOS
     static get currentScreen() {return this.#currentScreen};
     static get currentVillage() {return this.#currentVillage};
     static get currentPlayer() {return this.#currentPlayer};
 
+    // MODAL
+    static get modal() {return this.#modal};
+
+    // OUTROS
     static get urlDecode() {return this.#urlDecode};
     static get calcDistance() {return this.#calcDistance};
+    static get generateIntegerBetween() {return this.#generateIntegerBetween};
     static get decipherDate() {return this.#decipherDate};
-    static get modal() {return this.#modal};
+    static get portugueseName() {return this.#portugueseName};
 };

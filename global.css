@@ -46,6 +46,11 @@ div#insidious_modal {
     font-size: medium;
 }
 
+#insidious_progressInfo {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
 /* MAPA */
 #insidious_mapMenuArea {
     max-width: 700px;
@@ -78,6 +83,7 @@ div#insidious_modal {
     right: 0px;
     z-index: 4;
 
+    color: #000000;
     background-color: #ffffff;
 
     width: fit-content;
@@ -90,4 +96,14 @@ div#insidious_modal {
     text-align: center;
     margin-top: 2px;
     margin-bottom: 2px;
+}
+
+#insidious_farmActionArea {
+    text-align: center;
+    padding-top: 2px;
+    padding-bottom: 5px;
+}
+
+#insidious_farmActionArea span {
+    margin-right: 3px;
 }

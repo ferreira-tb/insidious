@@ -117,7 +117,7 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastFetch[1].worldDataFetch || now - lastFetch[1].worldDataFetch > (3600000 * 3)) {
+            if (!lastFetch[1].worldDataFetch || now - lastFetch[1].worldDataFetch > (3600000 * 1.2)) {
                 await this.#storage.set({ worldDataFetch: now });
 
                 Utils.modal('Aguarde');
@@ -164,14 +164,32 @@ class Insidious {
                             }).catch((err) => reject(err));
                     });
 
-                })).then((results) => {
+                })).then(async (results) => {
                     document.querySelector('#insidious_modal').removeAttribute('style');
                     document.querySelector('#insidious_modal_h1').innerText = 'Concluído';
 
                     const villageProgressInfo = document.querySelector('#insidious_progressInfo');
                     villageProgressInfo.removeAttribute('style');
                     villageProgressInfo.innerText = `${results.length} aldeias processadas.`;
+             
+                    const lastTotalVillages = await this.#storage.get('totalVillages');
+                    if (lastTotalVillages.totalVillages) {
+                        const setDivText = () => {
+                            const difference = results.length - lastTotalVillages.totalVillages;
+                            switch (difference) {
+                                case 0: return 'Nenhuma aldeia foi adicionada.';
+                                case 1: return 'Uma aldeia foi adicionada.';
+                                default: return `${difference} aldeias foram adicionadas.`;
+                            };
+                        };
+                        
+                        const addedVillages = document.createElement('div');
+                        addedVillages.innerText = setDivText();
+                        document.querySelector('#insidious_modal').appendChild(addedVillages);
+                    };
 
+                    this.#storage.set({ totalVillages: results.length });
+                    
                     const closeButton = document.createElement('button');
                     closeButton.setAttribute('style', 'margin-top: 10px;');
                     closeButton.innerText = 'Fechar';

@@ -112,11 +112,22 @@ class TWMap {
 
                                     let elementStyle = villageElement.getAttribute('style').split(';');
                                     elementStyle = elementStyle.filter((property) => {
-                                        if (property.startsWith(' left:') || property.startsWith(' top:')) return true;
+                                        if (property.includes('left:') || property.includes('top:')) return true;
                                         return false;
                                     });
 
-                                    const elementPosition = (elementStyle[0].trimStart()).concat(';', elementStyle[1], ';');
+                                    const adjustTop = () => {
+                                        let topValue = elementStyle[0].includes('top') ? elementStyle[0] : elementStyle[1];
+                                        topValue = topValue.replace('top:', '').replace('px', '').trim();
+                                        return `top: ${String(Number(topValue) + 20)}px;`;
+                                    };
+
+                                    const adjustLeft = () => {
+                                        let leftValue = elementStyle[0].includes('left') ? elementStyle[0] : elementStyle[1];
+                                        return ` ${leftValue};`;
+                                    };
+
+                                    const elementPosition = adjustTop().concat(adjustLeft());
                                     villageCustomTag.setAttribute('style', elementPosition);
                                     villageElement.parentNode.insertBefore(villageCustomTag, villageElement);
 

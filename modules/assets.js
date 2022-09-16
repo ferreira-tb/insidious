@@ -1,3 +1,4 @@
+'use strict';
 class TWAssets {
     static #world = {
         village: location.origin + '/map/village.txt',
