@@ -27,7 +27,6 @@ browser.runtime.onMessage.addListener((message) => {
 });
 
 browser.action.onClicked.addListener(() => browser.storage.local.clear());
-browser.storage.onChanged.addListener((changes) => console.log(changes));
 
 let currentTab;
 browser.tabs.onActivated.addListener(async () => {

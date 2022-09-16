@@ -36,6 +36,7 @@ class Utils {
         return Number(distance.toFixed(1));
     };
 
+    // Gera um número inteiro entre dois outros inteiros.
     static #generateIntegerBetween(min, max) {
         return Math.floor(Math.random() * (max - min) + min);
     };

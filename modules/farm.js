@@ -58,10 +58,7 @@ class TWFarm {
         ////// EVENTOS
         const plunderBtnEvents = async () => {
             startPlunderBtn.removeEventListener('click', plunderBtnEvents);
-
-            while (actionArea.firstChild) {
-                actionArea.removeChild(actionArea.firstChild)
-            };
+            while (actionArea.firstChild) actionArea.removeChild(actionArea.firstChild);
 
             try {
                 // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
@@ -144,6 +141,8 @@ class TWFarm {
                 ratio = 0.8;
                 Insidious.storage.set({ resourceRatio: 0.8 })
                     .catch((err) => console.error(err));
+            } else {
+                ratio = ratio.resourceRatio;
             };
 
             const sendAttack = async () => {
@@ -155,10 +154,10 @@ class TWFarm {
                     const ratioA = Number((resourceAmount / carryCapacity.a).toFixed(2));
                     const ratioB = Number((resourceAmount / carryCapacity.b).toFixed(2));
                     // Em seguida, escolhe o maior entre eles.
-                    const bestRatio = ratioA > ratioB ? { origin: 'a', value: ratioA } : { origin: 'b', value: ratioB };
+                    const bestRatio = ratioA >= ratioB ? { origin: 'a', value: ratioA } : { origin: 'b', value: ratioB };
 
-                    // Verifica se há tropas disponíveis.
-                    if (bestRatio.value > 0.8) {
+                    // Se essa razão for aceitável, verifica se há tropas disponíveis.
+                    if (bestRatio.value > ratio) {
                         const getTroopElem = (troop) => {
                             return Number(document.querySelector(`#farm_units #units_home tbody tr td#${troop}`).innerText);
                         };
@@ -188,7 +187,7 @@ class TWFarm {
 
                         // Se as tropas estiverem disponíveis, envia o ataque após um delay aleatório.
                         if (checkAvailability()) {
-                            new Promise((resolve, reject) => {
+                            return new Promise((resolve, reject) => {
                                 const attackCtrl = new AbortController();
 
                                 const timerID = setTimeout(async () => {
@@ -212,24 +211,24 @@ class TWFarm {
                                     };
 
                                     await this.#updatePlunderedAmount(...calcExpected());
-                                    sendAttack();
                                     resolve();
-                                }, Utils.generateIntegerBetween(1000, 3000));
+                                }, Utils.generateIntegerBetween(300, 500));
  
                                 plunderEventTarget.addEventListener('stopplundering', () => {
                                     clearTimeout(timerID);
                                     attackCtrl.abort();
-                                    reject();
+                                    reject(new FarmAbort());
                                 }, { signal: attackCtrl.signal });
 
-                                document.querySelector('#insidious_startPlunderBtn').addEventListener('stopplundering', () => {
+                                document.querySelector('#insidious_startPlunderBtn').addEventListener('click', () => {
                                     clearTimeout(timerID);
                                     attackCtrl.abort();
-                                    reject();
+                                    reject(new FarmAbort());
                                 }, { signal: attackCtrl.signal });
-                            });
 
-                            break;
+                            }).then(() => sendAttack()).catch((err) => {
+                                if (err instanceof FarmAbort) return;
+                            });
                         };
                     };
                 };
@@ -241,13 +240,7 @@ class TWFarm {
                 return new Promise((resolve, reject) => {
                     const timeoutCtrl = new AbortController();
 
-                    const plunderTimeoutID = setTimeout(async () => {
-                        const plunderStatus = await Insidious.storage.get('isPlunderActive');
-                        if (plunderStatus.isPlunderActive === false) {
-                            reject();
-                            return;
-                        };
-
+                    const plunderTimeoutID = setTimeout(() => {
                         // Interrompe qualquer atividade no plunder e inicia a preparação para o recarregamento.
                         plunderEventTarget.dispatchEvent(new Event('stopplundering'));
                         timeoutCtrl.abort();
@@ -259,14 +252,16 @@ class TWFarm {
                     document.querySelector('#insidious_startPlunderBtn').addEventListener('click', () => {
                         clearTimeout(plunderTimeoutID);
                         timeoutCtrl.abort();
-                        reject();
+                        reject(new FarmAbort());
                     }, { signal: timeoutCtrl.signal });
                 });
             };
 
             // Alea iacta est.
             sendAttack();
-            setPlunderTimeout();
+            setPlunderTimeout().catch((err) => {
+                if (err instanceof FarmAbort) return;
+            });
 
         } catch (err) {
             console.error(err);
@@ -322,7 +317,7 @@ class TWFarm {
                     function getAmount(span) {
                         const querySpan = (className) => {
                             const resSpan = span.querySelector(`.${className}`);                        
-                            if (!resSpan) return;
+                            if (!resSpan) return false;
 
                             const resValue = resSpan.innerText.replaceAll('.', '');
                             const resType = resSpan.previousElementSibling.dataset.title;
@@ -478,6 +473,10 @@ class TWFarm {
                     stone: stone,
                     iron: iron
                 }});
+
+                document.querySelector('#insidious_plundered_wood').innerText = wood;
+                document.querySelector('#insidious_plundered_stone').innerText = stone;
+                document.querySelector('#insidious_plundered_iron').innerText = iron;
             };
 
         } catch (err) {
@@ -486,4 +485,13 @@ class TWFarm {
     };
 
     static get open() {return this.#open};
+};
+
+class FarmAbort extends Error {
+    constructor(message) {
+        super();
+
+        this.name = 'FarmAbort';
+        this.message = message ?? 'Operação abortada com sucesso.';
+    };
 };
