@@ -39,14 +39,14 @@ class TWFarm {
             if (field.parentElement.parentElement === aRow) {
                 field.setAttribute('data-insidious-model-a', fieldType);
                 Object.defineProperty(parentRow.a, fieldType, {
-                    value: Number(field.value),
+                    value: parseInt(field.value, 10),
                     enumerable: true
                 });
 
             } else {
                 field.setAttribute('data-insidious-model-b', fieldType);
                 Object.defineProperty(parentRow.b, fieldType, {
-                    value: Number(field.value),
+                    value: parseInt(field.value, 10),
                     enumerable: true
                 });
             };
@@ -130,9 +130,15 @@ class TWFarm {
                 return result;
             };
 
+            const capacityA = calcCarryCapacity(models.amodel);
+            const capacityB = calcCarryCapacity(models.bmodel);
+
+            // Caso o valor fosse zero, surgiria uma divisão por zero no cálculo do ratio.
+            // Qualquer valor dividido por Infinity se torna zero, o que o torna a melhor opção lá.
+            // Isso porquê bestRatio.value > ratio será sempre falso.
             const carryCapacity = {
-                a: calcCarryCapacity(models.amodel),
-                b: calcCarryCapacity(models.bmodel)
+                a: capacityA === 0 ? Infinity : capacityA,
+                b: capacityB === 0 ? Infinity : capacityB,
             };
 
             // Caso não exista um ratio salvo, usa o padrão e o registra.
@@ -150,27 +156,29 @@ class TWFarm {
                     if (village.getAttribute('style')?.includes('display: none')) continue;
 
                     // Calcula a razão entre os recursos disponíveis e cada um dos modelos.
-                    const resourceAmount = Number(village.dataset.insidiousResources);
-                    const ratioA = Number((resourceAmount / carryCapacity.a).toFixed(2));
-                    const ratioB = Number((resourceAmount / carryCapacity.b).toFixed(2));
+                    const resourceAmount = parseInt(village.dataset.insidiousResources, 10);
+                    const ratioA = parseFloat((resourceAmount / carryCapacity.a).toFixed(2));
+                    const ratioB = parseFloat((resourceAmount / carryCapacity.b).toFixed(2));
                     // Em seguida, escolhe o maior entre eles.
                     const bestRatio = ratioA >= ratioB ? { origin: 'a', value: ratioA } : { origin: 'b', value: ratioB };
 
                     // Se essa razão for aceitável, verifica se há tropas disponíveis.
                     if (bestRatio.value > ratio) {
-                        const getTroopElem = (troop) => {
-                            return Number(document.querySelector(`#farm_units #units_home tbody tr td#${troop}`).innerText);
+                        const getUnitElem = (unit) => {
+                            const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
+                            if (!unitElem) throw new ElementError({ id: `#farm_units #units_home tbody tr td#${unit}` });
+                            return parseInt(unitElem.innerText, 10);
                         };
 
                         // Lista das tropas disponíveis.
                         const availableTroops = {
-                            spear: getTroopElem('spear'),
-                            sword: getTroopElem('sword'),
-                            axe: getTroopElem('axe'),
-                            spy: getTroopElem('spy'),
-                            light: getTroopElem('light'),
-                            heavy: getTroopElem('heavy'),
-                            knight: getTroopElem('knight')
+                            spear: getUnitElem('spear'),
+                            sword: getUnitElem('sword'),
+                            axe: getUnitElem('axe'),
+                            spy: getUnitElem('spy'),
+                            light: getUnitElem('light'),
+                            heavy: getUnitElem('heavy'),
+                            knight: getUnitElem('knight')
                         };
 
                         // Modelo escolhido pela função.
@@ -192,26 +200,61 @@ class TWFarm {
 
                                 const timerID = setTimeout(async () => {
                                     attackCtrl.abort();
-                                    const attackButton = document.querySelector(`#${bestRatio.origin}_btn_${village.dataset.insidiousVillage}`);
-                                    attackButton?.dispatchEvent(new Event('click'));
 
+                                    // O plunder cumpre sua tarefa bem mais rápido que o servidor consegue responder.
+                                    // No entanto, como ele depende do número de tropas ditado pelo jogo, é necessário esperar o valor ser atualizado.
+                                    await new Promise((resolve, reject) => {
+                                        const observerTimeout = setTimeout(handleTimeout, 5000);
+                                        const observeTroops = new MutationObserver(() => {
+                                            clearTimeout(observerTimeout);
+                                            observeTroops.disconnect();
+                                            resolve();
+                                        });
+
+                                        function handleTimeout() {
+                                            observeTroops.disconnect();
+                                            reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.'));
+                                        };
+
+                                        const unitTable = document.querySelector('tr[data-insidious-available-unit-table="true"]');
+                                        if (!unitTable) throw new ElementError({ attribute: 'tr[data-insidious-available-unit-table]' });
+
+                                        observeTroops.observe(unitTable, { subtree: true, childList: true });
+                                        const attackButton = document.querySelector(`#${bestRatio.origin}_btn_${village.dataset.insidiousVillage}`);
+                                        attackButton?.dispatchEvent(new Event('click')); 
+                                    });
+
+                                    // Calcula a quantidade recursos esperada no saque (sempre quantia total).
                                     const calcExpected = () => {
-                                        const woodAmount = Number(village.dataset.insidiousWood);
-                                        const stoneAmount = Number(village.dataset.insidiousStone);
-                                        const ironAmount = Number(village.dataset.insidiousIron);
+                                        const parseAmount = (amount) => {
+                                            const parsed = parseInt(amount, 10);
+                                            if (Number.isNaN(parsed)) return 0;
+                                            return parsed;
+                                        };
 
-                                        const totalAmount = woodAmount + stoneAmount + ironAmount;
+                                        const woodAmount = parseAmount(village.dataset.insidiousWood);
+                                        const stoneAmount = parseAmount(village.dataset.insidiousStone);
+                                        const ironAmount = parseAmount(village.dataset.insidiousIron);
+
+                                        const calcTotalAmount = () => {
+                                            const sum = woodAmount + stoneAmount + ironAmount;
+                                            if (sum === 0) return Infinity;
+                                            return sum;
+                                        };
+
+                                        const totalAmount = calcTotalAmount();
                                         const modelCarryCapacity = carryCapacity[bestRatio.origin];
 
-                                        const woodRatio = Math.floor((woodAmount / totalAmount) * modelCarryCapacity);
-                                        const stoneRatio = Math.floor((stoneAmount / totalAmount) * modelCarryCapacity);
-                                        const ironRatio = Math.floor((ironAmount / totalAmount) * modelCarryCapacity);
+                                        const calcRatio = (ratio) => {
+                                            return Math.floor((ratio / totalAmount) * modelCarryCapacity);
+                                        };
 
-                                        return [woodRatio, stoneRatio, ironRatio];
+                                        return [calcRatio(woodAmount), calcRatio(stoneAmount), calcRatio(ironAmount)];
                                     };
 
                                     await this.#updatePlunderedAmount(...calcExpected());
                                     resolve();
+                                    
                                 }, Utils.generateIntegerBetween(300, 500));
  
                                 plunderEventTarget.addEventListener('stopplundering', () => {
@@ -228,6 +271,7 @@ class TWFarm {
 
                             }).then(() => sendAttack()).catch((err) => {
                                 if (err instanceof FarmAbort) return;
+                                console.error(err);
                             });
                         };
                     };
@@ -272,6 +316,20 @@ class TWFarm {
         const plunderList = document.querySelector('#plunder_list tbody');
         if (!plunderList) throw new ElementError({ id: 'plunder_list tbody' });
 
+        // Célula de referência.
+        const spearElem = document.querySelector('#farm_units #units_home tbody tr td#spear');
+        if (!spearElem) throw new ElementError({ id: `#farm_units #units_home tbody tr td#spear` });
+
+        // Tabela com as tropas disponíveis.
+        spearElem.parentElement.setAttribute('data-insidious-available-unit-table', 'true');
+
+        const availableUnits = ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'knight'];
+        availableUnits.forEach((unit) => {
+            const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
+            if (!unitElem) throw new ElementError({ id: `#farm_units #units_home tbody tr td#${unit}` });
+            unitElem.setAttribute('data-insidious-available-units', unit);
+        });
+
         // Ajuda a controlar o MutationObserver.
         const infoEventTarget = new EventTarget();
 
@@ -310,7 +368,7 @@ class TWFarm {
 
                     function calcResourceAmount() {
                         let result = 0;
-                        for (const span of expectedResources.children) result += Number(getAmount(span));
+                        for (const span of expectedResources.children) result += parseInt(getAmount(span), 10);
                         return result;
                     };
 
@@ -319,7 +377,9 @@ class TWFarm {
                             const resSpan = span.querySelector(`.${className}`);                        
                             if (!resSpan) return false;
 
-                            const resValue = resSpan.innerText.replaceAll('.', '');
+                            let resValue = resSpan.innerText.includes('.') ? resSpan.innerText.replaceAll('.', '') : resSpan.innerText;
+                            resValue = resValue.replace(/\s+/g, '');
+
                             const resType = resSpan.previousElementSibling.dataset.title;
                             switch (resType) {
                                 case 'Madeira': child.setAttribute('data-insidious-wood', resValue);

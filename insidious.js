@@ -265,8 +265,9 @@ class ElementError extends Error {
         this.tag = options.tag ?? '###';
         this.id = options.id ?? '###';
         this.class = options.class ?? '###';
+        this.attribute = options.attribute ?? '###';
 
-        this.message = `TAG: ${this.tag}, ID: ${this.id}, CLASS: ${this.class}`;
+        this.message = `TAG: ${this.tag}, ID: ${this.id}, CLASS: ${this.class}, ATTRIBUTE: ${this.class}`;
     };
 };
 
