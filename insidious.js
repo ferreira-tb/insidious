@@ -121,11 +121,11 @@ class Insidious {
                 await this.#storage.set({ worldDataFetch: now });
 
                 Utils.modal('Aguarde');
-                const progressInfo = document.createElement('div');
-                progressInfo.setAttribute('id', 'insidious_progressInfo');
-                progressInfo.setAttribute('style', 'cursor: wait;');
-                progressInfo.innerText = 'Obtendo dados do servidor.';
-                document.querySelector('#insidious_modal').appendChild(progressInfo);
+                new Manatsu({
+                    id: 'insidious_progressInfo',
+                    style: 'cursor: wait;',
+                    text: 'Obtendo dados do servidor.'
+                }, document.querySelector('#insidious_modal')).create();
 
                 const villages = await new Promise((resolve, reject) => {
                     fetch(TWAssets.world.village)
@@ -152,10 +152,8 @@ class Insidious {
                         this.#storage.set({ ['village' + thisID]: villageInfo })
                             .then(() => {
                                 if (!document.querySelector('#insidious_progressInfo')) {
-                                    const updatedProgressInfo = document.createElement('div');
-                                    updatedProgressInfo.setAttribute('id', 'insidious_progressInfo');
+                                    new Manatsu({ id: 'insidious_progressInfo' }, document.querySelector('#insidious_modal')).create();
                                     document.querySelector('#insidious_modal').setAttribute('style', 'cursor: wait;');
-                                    document.querySelector('#insidious_modal').appendChild(updatedProgressInfo);
                                 };
                             
                                 document.querySelector('#insidious_progressInfo').innerText = `${villageName} (${otherData[1]}|${otherData[2]})`;
@@ -167,11 +165,8 @@ class Insidious {
                 })).then(async (results) => {
                     document.querySelector('#insidious_modal').removeAttribute('style');
                     document.querySelector('#insidious_modal_h1').innerText = 'Concluído';
-
-                    const villageProgressInfo = document.querySelector('#insidious_progressInfo');
-                    villageProgressInfo.removeAttribute('style');
-                    villageProgressInfo.innerText = `${results.length} aldeias processadas.`;
              
+                    // Compara a quantidade de aldeias na última varredura com a dessa.
                     const lastTotalVillages = await this.#storage.get('totalVillages');
                     if (lastTotalVillages.totalVillages) {
                         const setDivText = () => {
@@ -183,21 +178,42 @@ class Insidious {
                             };
                         };
                         
-                        const addedVillages = document.createElement('div');
-                        addedVillages.innerText = setDivText();
+                        const addedVillages = new Manatsu({ text: setDivText() }).create();
                         document.querySelector('#insidious_modal').appendChild(addedVillages);
                     };
 
-                    this.#storage.set({ totalVillages: results.length });
-                    
-                    const closeButton = document.createElement('button');
-                    closeButton.setAttribute('style', 'margin-top: 10px;');
-                    closeButton.innerText = 'Fechar';
-                    document.querySelector('#insidious_modal').appendChild(closeButton);
+                    // Remove o estilo do cursor.
+                    const villageProgressInfo = document.querySelector('#insidious_progressInfo');
+                    villageProgressInfo.removeAttribute('style');
+
+                    // Cria uma área para os botões.
+                    const logButtonArea = new Manatsu(document.querySelector('#insidious_modal')).create();
+
+                    // Casos alguma promise tenha sido rejeitada, informa a quantidade.
+                    // Além disso, oferece uma opção para verificar os erros no console.
+                    const resultsLog = { sucess: [], failure: [] };
+                    for (const result of results) {
+                        if (result.status === 'fulfilled') resultsLog.sucess.push('OK');
+                        if (result.status === 'rejected') resultsLog.failure.push(result.reason);
+                    };
+                    villageProgressInfo.innerText = `${resultsLog.sucess.length} aldeias processadas.`;
+                    if (resultsLog.failure.length > 0) {
+                        new Manatsu({ text: `${resultsLog.failure.length} erros.` }, logButtonArea).create();
+
+                        // Cria um botão que permite listar os erros no console do navegador.
+                        new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Relatório' }, logButtonArea).create()
+                            .addEventListener('click', () => {
+                            for (const err of resultsLog.failure) console.log(err);
+                        });
+                    };
+
+                    // Salva a quantidade de aldeias adicionadas com sucesso.
+                    this.#storage.set({ totalVillages: resultsLog.sucess.length });
+
+                    const closeButton = new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Fechar' }, logButtonArea).create();
                     closeButton.addEventListener('click', () => {
                         document.querySelector('#insidious_blurBG').dispatchEvent(new Event('closemodal'));
                     });
-
                 });
             };
 

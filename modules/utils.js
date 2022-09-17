@@ -91,12 +91,10 @@ class Utils {
     };
 
     static #modal(modalTitle) {
-        const blurBG = document.createElement('div');
-        blurBG.setAttribute('id', 'insidious_blurBG');
+        const blurBG = new Manatsu('div', { id: 'insidious_blurBG' }).create();
         document.body.appendChild(blurBG);
 
-        const modalWindow = document.createElement('div');
-        modalWindow.setAttribute('id', 'insidious_modal');
+        const modalWindow = new Manatsu('div', { id: 'insidious_modal' }).create();
         document.body.appendChild(modalWindow);
 
         const modalCtrl = new AbortController();
@@ -106,12 +104,10 @@ class Utils {
             document.body.removeChild(blurBG);
         }, {signal: modalCtrl.signal});
 
-        const titleContainer = document.createElement('h1');
+        const titleContainer = new Manatsu('div').create();
         modalWindow.appendChild(titleContainer);
 
-        const h1Title = document.createElement('h1');
-        h1Title.setAttribute('id', 'insidious_modal_h1');
-        h1Title.innerText = modalTitle;
+        const h1Title = new Manatsu('h1', { id: 'insidious_modal_h1', text: modalTitle }).create();
         titleContainer.appendChild(h1Title);
     };
 

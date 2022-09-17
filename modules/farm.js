@@ -314,9 +314,10 @@ class TWFarm {
 
         const plundered = await Insidious.storage.get('totalPlundered');
 
-        const spanContainer = document.createElement('span');
-        spanContainer.setAttribute('class', 'nowrap');
-        spanContainer.setAttribute('data-insidious-custom', 'true');
+        const spanContainer = new Manatsu('span', {
+             class: 'nowrap',
+             ['data-insidious-custom']: 'true'
+        }).create();
         actionArea.appendChild(spanContainer);
 
         // MADEIRA

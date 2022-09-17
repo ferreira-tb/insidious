@@ -10,15 +10,15 @@ class TWMap {
             if (!mapBig) throw new ElementError({ id: 'map_big' });
 
             // Elementos da extensão.
-            const menuArea = new Manatsu('div', { id: 'insidious_mapMenuArea' }).create();
+            const menuArea = new Manatsu({ id: 'insidious_mapMenuArea' }).create();
             mapBig.insertBefore(menuArea, mapLegend);
 
             // Área dos botões e de suas subdivisões.
-            const buttonArea = new Manatsu('div', { id: 'insidious_mapButtonArea' }).create();
+            const buttonArea = new Manatsu({ id: 'insidious_mapButtonArea' }).create();
             menuArea.appendChild(buttonArea);
 
             // Área usada por alguns eventos para exibir resultados.
-            const actionArea = new Manatsu('div', { id: 'insidious_mapActionArea' }).create();
+            const actionArea = new Manatsu({ id: 'insidious_mapActionArea' }).create();
             menuArea.appendChild(actionArea);
 
             ////// BOTÕES
@@ -89,10 +89,11 @@ class TWMap {
                         Insidious.storage.get([village, 'village' + currentVillageID])
                             .then(async (result) => {
                                 if (id !== currentVillageID) {
-                                    const villageCustomTag = document.createElement('div');
-                                    villageCustomTag.setAttribute('class', 'insidious_map_villageCustomTag');
-                                    villageCustomTag.setAttribute('data-insidious-tag-type', tagType);
-                                    villageCustomTag.setAttribute('data-insidious-village', id);
+                                    const villageCustomTag = new Manatsu({
+                                        class: 'insidious_map_villageCustomTag',
+                                        ['data-insidious-tag-type']: tagType,
+                                        ['data-insidious-village']: id
+                                    }).create();
 
                                     const villageElement = document.querySelector('#map_village_' + id);
                                     if (!villageElement) throw new ElementError({ id: '#map_village_' + id });
