@@ -225,7 +225,7 @@ class Insidious {
     static #parseXML(configXML, options) {
         return new Promise((resolve, reject) => {
             const getValue = (value) => {
-                return parseInt(configXML.querySelector(value).textContent, 10);
+                return parseFloat(configXML.querySelector(value).textContent);
             };
 
             if (options.name === 'config') {

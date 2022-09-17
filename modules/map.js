@@ -14,31 +14,38 @@ class TWMap {
             mapBig.insertBefore(menuArea, mapLegend);
 
             // Área dos botões e de suas subdivisões.
-            const buttonArea = new Manatsu({ id: 'insidious_mapButtonArea' }).create();
-            menuArea.appendChild(buttonArea);
+            const buttonArea = new Manatsu({ id: 'insidious_mapButtonArea' }, menuArea).create();
+            const tagArea = new Manatsu(buttonArea).create();
+            new Manatsu('span', { text: 'Tags' }, tagArea).create();
+            const toggleTags = new Manatsu('input', {
+                type: 'checkbox',
+                id: 'insidious_customTags_checkbox'
+            }, tagArea).create();
+
+            const coordsArea = new Manatsu(buttonArea).create();
+            new Manatsu('span', { text: 'Coordenadas' }, coordsArea).create();
 
             // Área usada por alguns eventos para exibir resultados.
             const actionArea = new Manatsu({ id: 'insidious_mapActionArea' }).create();
             menuArea.appendChild(actionArea);
 
             ////// BOTÕES
-            const getBBCoordsBtn = new Manatsu('button', { text: 'Coordenadas BB', class: 'insidious_mapButtonArea_Btn' }).create();
-            buttonArea.appendChild(getBBCoordsBtn);
+            const addTagButton = (text) => {
+                return new Manatsu('button', {
+                    text: text,
+                    class: 'insidious_mapButtonArea_Btn'
+                }, tagArea).create();
+            };
 
-            const showPointsBtn = new Manatsu('button', { text: 'Pontos', class: 'insidious_mapButtonArea_Btn' }).create();
-            buttonArea.appendChild(showPointsBtn);
-
-            const showBBPointsBtn = new Manatsu('button', { text: 'Pontos BB', class: 'insidious_mapButtonArea_Btn' }).create();
-            buttonArea.appendChild(showBBPointsBtn);
-
-            const showTimeBtn = new Manatsu('button', { text: 'Tempo', class: 'insidious_mapButtonArea_Btn' }).create();
-            buttonArea.appendChild(showTimeBtn);
-
-            const showDistanceBtn = new Manatsu('button', { text: 'Distância', class: 'insidious_mapButtonArea_Btn' }).create();
-            buttonArea.appendChild(showDistanceBtn);
-
-            const clearTagsBtn = new Manatsu('button', { text: 'Limpar', class: 'insidious_mapButtonArea_Btn' }).create();
-            buttonArea.appendChild(clearTagsBtn);
+            const showPointsBtn = addTagButton('PT - Jogadores');
+            const showBBPointsBtn = addTagButton('PT - Bárbaras');
+            const showTimeBtn = addTagButton('Tempo');
+            const showDistanceBtn = addTagButton('Distância');
+            
+            const getBBCoordsBtn = new Manatsu('button',{
+                text: 'Bárbaras',
+                class: 'insidious_mapButtonArea_Btn'
+            }, coordsArea).create();
 
             ////// FUNÇÕES
             const mapEventTarget = new EventTarget();
@@ -48,9 +55,12 @@ class TWMap {
                 Manatsu.removeChildren(actionArea);
             };
 
-            const addCustomTags = (tagType) => {
+            const addCustomTags = async (tagType) => {
                 // Desconecta qualquer observer que esteja ativo no mapa.
                 mapEventTarget.dispatchEvent(new Event('stopmapobserver'));
+
+                const tagStatus = await Insidious.storage.get('customTagStatus');
+                if (tagStatus?.customTagStatus === 'disabled') return;
 
                 // Salva no registro a última tag utilizada, para que seja ativada automaticamente na próxima vez.
                 Insidious.storage.set({ lastCustomTag: tagType })
@@ -70,8 +80,6 @@ class TWMap {
                         };
                     });
                 };
-
-                if (tagType === 'clear') return;
 
                 // Vasculha os elementos do mapa e retorna aqueles que são aldeias.
                 // Em seguida, remove aquelas que já possuem tags.
@@ -201,7 +209,23 @@ class TWMap {
             showDistanceBtn.addEventListener('click', () => addCustomTags('distance'));
             showPointsBtn.addEventListener('click', () => addCustomTags('points'));
             showBBPointsBtn.addEventListener('click', () => addCustomTags('bbpoints'));
-            clearTagsBtn.addEventListener('click', () => addCustomTags('clear'));
+
+            toggleTags.addEventListener('change', async () => {
+                if (toggleTags.checked) {
+                    await Insidious.storage.set({ customTagStatus: 'enabled' });
+
+                    const lastTag = await Insidious.storage.get('lastCustomTag');
+                    if (lastTag?.lastCustomTag) addCustomTags(lastTag.lastCustomTag);
+
+                } else {
+                    await Insidious.storage.set({ customTagStatus: 'disabled' });
+
+                    const oldCustomTags = document.querySelectorAll('.insidious_map_villageCustomTag');
+                    for (const customTag of oldCustomTags) {
+                        customTag.parentNode.removeChild(customTag);
+                    };
+                };
+            });
 
             showTimeBtn.addEventListener('click', async () => {
                 try {
@@ -328,7 +352,15 @@ class TWMap {
             // Ativa a última tag utilizada.
             Insidious.storage.get('lastCustomTag')
                 .then(async (result) => {
-                    if (result.lastCustomTag && result.lastCustomTag !== 'clear') {
+                    const tagStatus = await Insidious.storage.get('customTagStatus');
+                    if (tagStatus?.customTagStatus === 'disabled') {
+                        document.querySelector('#insidious_customTags_checkbox').checked = false;
+                        return;
+                    };
+
+                    document.querySelector('#insidious_customTags_checkbox').checked = true;
+
+                    if (result.lastCustomTag) {
                         // O jogo comumente demora a carregar o #map_container, o que impede o carregamento das tags.
                         if (!document.querySelector('#map_container')) {
                             await delayCustomTags(result.lastCustomTag);

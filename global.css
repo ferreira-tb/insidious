@@ -59,15 +59,25 @@ div#insidious_modal {
     margin-bottom: 15px;
 }
 
+#insidious_mapButtonArea span {
+    font-weight: bold;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+#insidious_mapButtonArea input[type="checkbox"] {
+    margin-right: 10px;
+    margin-bottom: 5px;
+}
+
 .insidious_mapButtonArea_Btn {
     margin-right: 5px;
+    margin-bottom: 5px;
 }
 
 #insidious_mapActionArea {
     overflow-x: hidden;
     overflow-wrap: break-word;
-    padding-top: 10px;
-    padding-bottom: 10px;
 }
 
 .insidious_mapActionArea_coords {
