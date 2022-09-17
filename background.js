@@ -26,9 +26,16 @@ browser.runtime.onMessage.addListener((message) => {
     });
 });
 
-browser.action.onClicked.addListener(() => browser.storage.local.clear());
-
-let currentTab;
-browser.tabs.onActivated.addListener(async () => {
-    currentTab = await browser.tabs.query({ currentWindow: true, active: true, url: '*://*.tribalwars.com.br/*' });
+// Porta para comunicação prolongada.
+browser.runtime.onConnect.addListener((port) => {
+    if (port.name === 'insidious-set') {
+        const insidiousPort = port;
+        insidiousPort.onMessage.addListener((message) => {
+            browser.storage.local.set(message.value)
+                .then(() => insidiousPort.postMessage({ id: message.id }))
+                .catch((err) => insidiousPort.postMessage({ id: message.id, err: err }));
+        });
+    };
 });
+
+browser.action.onClicked.addListener(() => browser.storage.local.clear());

@@ -117,7 +117,7 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastFetch[1].worldDataFetch || now - lastFetch[1].worldDataFetch > (3600000 * 2)) {
+            if (!lastFetch[1].worldDataFetch || now - lastFetch[1].worldDataFetch > (3600000 * 1.2)) {
                 await this.#storage.set({ worldDataFetch: now });
 
                 Utils.modal('Aguarde');
@@ -134,6 +134,21 @@ class Insidious {
                         .catch((err) => reject(err));
                 });
 
+                // Registro de erros.
+                const errorLog = [];
+                // É usado para filtrar mensagens recebidas do background.
+                const fetchEventTarget = new EventTarget();
+                // Cria uma porta para comunicação com o background durante o processamento das promises.
+                const fetchPort = browser.runtime.connect({ name: 'insidious-set' });
+                fetchPort.onMessage.addListener((message) => {
+                    if (message.err) {
+                        errorLog.push(message.err);
+                        fetchEventTarget.dispatchEvent(new Event('err' + message.id));
+                    } else {
+                        fetchEventTarget.dispatchEvent(new Event(message.id));
+                    };
+                });
+
                 Promise.allSettled(villages.map((village) => {
                     return new Promise((resolve, reject) => {
                         const thisID = village.slice(0, village.indexOf(','));
@@ -142,78 +157,63 @@ class Insidious {
                         const villageName = Utils.urlDecode(otherData[0]);
                         const villageInfo = {
                             name: villageName,
-                            x: Number(otherData[1]),
-                            y: Number(otherData[2]),
-                            player: Number(otherData[3]),
-                            points: Number(otherData[4]),
-                            rank: Number(otherData[5])
+                            x: parseInt(otherData[1], 10),
+                            y: parseInt(otherData[2], 10),
+                            player: parseInt(otherData[3], 10),
+                            points: parseInt(otherData[4], 10),
+                            rank: parseInt(otherData[5], 10)
                         };
 
-                        this.#storage.set({ ['village' + thisID]: villageInfo })
-                            .then(() => {
-                                if (!document.querySelector('#insidious_progressInfo')) {
-                                    new Manatsu({ id: 'insidious_progressInfo' }, document.querySelector('#insidious_modal')).create();
-                                    document.querySelector('#insidious_modal').setAttribute('style', 'cursor: wait;');
-                                };
-                            
-                                document.querySelector('#insidious_progressInfo').innerText = `${villageName} (${otherData[1]}|${otherData[2]})`;
-                                resolve();
+                        const promiseCtrl = new AbortController();
+                        fetchEventTarget.addEventListener(thisID, () => {
+                            promiseCtrl.abort();
+                            if (!document.querySelector('#insidious_progressInfo')) {
+                                new Manatsu({ id: 'insidious_progressInfo' }, document.querySelector('#insidious_modal')).create();
+                                document.querySelector('#insidious_modal').setAttribute('style', 'cursor: wait;');
+                            };
+                        
+                            document.querySelector('#insidious_progressInfo').innerText = `${villageName} (${otherData[1]}|${otherData[2]})`;
+                            resolve();
+                        }, { signal: promiseCtrl.signal });
 
-                            }).catch((err) => reject(err));
+                        fetchEventTarget.addEventListener('err' + thisID, () => {
+                            promiseCtrl.abort();
+                            reject();
+                        }, { signal: promiseCtrl.signal });
+
+                        fetchPort.postMessage({ id: thisID, value: { ['village' + thisID]: villageInfo } });
                     });
 
-                })).then(async (results) => {
+                })).then((results) => {
+                    fetchPort.disconnect();
+
                     document.querySelector('#insidious_modal').removeAttribute('style');
                     document.querySelector('#insidious_modal_h1').innerText = 'Concluído';
-             
-                    // Compara a quantidade de aldeias na última varredura com a dessa.
-                    const lastTotalVillages = await this.#storage.get('totalVillages');
-                    if (lastTotalVillages.totalVillages) {
-                        const setDivText = () => {
-                            const difference = results.length - lastTotalVillages.totalVillages;
-                            switch (difference) {
-                                case 0: return 'Nenhuma aldeia foi adicionada.';
-                                case 1: return 'Uma aldeia foi adicionada.';
-                                default: return `${difference} aldeias foram adicionadas.`;
-                            };
-                        };
-                        
-                        const addedVillages = new Manatsu({ text: setDivText() }).create();
-                        document.querySelector('#insidious_modal').appendChild(addedVillages);
-                    };
 
                     // Remove o estilo do cursor.
                     const villageProgressInfo = document.querySelector('#insidious_progressInfo');
+                    villageProgressInfo.innerText = `${results.length} aldeias processadas.`;
                     villageProgressInfo.removeAttribute('style');
 
                     // Cria uma área para os botões.
                     const logButtonArea = new Manatsu(document.querySelector('#insidious_modal')).create();
 
                     // Casos alguma promise tenha sido rejeitada, informa a quantidade.
-                    // Além disso, oferece uma opção para verificar os erros no console.
-                    const resultsLog = { sucess: [], failure: [] };
-                    for (const result of results) {
-                        if (result.status === 'fulfilled') resultsLog.sucess.push('OK');
-                        if (result.status === 'rejected') resultsLog.failure.push(result.reason);
-                    };
-                    villageProgressInfo.innerText = `${resultsLog.sucess.length} aldeias processadas.`;
-                    if (resultsLog.failure.length > 0) {
-                        new Manatsu({ text: `${resultsLog.failure.length} erros.` }, logButtonArea).create();
+                    // Além disso, oferece uma opção para verificar os erros no console.                  
+                    if (errorLog.length > 0) {
+                        new Manatsu({ text: `${errorLog.length} erros.` }, logButtonArea).create();
 
                         // Cria um botão que permite listar os erros no console do navegador.
                         new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Relatório' }, logButtonArea).create()
                             .addEventListener('click', () => {
-                            for (const err of resultsLog.failure) console.log(err);
-                        });
+                                for (const err of errorLog) console.log(err);
+                            });
                     };
 
-                    // Salva a quantidade de aldeias adicionadas com sucesso.
-                    this.#storage.set({ totalVillages: resultsLog.sucess.length });
-
-                    const closeButton = new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Fechar' }, logButtonArea).create();
-                    closeButton.addEventListener('click', () => {
-                        document.querySelector('#insidious_blurBG').dispatchEvent(new Event('closemodal'));
-                    });
+                    new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Fechar' }, logButtonArea).create()
+                        .addEventListener('click', () => {
+                            document.querySelector('#insidious_blurBG').dispatchEvent(new Event('closemodal'));
+                        });
                 });
             };
 
