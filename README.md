@@ -1,4 +1,4 @@
-# insidious-firefox
+# Insidious
 Insidious é uma extensão para o jogo de navegador Tribal Wars. Atualmente está em fase inicial de desenvolvimento.
 
 ## Funcionalidades
