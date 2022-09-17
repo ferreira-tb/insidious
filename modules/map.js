@@ -23,34 +23,22 @@ class TWMap {
             menuArea.appendChild(actionArea);
 
             ////// BOTÕES
-            const getBBCoordsBtn = document.createElement('button');
-            getBBCoordsBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
-            getBBCoordsBtn.innerText = 'Coordenadas BB';
+            const getBBCoordsBtn = Utils.createStandardButton('Coordenadas BB', 'insidious_mapButtonArea_Btn');
             buttonArea.appendChild(getBBCoordsBtn);
 
-            const showPointsBtn = document.createElement('button');
-            showPointsBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
-            showPointsBtn.innerText = 'Pontos';
+            const showPointsBtn = Utils.createStandardButton('Pontos', 'insidious_mapButtonArea_Btn');
             buttonArea.appendChild(showPointsBtn);
 
-            const showBBPointsBtn = document.createElement('button');
-            showBBPointsBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
-            showBBPointsBtn.innerText = 'Pontos BB';
+            const showBBPointsBtn = Utils.createStandardButton('Pontos BB', 'insidious_mapButtonArea_Btn');
             buttonArea.appendChild(showBBPointsBtn);
 
-            const showTimeBtn = document.createElement('button');
-            showTimeBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
-            showTimeBtn.innerText = '??Tempo';
+            const showTimeBtn = Utils.createStandardButton('Tempo', 'insidious_mapButtonArea_Btn');
             buttonArea.appendChild(showTimeBtn);
 
-            const showDistanceBtn = document.createElement('button');
-            showDistanceBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
-            showDistanceBtn.innerText = 'Distância';
+            const showDistanceBtn = Utils.createStandardButton('Distância', 'insidious_mapButtonArea_Btn');
             buttonArea.appendChild(showDistanceBtn);
 
-            const clearTagsBtn = document.createElement('button');
-            clearTagsBtn.setAttribute('class', 'insidious_mapButtonArea_Btn');
-            clearTagsBtn.innerText = 'Limpar';
+            const clearTagsBtn = Utils.createStandardButton('Limpar', 'insidious_mapButtonArea_Btn');
             buttonArea.appendChild(clearTagsBtn);
 
             ////// FUNÇÕES
@@ -100,7 +88,7 @@ class TWMap {
                         const village = 'village' + id;
                         const currentVillageID = Utils.currentVillage();
                         Insidious.storage.get([village, 'village' + currentVillageID])
-                            .then((result) => {                          
+                            .then(async (result) => {
                                 if (id !== currentVillageID) {
                                     const villageCustomTag = document.createElement('div');
                                     villageCustomTag.setAttribute('class', 'insidious_map_villageCustomTag');
@@ -131,7 +119,7 @@ class TWMap {
                                     villageCustomTag.setAttribute('style', elementPosition);
                                     villageElement.parentNode.insertBefore(villageCustomTag, villageElement);
 
-                                    if (tagType === 'distance') {
+                                    const getRelativeCoords = () => {
                                         const coords = [
                                             result['village' + currentVillageID]?.x,
                                             result['village' + currentVillageID]?.y,
@@ -140,7 +128,12 @@ class TWMap {
                                         ];
 
                                         if (coords.includes(undefined)) throw new InsidiousError('Não foi possível obter as coordenadas.');
-                                        villageCustomTag.innerText = Utils.calcDistance(...coords);
+                                        return coords;
+                                    };
+
+                                    if (tagType === 'distance') {
+                                        const distance = Utils.calcDistance(...getRelativeCoords());
+                                        villageCustomTag.innerText = distance.toFixed(1);
 
                                     } else if (tagType === 'points') {
                                         if (!result[village]?.points) throw new InsidiousError('Aldeia não encontrada no registro.');
@@ -149,12 +142,41 @@ class TWMap {
                                     } else if (tagType === 'bbpoints') {
                                         if (!result[village]?.points) throw new InsidiousError('Aldeia não encontrada no registro.');
                                         if (result[village]?.player === 0) villageCustomTag.innerText = result[village].points;
+
+                                    } else if (tagType.startsWith('time_')) {
+                                        const unitName = tagType.replace('time_', '');
+                                        const unitInfo = await Insidious.storage.get('unit');
+                                        const worldInfo = await Insidious.storage.get('config');
+                                        if (!unitInfo.unit || !worldInfo.config) throw new InsidiousError('Não foi possível obter as configurações do mundo.');
+
+                                        const millisecondsPerField = 60000 * (unitInfo.unit[unitName].speed * worldInfo.config.unit_speed);
+                                        const fieldAmount = Utils.calcDistance(...getRelativeCoords());
+                                        const travelTime = millisecondsPerField * fieldAmount;
+
+                                        const getFullHours = () => {
+                                            // É necessário usar Math.trunc(), pois toFixed() arredonda o número.
+                                            let hours = String(Math.trunc(travelTime / 3600000));
+                                            let remainder = travelTime % 3600000;
+                                            if (hours.length === 1) hours = hours.padStart(2, '0');
+
+                                            let minutes = String(Math.trunc(remainder / 60000));
+                                            remainder = remainder % 60000;
+                                            if (minutes.length === 1) minutes = minutes.padStart(2, '0');
+
+                                            // No entanto, no caso dos segundos, o arredondamento é desejado.
+                                            let seconds = (remainder / 1000).toFixed(0);
+                                            if (seconds.length === 1) seconds = seconds.padStart(2, '0');
+
+                                            return `${hours}:${minutes}:${seconds}`;
+                                        };
+
+                                        villageCustomTag.innerText = getFullHours();
                                     };
                                 };
 
                                 resolve();
-                            })
-                            .catch((err) => reject(err));
+
+                            }).catch((err) => reject(err));
                     });
 
                 })).then(() => {
@@ -176,11 +198,46 @@ class TWMap {
             };
 
             ////// EVENTOS
-            showTimeBtn.addEventListener('click', () => addCustomTags('time'));
             showDistanceBtn.addEventListener('click', () => addCustomTags('distance'));
             showPointsBtn.addEventListener('click', () => addCustomTags('points'));
             showBBPointsBtn.addEventListener('click', () => addCustomTags('bbpoints'));
             clearTagsBtn.addEventListener('click', () => addCustomTags('clear'));
+
+            showTimeBtn.addEventListener('click', async () => {
+                try {
+                    const worldInfo = await Insidious.storage.get('config');
+                    if (!worldInfo.config?.game) throw new InsidiousError('Não foi possível obter as configurações do mundo.');
+
+                    clearActionArea();
+                    const imgIconCtrl = new AbortController();
+                    mapEventTarget.addEventListener('clearactionarea', () => {
+                        imgIconCtrl.abort();
+                    }, { signal: imgIconCtrl.signal });
+
+                    const isThereArchers = () => {
+                        switch (worldInfo.config.game.archer) {
+                            case 0: return TWAssets.list.all_units;
+                            case 1: return TWAssets.list.all_units_archer;
+                            default: return TWAssets.list.all_units;
+                        };
+                    };
+    
+                    isThereArchers().forEach((unit) => {
+                        const imgIcon = Utils.createIconImg(unit, '18');
+                        imgIcon.setAttribute('style', 'cursor: pointer; margin-right: 5px;');
+                        actionArea.appendChild(imgIcon);
+    
+                        imgIcon.addEventListener('click', () => {
+                            imgIconCtrl.abort();
+                            clearActionArea();
+                            addCustomTags('time_' + unit);
+                        }, { signal: imgIconCtrl.signal });
+                    });
+
+                } catch (err) {
+                    console.error(err)
+                };
+            });
 
             // Coleta as coordenadas das aldeias bárbaras no mapa.
             getBBCoordsBtn.addEventListener('click', () => {

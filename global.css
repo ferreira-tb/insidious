@@ -75,7 +75,7 @@ div#insidious_modal {
 }
 
 .insidious_map_glow {
-    animation: glow 1s infinite alternate;
+    animation: glow 0.5s infinite alternate;
 }
 
 .insidious_map_villageCustomTag {
@@ -89,6 +89,13 @@ div#insidious_modal {
     width: fit-content;
     max-width: 53px;
     height: 14px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    font-size: 10px;
+    font-weight: bold;
 }
 
 /* FARM */

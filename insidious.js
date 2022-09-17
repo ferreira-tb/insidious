@@ -51,10 +51,6 @@ class Insidious {
 
     static async #fetch() {
         try {
-            // Caso o plunder esteja ativo, impede que a função continue.
-            const plunderStatus = await this.#storage.get('isPlunderActive');
-            if (plunderStatus.isPlunderActive === true) return;
-
             // Verifica qual foi a hora do último fetch.
             const now = new Date().getTime();
             const lastFetch = [
@@ -73,6 +69,10 @@ class Insidious {
                 if (!serverInfo) throw new ElementError({ class: 'p.server_info' });
                 serverInfo.insertBefore(lastFetchInfo, serverInfo.firstChild);  // Não se deve usar firstElementChild aqui.
             };
+
+            // Caso o plunder esteja ativo, impede que a função continue.
+            const plunderStatus = await this.#storage.get('isPlunderActive');
+            if (plunderStatus.isPlunderActive === true) return;
             
             // Salva as configurações do mundo, caso ainda não estejam.
             if (!lastFetch[0].worldConfigFetch) {
@@ -209,7 +209,7 @@ class Insidious {
     static #parseXML(configXML, options) {
         return new Promise((resolve, reject) => {
             const getValue = (value) => {
-                return Number(configXML.querySelector(value).textContent);
+                return parseInt(configXML.querySelector(value).textContent, 10);
             };
 
             if (options.name === 'config') {

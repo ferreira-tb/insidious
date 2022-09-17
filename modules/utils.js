@@ -32,8 +32,7 @@ class Utils {
 
     // Calcula distância em campos entre duas coordenadas.
     static #calcDistance(originX, originY, destinationX, destinationY) {
-        const distance = Math.sqrt(((destinationX - originX) ** 2) + ((destinationY - originY) ** 2));
-        return Number(distance.toFixed(1));
+        return Math.sqrt(((destinationX - originX) ** 2) + ((destinationY - originY) ** 2));
     };
 
     // Gera um número inteiro entre dois outros inteiros.
@@ -65,14 +64,21 @@ class Utils {
             
             default: return 'PALAVRA INVÁLIDA';
         };
-    }
+    };
+
+    static #createStandardButton(title, className) {
+        const standardButton = document.createElement('button');
+        standardButton.setAttribute('data-insidious-standard-button', 'true');
+        standardButton.setAttribute('class', className);
+        standardButton.innerText = title;
+        return standardButton;
+    };
 
     static #createResourceSpan(resource) {
         const resourceSpan = document.createElement('span');
         resourceSpan.setAttribute('class', `icon header ${resource}`);
         resourceSpan.setAttribute('data-insidious-custom', 'true');
         resourceSpan.setAttribute('data-title', this.#portugueseName(resource));
-
         return resourceSpan;
     };
 
@@ -81,8 +87,15 @@ class Utils {
         resourceSpanLabel.setAttribute('class', 'res');
         resourceSpanLabel.setAttribute('data-insidious-custom', 'true');
         resourceSpanLabel.setAttribute('data-title', this.#portugueseName(resource));
-
         return resourceSpanLabel;
+    };
+
+    static #createIconImg(icon, size) {
+        if (typeof size !== 'string') size = String(size);
+        const iconImg = document.createElement('img');
+        iconImg.setAttribute('src', TWAssets.image[`${icon}_${size}`]);
+        iconImg.setAttribute('data-insidious-custom', 'true');
+        return iconImg;
     };
 
     static #modal(modalTitle) {
@@ -111,8 +124,10 @@ class Utils {
     };
 
     // ELEMENTOS
+    static get createStandardButton() {return this.#createStandardButton};
     static get createResourceSpan() {return this.#createResourceSpan};
     static get createResourceSpanLabel() {return this.#createResourceSpanLabel};
+    static get createIconImg() {return this.#createIconImg};
 
     // DADOS
     static get currentScreen() {return this.#currentScreen};

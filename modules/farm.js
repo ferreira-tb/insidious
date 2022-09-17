@@ -22,8 +22,7 @@ class TWFarm {
         menuArea.appendChild(actionArea);
 
         ////// BOTÕES
-        const startPlunderBtn = document.createElement('button');
-        startPlunderBtn.setAttribute('class', 'insidious_farmButtonArea_Btn');
+        const startPlunderBtn = Utils.createStandardButton('', 'insidious_farmButtonArea_Btn');
         startPlunderBtn.setAttribute('id', 'insidious_startPlunderBtn');
 
         ////// DADOS
@@ -200,7 +199,6 @@ class TWFarm {
 
                                 const timerID = setTimeout(async () => {
                                     attackCtrl.abort();
-
                                     // O plunder cumpre sua tarefa bem mais rápido que o servidor consegue responder.
                                     // No entanto, como ele depende do número de tropas ditado pelo jogo, é necessário esperar o valor ser atualizado.
                                     await new Promise((resolve, reject) => {
@@ -219,7 +217,7 @@ class TWFarm {
                                         const unitTable = document.querySelector('tr[data-insidious-available-unit-table="true"]');
                                         if (!unitTable) throw new ElementError({ attribute: 'tr[data-insidious-available-unit-table]' });
 
-                                        observeTroops.observe(unitTable, { subtree: true, childList: true });
+                                        observeTroops.observe(unitTable, { subtree: true, childList: true, characterData: true });
                                         const attackButton = document.querySelector(`#${bestRatio.origin}_btn_${village.dataset.insidiousVillage}`);
                                         attackButton?.dispatchEvent(new Event('click')); 
                                     });
@@ -290,7 +288,6 @@ class TWFarm {
                         timeoutCtrl.abort();
                         setTimeout(() => window.location.reload(), 5000);
                         resolve();
-
                     }, Utils.generateIntegerBetween((60000 * 20), (60000 * 30)));
 
                     document.querySelector('#insidious_startPlunderBtn').addEventListener('click', () => {
@@ -309,7 +306,79 @@ class TWFarm {
 
         } catch (err) {
             console.error(err);
-        };   
+        };
+    };
+
+    static async #showPlunderedAmount() {
+        const actionArea = document.querySelector('#insidious_farmActionArea');
+        while (actionArea.firstChild) actionArea.removeChild(actionArea.firstChild);
+
+        const plundered = await Insidious.storage.get('totalPlundered');
+
+        const spanContainer = document.createElement('span');
+        spanContainer.setAttribute('class', 'nowrap');
+        spanContainer.setAttribute('data-insidious-custom', 'true');
+        actionArea.appendChild(spanContainer);
+
+        // MADEIRA
+        const plunderedWood = Utils.createResourceSpan('wood');
+        spanContainer.appendChild(plunderedWood);
+
+        const woodAmount = Utils.createResourceSpanLabel('wood');
+        woodAmount.setAttribute('id', 'insidious_plundered_wood');
+        woodAmount.innerText = plundered.totalPlundered?.wood ?? 0;
+        spanContainer.appendChild(woodAmount);
+
+        // ARGILA
+        const plunderedStone = Utils.createResourceSpan('stone');
+        spanContainer.appendChild(plunderedStone);
+
+        const stoneAmount = Utils.createResourceSpanLabel('stone');
+        stoneAmount.setAttribute('id', 'insidious_plundered_stone');
+        stoneAmount.innerText = plundered.totalPlundered?.stone ?? 0;
+        spanContainer.appendChild(stoneAmount);
+
+        // FERRO
+        const plunderediron = Utils.createResourceSpan('iron');
+        spanContainer.appendChild(plunderediron);
+
+        const ironAmount = Utils.createResourceSpanLabel('iron');
+        ironAmount.setAttribute('id', 'insidious_plundered_iron');
+        ironAmount.innerText = plundered.totalPlundered?.iron ?? 0;
+        spanContainer.appendChild(ironAmount);
+    };
+
+    static async #updatePlunderedAmount(wood, stone, iron) {
+        try {
+            const plundered = await Insidious.storage.get('totalPlundered');
+            if (plundered.totalPlundered) {
+                const updatedValues = {
+                    wood: plundered.totalPlundered.wood + wood,
+                    stone: plundered.totalPlundered.stone + stone,
+                    iron: plundered.totalPlundered.iron + iron
+                };
+
+                await Insidious.storage.set({ totalPlundered: updatedValues });
+
+                document.querySelector('#insidious_plundered_wood').innerText = updatedValues.wood;
+                document.querySelector('#insidious_plundered_stone').innerText = updatedValues.stone;
+                document.querySelector('#insidious_plundered_iron').innerText = updatedValues.iron;
+
+            } else {
+                await Insidious.storage.set({ totalPlundered: {
+                    wood: wood,
+                    stone: stone,
+                    iron: iron
+                }});
+
+                document.querySelector('#insidious_plundered_wood').innerText = wood;
+                document.querySelector('#insidious_plundered_stone').innerText = stone;
+                document.querySelector('#insidious_plundered_iron').innerText = iron;
+            };
+
+        } catch (err) {
+            console.error(err);
+        };
     };
 
     static #info() {
@@ -323,8 +392,7 @@ class TWFarm {
         // Tabela com as tropas disponíveis.
         spearElem.parentElement.setAttribute('data-insidious-available-unit-table', 'true');
 
-        const availableUnits = ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'knight'];
-        availableUnits.forEach((unit) => {
+        TWAssets.list.farm_units.forEach((unit) => {
             const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
             if (!unitElem) throw new ElementError({ id: `#farm_units #units_home tbody tr td#${unit}` });
             unitElem.setAttribute('data-insidious-available-units', unit);
@@ -470,78 +538,6 @@ class TWFarm {
 
         // Inicia a adição dos dados.
         addInfo();
-    };
-
-    static async #showPlunderedAmount() {
-        const actionArea = document.querySelector('#insidious_farmActionArea');
-        while (actionArea.firstChild) actionArea.removeChild(actionArea.firstChild);
-
-        const plundered = await Insidious.storage.get('totalPlundered');
-
-        const spanContainer = document.createElement('span');
-        spanContainer.setAttribute('class', 'nowrap');
-        spanContainer.setAttribute('data-insidious-custom', 'true');
-        actionArea.appendChild(spanContainer);
-
-        // MADEIRA
-        const plunderedWood = Utils.createResourceSpan('wood');
-        spanContainer.appendChild(plunderedWood);
-
-        const woodAmount = Utils.createResourceSpanLabel('wood');
-        woodAmount.setAttribute('id', 'insidious_plundered_wood');
-        woodAmount.innerText = plundered.totalPlundered?.wood ?? 0;
-        spanContainer.appendChild(woodAmount);
-
-        // ARGILA
-        const plunderedStone = Utils.createResourceSpan('stone');
-        spanContainer.appendChild(plunderedStone);
-
-        const stoneAmount = Utils.createResourceSpanLabel('stone');
-        stoneAmount.setAttribute('id', 'insidious_plundered_stone');
-        stoneAmount.innerText = plundered.totalPlundered?.stone ?? 0;
-        spanContainer.appendChild(stoneAmount);
-
-        // FERRO
-        const plunderediron = Utils.createResourceSpan('iron');
-        spanContainer.appendChild(plunderediron);
-
-        const ironAmount = Utils.createResourceSpanLabel('iron');
-        ironAmount.setAttribute('id', 'insidious_plundered_iron');
-        ironAmount.innerText = plundered.totalPlundered?.iron ?? 0;
-        spanContainer.appendChild(ironAmount);
-    };
-
-    static async #updatePlunderedAmount(wood, stone, iron) {
-        try {
-            const plundered = await Insidious.storage.get('totalPlundered');
-            if (plundered.totalPlundered) {
-                const updatedValues = {
-                    wood: plundered.totalPlundered.wood + wood,
-                    stone: plundered.totalPlundered.stone + stone,
-                    iron: plundered.totalPlundered.iron + iron
-                };
-
-                await Insidious.storage.set({ totalPlundered: updatedValues });
-
-                document.querySelector('#insidious_plundered_wood').innerText = updatedValues.wood;
-                document.querySelector('#insidious_plundered_stone').innerText = updatedValues.stone;
-                document.querySelector('#insidious_plundered_iron').innerText = updatedValues.iron;
-
-            } else {
-                await Insidious.storage.set({ totalPlundered: {
-                    wood: wood,
-                    stone: stone,
-                    iron: iron
-                }});
-
-                document.querySelector('#insidious_plundered_wood').innerText = wood;
-                document.querySelector('#insidious_plundered_stone').innerText = stone;
-                document.querySelector('#insidious_plundered_iron').innerText = iron;
-            };
-
-        } catch (err) {
-            console.error(err);
-        };
     };
 
     static get open() {return this.#open};
