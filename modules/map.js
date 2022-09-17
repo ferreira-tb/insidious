@@ -10,35 +10,34 @@ class TWMap {
             if (!mapBig) throw new ElementError({ id: 'map_big' });
 
             // Elementos da extensão.
-            const menuArea = document.createElement('div');
-            menuArea.setAttribute('id', 'insidious_mapMenuArea');
+            const menuArea = new Manatsu('div', { id: 'insidious_mapMenuArea' }).create();
             mapBig.insertBefore(menuArea, mapLegend);
 
-            const buttonArea = document.createElement('div');
-            buttonArea.setAttribute('id', 'insidious_mapButtonArea');
+            // Área dos botões e de suas subdivisões.
+            const buttonArea = new Manatsu('div', { id: 'insidious_mapButtonArea' }).create();
             menuArea.appendChild(buttonArea);
 
-            const actionArea = document.createElement('div');
-            actionArea.setAttribute('id', 'insidious_mapActionArea');
+            // Área usada por alguns eventos para exibir resultados.
+            const actionArea = new Manatsu('div', { id: 'insidious_mapActionArea' }).create();
             menuArea.appendChild(actionArea);
 
             ////// BOTÕES
-            const getBBCoordsBtn = Utils.createStandardButton('Coordenadas BB', 'insidious_mapButtonArea_Btn');
+            const getBBCoordsBtn = new Manatsu('button', { text: 'Coordenadas BB', class: 'insidious_mapButtonArea_Btn' }).create();
             buttonArea.appendChild(getBBCoordsBtn);
 
-            const showPointsBtn = Utils.createStandardButton('Pontos', 'insidious_mapButtonArea_Btn');
+            const showPointsBtn = new Manatsu('button', { text: 'Pontos', class: 'insidious_mapButtonArea_Btn' }).create();
             buttonArea.appendChild(showPointsBtn);
 
-            const showBBPointsBtn = Utils.createStandardButton('Pontos BB', 'insidious_mapButtonArea_Btn');
+            const showBBPointsBtn = new Manatsu('button', { text: 'Pontos BB', class: 'insidious_mapButtonArea_Btn' }).create();
             buttonArea.appendChild(showBBPointsBtn);
 
-            const showTimeBtn = Utils.createStandardButton('Tempo', 'insidious_mapButtonArea_Btn');
+            const showTimeBtn = new Manatsu('button', { text: 'Tempo', class: 'insidious_mapButtonArea_Btn' }).create();
             buttonArea.appendChild(showTimeBtn);
 
-            const showDistanceBtn = Utils.createStandardButton('Distância', 'insidious_mapButtonArea_Btn');
+            const showDistanceBtn = new Manatsu('button', { text: 'Distância', class: 'insidious_mapButtonArea_Btn' }).create();
             buttonArea.appendChild(showDistanceBtn);
 
-            const clearTagsBtn = Utils.createStandardButton('Limpar', 'insidious_mapButtonArea_Btn');
+            const clearTagsBtn = new Manatsu('button', { text: 'Limpar', class: 'insidious_mapButtonArea_Btn' }).create();
             buttonArea.appendChild(clearTagsBtn);
 
             ////// FUNÇÕES
@@ -46,7 +45,7 @@ class TWMap {
 
             const clearActionArea = () => {
                 mapEventTarget.dispatchEvent(new Event('clearactionarea'));
-                while (actionArea.firstChild) actionArea.removeChild(actionArea.firstChild);
+                Manatsu.removeChildren(actionArea);
             };
 
             const addCustomTags = (tagType) => {

@@ -9,21 +9,20 @@ class TWFarm {
         if (!farmModels) throw new ElementError({ id: 'content_value div.vis div form table.vis tbody' });
 
         // Elementos da extensão.
-        const menuArea = document.createElement('div');
-        menuArea.setAttribute('id', 'insidious_farmMenuArea');
+        const menuArea = new Manatsu('div', { id: 'insidious_farmMenuArea' }).create();
         plunderListFilters.parentNode.insertBefore(menuArea, plunderListFilters.nextElementSibling);
 
-        const buttonArea = document.createElement('div');
-        buttonArea.setAttribute('id', 'insidious_farmButtonArea');
+        const buttonArea = new Manatsu('div', { id: 'insidious_farmButtonArea' }).create();
         menuArea.appendChild(buttonArea);
 
-        const actionArea = document.createElement('div');
-        actionArea.setAttribute('id', 'insidious_farmActionArea');
+        const actionArea = new Manatsu('div', { id: 'insidious_farmActionArea' }).create();
         menuArea.appendChild(actionArea);
 
         ////// BOTÕES
-        const startPlunderBtn = Utils.createStandardButton('', 'insidious_farmButtonArea_Btn');
-        startPlunderBtn.setAttribute('id', 'insidious_startPlunderBtn');
+        const startPlunderBtn = new Manatsu('button', {
+            class: 'insidious_farmButtonArea_Btn',
+            id: 'insidious_startPlunderBtn'
+        }).create();
 
         ////// DADOS
         this.#info();
@@ -57,7 +56,7 @@ class TWFarm {
         ////// EVENTOS
         const plunderBtnEvents = async () => {
             startPlunderBtn.removeEventListener('click', plunderBtnEvents);
-            while (actionArea.firstChild) actionArea.removeChild(actionArea.firstChild);
+            Manatsu.removeChildren(actionArea);
 
             try {
                 // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
@@ -311,7 +310,7 @@ class TWFarm {
 
     static async #showPlunderedAmount() {
         const actionArea = document.querySelector('#insidious_farmActionArea');
-        while (actionArea.firstChild) actionArea.removeChild(actionArea.firstChild);
+        Manatsu.removeChildren(actionArea);
 
         const plundered = await Insidious.storage.get('totalPlundered');
 

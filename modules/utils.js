@@ -66,14 +66,6 @@ class Utils {
         };
     };
 
-    static #createStandardButton(title, className) {
-        const standardButton = document.createElement('button');
-        standardButton.setAttribute('data-insidious-standard-button', 'true');
-        standardButton.setAttribute('class', className);
-        standardButton.innerText = title;
-        return standardButton;
-    };
-
     static #createResourceSpan(resource) {
         const resourceSpan = document.createElement('span');
         resourceSpan.setAttribute('class', `icon header ${resource}`);
@@ -124,7 +116,6 @@ class Utils {
     };
 
     // ELEMENTOS
-    static get createStandardButton() {return this.#createStandardButton};
     static get createResourceSpan() {return this.#createResourceSpan};
     static get createResourceSpanLabel() {return this.#createResourceSpanLabel};
     static get createIconImg() {return this.#createIconImg};
@@ -140,7 +131,7 @@ class Utils {
     // OUTROS
     static get urlDecode() {return this.#urlDecode};
     static get calcDistance() {return this.#calcDistance};
-    static get generateIntegerBetween() {return this.#generateIntegerBetween};
     static get decipherDate() {return this.#decipherDate};
     static get portugueseName() {return this.#portugueseName};
+    static get generateIntegerBetween() {return this.#generateIntegerBetween};
 };
