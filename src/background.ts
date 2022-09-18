@@ -1,5 +1,3 @@
-'use strict';
-////// EVENTOS
 browser.runtime.onMessage.addListener((message) => {
     return new Promise((resolve, reject) => {
         if (message.name?.startsWith('storage-')) {

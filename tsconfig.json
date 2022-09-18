@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "outDir": "dist",
+        "lib": ["DOM", "ES2021"],
+        "target": "ES2021",
+        "removeComments": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "noUnusedParameters": true,
+        "noImplicitOverride": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "allowUnreachableCode": false,
+        "alwaysStrict": true
+    },
+    
+    "files": [
+        "web-ext-v3.d.ts",
+        "src/insidious.ts",
+        "src/background.ts",
+        "src/modules/assets.ts",
+        "src/modules/farm.ts",
+        "src/modules/manatsu.ts",
+        "src/modules/map.ts",
+        "src/modules/utils.ts"
+    ],
+}

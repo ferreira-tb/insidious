@@ -1,4 +1,3 @@
-'use strict';
 class TWMap {
     static #open() {
         try {
@@ -30,7 +29,7 @@ class TWMap {
             menuArea.appendChild(actionArea);
 
             ////// BOTÕES
-            const addTagButton = (text) => {
+            const addTagButton = (text: string) => {
                 return new Manatsu('button', {
                     text: text,
                     class: 'insidious_mapButtonArea_Btn'
@@ -55,7 +54,7 @@ class TWMap {
                 Manatsu.removeChildren(actionArea);
             };
 
-            const addCustomTags = async (tagType) => {
+            const addCustomTags = async (tagType: string) => {
                 // Desconecta qualquer observer que esteja ativo no mapa.
                 mapEventTarget.dispatchEvent(new Event('stopmapobserver'));
 
@@ -93,7 +92,9 @@ class TWMap {
                 Promise.allSettled(mapVillages.map((id) => {
                     return new Promise((resolve, reject) => {
                         const village = 'village' + id;
-                        const currentVillageID = Utils.currentVillage();
+                        const currentVillageID: string | undefined = Utils.currentVillage();
+                        if (!currentVillageID) throw new InsidiousError('Não foi possível obter as coordenadas da aldeia atual.');
+
                         Insidious.storage.get([village, 'village' + currentVillageID])
                             .then(async (result) => {
                                 if (id !== currentVillageID) {
@@ -106,26 +107,34 @@ class TWMap {
                                     const villageElement = document.querySelector('#map_village_' + id);
                                     if (!villageElement) throw new ElementError({ id: '#map_village_' + id });
 
-                                    let elementStyle = villageElement.getAttribute('style').split(';');
-                                    elementStyle = elementStyle.filter((property) => {
+                                    const elementStyle: string | null = villageElement.getAttribute('style');
+                                    if (!elementStyle) throw new InsidiousError('Não foi possível encontrar a tag de estilo em \"villageElement\".');
+                                    const leftTopStyle: string[] = elementStyle.split(';').filter((property) => {
                                         if (property.includes('left:') || property.includes('top:')) return true;
                                         return false;
                                     });
 
-                                    const adjustTop = () => {
-                                        let topValue = elementStyle[0].includes('top') ? elementStyle[0] : elementStyle[1];
-                                        topValue = topValue.replace('top:', '').replace('px', '').trim();
-                                        return `top: ${String(Number(topValue) + 20)}px;`;
-                                    };
+                                    if (leftTopStyle.length > 0) {
+                                        const adjustTop = () => {
+                                            let topValue = leftTopStyle[0].includes('top') ? leftTopStyle[0] : leftTopStyle[1];
+                                            topValue = topValue.replace('top:', '').replace('px', '').trim();
+                                            return `top: ${String(Number(topValue) + 20)}px;`;
+                                        };
+    
+                                        const adjustLeft = () => {
+                                            let leftValue = leftTopStyle[0].includes('left') ? leftTopStyle[0] : leftTopStyle[1];
+                                            return ` ${leftValue};`;
+                                        };
+    
+                                        const elementPosition = adjustTop().concat(adjustLeft());
+                                        villageCustomTag.setAttribute('style', elementPosition);
+    
+                                        if (!villageElement.parentNode) throw new InsidiousError('Não foi possível encontrar o elemento pai de \"villageElement\".');
+                                        villageElement.parentNode.insertBefore(villageCustomTag, villageElement);
 
-                                    const adjustLeft = () => {
-                                        let leftValue = elementStyle[0].includes('left') ? elementStyle[0] : elementStyle[1];
-                                        return ` ${leftValue};`;
+                                    } else {
+                                        throw new InsidiousError('Não existem \"left\" e \"top\" entre os elementos de \"villageElement\"');
                                     };
-
-                                    const elementPosition = adjustTop().concat(adjustLeft());
-                                    villageCustomTag.setAttribute('style', elementPosition);
-                                    villageElement.parentNode.insertBefore(villageCustomTag, villageElement);
 
                                     const getRelativeCoords = () => {
                                         const coords = [

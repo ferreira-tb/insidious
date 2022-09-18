@@ -1,4 +1,3 @@
-'use strict';
 class TWFarm {
     static #open() {
         // Elementos originais.
@@ -162,7 +161,7 @@ class TWFarm {
 
                     // Se essa razão for aceitável, verifica se há tropas disponíveis.
                     if (bestRatio.value > ratio) {
-                        const getUnitElem = (unit) => {
+                        const getUnitElem = (unit: string) => {
                             const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
                             if (!unitElem) throw new ElementError({ id: `#farm_units #units_home tbody tr td#${unit}` });
                             return parseInt(unitElem.innerText, 10);
@@ -223,27 +222,27 @@ class TWFarm {
 
                                     // Calcula a quantidade recursos esperada no saque (sempre quantia total).
                                     const calcExpected = () => {
-                                        const parseAmount = (amount) => {
+                                        const woodAmount = parseAmount(village.dataset.insidiousWood);
+                                        const stoneAmount = parseAmount(village.dataset.insidiousStone);
+                                        const ironAmount = parseAmount(village.dataset.insidiousIron);
+
+                                        const totalAmount = calcTotalAmount();
+                                        const modelCarryCapacity = carryCapacity[bestRatio.origin];
+
+                                        const calcRatio = (amount: number) => {
+                                            return Math.floor((amount / totalAmount) * modelCarryCapacity);
+                                        };
+
+                                        function parseAmount(amount: string) {
                                             const parsed = parseInt(amount, 10);
                                             if (Number.isNaN(parsed)) return 0;
                                             return parsed;
                                         };
 
-                                        const woodAmount = parseAmount(village.dataset.insidiousWood);
-                                        const stoneAmount = parseAmount(village.dataset.insidiousStone);
-                                        const ironAmount = parseAmount(village.dataset.insidiousIron);
-
-                                        const calcTotalAmount = () => {
+                                        function calcTotalAmount() {
                                             const sum = woodAmount + stoneAmount + ironAmount;
                                             if (sum === 0) return Infinity;
                                             return sum;
-                                        };
-
-                                        const totalAmount = calcTotalAmount();
-                                        const modelCarryCapacity = carryCapacity[bestRatio.origin];
-
-                                        const calcRatio = (ratio) => {
-                                            return Math.floor((ratio / totalAmount) * modelCarryCapacity);
                                         };
 
                                         return [calcRatio(woodAmount), calcRatio(stoneAmount), calcRatio(ironAmount)];
@@ -310,6 +309,7 @@ class TWFarm {
 
     static async #showPlunderedAmount() {
         const actionArea = document.querySelector('#insidious_farmActionArea');
+        if (!actionArea) return;
         Manatsu.removeChildren(actionArea);
 
         const plundered = await Insidious.storage.get('totalPlundered');
@@ -348,7 +348,8 @@ class TWFarm {
         spanContainer.appendChild(ironAmount);
     };
 
-    static async #updatePlunderedAmount(wood, stone, iron) {
+    static async #updatePlunderedAmount(...args: number[]) {
+        const [wood, stone, iron] = args;
         try {
             const plundered = await Insidious.storage.get('totalPlundered');
             if (plundered.totalPlundered) {
@@ -441,7 +442,7 @@ class TWFarm {
                     };
 
                     function getAmount(span) {
-                        const querySpan = (className) => {
+                        const querySpan = (className: string) => {
                             const resSpan = span.querySelector(`.${className}`);                        
                             if (!resSpan) return false;
 
@@ -543,11 +544,11 @@ class TWFarm {
     static get open() {return this.#open};
 };
 
-class FarmAbort extends Error {
-    constructor(message) {
+class FarmAbort extends Error {  
+    constructor() {
         super();
 
         this.name = 'FarmAbort';
-        this.message = message ?? 'Operação abortada com sucesso.';
+        this.message = 'Operação abortada com sucesso.';
     };
 };

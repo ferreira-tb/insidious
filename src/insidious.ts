@@ -1,17 +1,15 @@
-'use strict';
 class Insidious {
     static #storage = {
-        // Value precisa ser um objeto.
+        // Precisa ser um objeto.
         set: (value) => {
             return new Promise((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-set', value: value })
                     .then(() => resolve())
-                    .catch((err) => reject(err));  
+                    .catch((err) => reject(err));
             });
         },
 
-        // Key pode ser uma string ou uma array de strings.
-        get: (key) => {
+        get: (key: string | string[]) => {
             return new Promise((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-get', key: key })
                     .then((result) => resolve(result))
@@ -19,7 +17,7 @@ class Insidious {
             });
         },
 
-        remove: (key) => {
+        remove: (key: string | string[]) => {
             return new Promise((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-remove', key: key })
                     .then(() => resolve())
@@ -38,7 +36,7 @@ class Insidious {
             
             // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
             const currentScreen = Utils.currentScreen();
-            if (currentScreen.startsWith('map')) {
+            if (currentScreen?.startsWith('map')) {
                 TWMap.open();             
             } else {
                 switch (currentScreen) {
@@ -127,7 +125,7 @@ class Insidious {
                     text: 'Obtendo dados do servidor.'
                 }, document.querySelector('#insidious_modal')).create();
 
-                const villages = await new Promise((resolve, reject) => {
+                const villages: string[] = await new Promise((resolve, reject) => {
                     fetch(TWAssets.world.village)
                         .then((raw) => raw.text())
                         .then((text) => resolve(text.split(/\r?\n/)))
@@ -135,7 +133,7 @@ class Insidious {
                 });
 
                 // Registro de erros.
-                const errorLog = [];
+                const errorLog: string[] = [];
                 // É usado para filtrar mensagens recebidas do background.
                 const fetchEventTarget = new EventTarget();
                 // Cria uma porta para comunicação com o background durante o processamento das promises.
@@ -222,9 +220,9 @@ class Insidious {
         };
     };
 
-    static #parseXML(configXML, options) {
+    static #parseXML(configXML, options: { name: string }) {
         return new Promise((resolve, reject) => {
-            const getValue = (value) => {
+            const getValue = (value: string): number => {
                 return parseFloat(configXML.querySelector(value).textContent);
             };
 
@@ -274,21 +272,30 @@ class Insidious {
 // Usado quando um elemento do DOM original não está mais acessível.
 // Isso pode ocorrer devido a mudanças feitas pelos desenvolvedores do jogo.
 class ElementError extends Error {
-    constructor(options) {
+    tag: string | undefined;
+    id: string | undefined;
+    class: string | undefined;
+    attribute: string | undefined;
+    
+    constructor(options: { tag?: string, id?: string, class?: string, attribute?: string }) {
         super();
 
         this.name = 'ElementError';
-        this.tag = options.tag ?? '###';
-        this.id = options.id ?? '###';
-        this.class = options.class ?? '###';
-        this.attribute = options.attribute ?? '###';
+        this.message = '';
 
-        this.message = `TAG: ${this.tag}, ID: ${this.id}, CLASS: ${this.class}, ATTRIBUTE: ${this.class}`;
+        this.tag = options.tag;
+        this.id = options.id;
+        this.class = options.class;
+        this.attribute = options.attribute;
+        
+        for (const [key, value] of Object.entries(options)) {
+            this.message += `${key}: ${value} `;
+        };
     };
 };
 
 class InsidiousError extends Error {
-    constructor(message) {
+    constructor(message: string) {
         super();
 
         this.name = 'InsidiousError';

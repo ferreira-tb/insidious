@@ -1,10 +1,9 @@
-'use strict';
 class Manatsu {
-    #element = 'div'; // <string>.
-    #options; // [object]
-    #parent; // [HTML Element]
+    #element: string = 'div';
+    #options;
+    #parent:  HTMLElement;
 
-    constructor(...args) {
+    constructor(...args: any) {
         for (const arg of args) this.#setProperty(arg);
     };
 
@@ -12,19 +11,19 @@ class Manatsu {
         const newElement = document.createElement(this.#element);
         
         if (this.#options) {
-            for (const key in this.#options) {
+            for (const [key, value] of Object.entries(this.#options)) {
                 if (typeof key !== 'string') throw new SyntaxError('option must be a string.');
-                if (typeof this.#options[key] !== 'string') throw new SyntaxError('option must be a string.');
+                if (typeof value !== 'string') throw new SyntaxError('option must be a string.');
     
                 switch (key) {
-                    case 'text': newElement.innerText = this.#options[key];
+                    case 'text': newElement.innerText = value;
                         break;
-                    case 'html': newElement.innerHTML = this.#options[key];
+                    case 'html': newElement.innerHTML = value;
                         break;
-                    case 'content': newElement.textContent = this.#options[key];
+                    case 'content': newElement.textContent = value;
                         break;
     
-                    default: newElement.setAttribute(key, this.#options[key]);
+                    default: newElement.setAttribute(key, value);
                 };
             };
         };
@@ -34,24 +33,19 @@ class Manatsu {
         return newElement;
     };
 
-    #setProperty(value) {
+    #setProperty(value: any) {
         if (typeof value === 'string') {
             this.#element = value;
 
-        } else if (isObject()) {
+        } else if (isValidObject()) {
             this.#options = value;
 
-        } else if (isHTMLElement()) {
-            this.#parent = value;          
+        } else if (value instanceof HTMLElement) {
+            this.#parent = value;
         };
 
-        function isObject() {
+        function isValidObject() {
             if (Object.getPrototypeOf(value) === Object.prototype) return true;
-            return false;
-        };
-
-        function isHTMLElement() {
-            if (value instanceof HTMLElement) return true;
             return false;
         };
     };
@@ -61,7 +55,7 @@ class Manatsu {
 
     // STATIC
     // Remove todos os filhos de um dado elemento.
-    static #removeChildren(element) {
+    static #removeChildren(element: HTMLElement) {
         while (element.firstChild) element.removeChild(element.firstChild);
     };
 
