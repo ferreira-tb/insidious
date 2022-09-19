@@ -4,24 +4,24 @@ browser.runtime.onMessage.addListener((message: BackgroundListener) => {
             const commandName = message.name.replace('storage-', '');
             switch (commandName) {
                 case 'set':
-                    if (!message.value) return;
+                    if (!message.value) reject();
                     browser.storage.local.set(message.value)
                         .then(() => resolve())
-                        .catch((err) => reject(err));
+                        .catch((err: any) => reject(err));
                     break;
 
                 case 'get':
-                    if (!message.key) return;
+                    if (!message.key) reject();
                     browser.storage.local.get(message.key)
-                        .then((result) => resolve(result))
-                        .catch((err) => reject(err));
+                        .then((result: any) => resolve(result))
+                        .catch((err: any) => reject(err));
                     break;
 
                 case 'remove':
-                    if (!message.key) return;
+                    if (!message.key) reject();
                     browser.storage.local.remove(message.key)
                         .then(() => resolve())
-                        .catch((err) => reject(err));
+                        .catch((err: any) => reject(err));
                     break;
             };
 
@@ -32,13 +32,13 @@ browser.runtime.onMessage.addListener((message: BackgroundListener) => {
 });
 
 // Porta para comunicação prolongada.
-browser.runtime.onConnect.addListener((port) => {
+browser.runtime.onConnect.addListener((port: any) => {
     if (port.name === 'insidious-set') {
         const insidiousPort = port;
         insidiousPort.onMessage.addListener((message: PortMessage) => {
             browser.storage.local.set(message.value)
                 .then(() => insidiousPort.postMessage({ id: message.id }))
-                .catch((err) => insidiousPort.postMessage({ id: message.id, err: err }));
+                .catch((err: any) => insidiousPort.postMessage({ id: message.id, err: err }));
         });
     };
 });

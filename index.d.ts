@@ -1,8 +1,5 @@
 declare const browser: any;
 
-type StringObject = { [key: string]: string };
-type StandardObjectSN = { [key: string]: string | number };
-
 // background.ts
 interface BackgroundListener {
     name: string;

@@ -14,15 +14,15 @@ class Manatsu {
         
         if (this.#options) {
             for (const [key, value] of Object.entries(this.#options)) {
-                if (typeof key !== 'string') throw new SyntaxError('option must be a string.');
-                if (typeof value !== 'string') throw new SyntaxError('option must be a string.');
+                if (typeof key !== 'string') throw new ManatsuError('option must be a string.');
+                if (typeof value !== 'string') throw new ManatsuError('option must be a string.');
     
                 switch (key) {
                     case 'text': newElement.textContent = value;
                         break;
                     case 'html': newElement.innerHTML = value;
                         break;
-                    case 'content': newElement.textContent = value;
+                    case 'inner': newElement.innerText = value;
                         break;
     
                     default: newElement.setAttribute(key, value);

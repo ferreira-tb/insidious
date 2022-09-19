@@ -27,9 +27,14 @@ class TWFarm {
         this.#info();
 
         // Recolhe dados sobre os modelos salvos.
+        if (!farmModels.firstElementChild) throw new InsidiousError('Não foi possível obter a linha principal da tabela de modelos.');
         const aRow = farmModels.firstElementChild.nextElementSibling;
         const parentRow = { a: {}, b: {} };
-        for (const field of farmModels.querySelectorAll('tr td input[type=\"text\"]')) {
+
+        const farmModelsInputFields = farmModels.querySelectorAll('tr td input[type=\"text\"]');
+        if (farmModelsInputFields.length < 14) throw new InsidiousError('Não foi possível obter os campos de texto dos modelos.');
+
+        for (const field of farmModelsInputFields) {
             const fieldName = field.getAttribute('name');
             const fieldType = fieldName.slice(0, fieldName.indexOf('\['));
 
@@ -50,7 +55,9 @@ class TWFarm {
         };
 
         Insidious.storage.set({ amodel: parentRow.a, bmodel: parentRow.b })
-            .catch((err) => console.error(err));
+            .catch((err) => {
+                if (err instanceof Error) console.error(err);
+            });
 
         ////// EVENTOS
         const plunderBtnEvents = async () => {
@@ -59,7 +66,7 @@ class TWFarm {
 
             try {
                 // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
-                const result = await Insidious.storage.get('isPlunderActive');
+                const result: { isPlunderActive: boolean } = await Insidious.storage.get('isPlunderActive');
                 if (result.isPlunderActive === true) {
                     await Insidious.storage.set({ isPlunderActive: false });
                     startPlunderBtn.textContent = 'Saquear';
@@ -72,7 +79,7 @@ class TWFarm {
                 };
 
             } catch (err) {
-                console.error(err);
+                if (err instanceof Error) console.error(err);
 
             } finally {
                 startPlunderBtn.addEventListener('click', plunderBtnEvents);
@@ -100,9 +107,12 @@ class TWFarm {
                 };
 
             }).catch((err) => {
-                // Caso haja algum erro, desativa o plunder, por segurança.
-                Insidious.storage.set({ isPlunderActive: false });
-                console.error(err);      
+                
+                if (err instanceof Error) {
+                    // Caso haja algum erro, desativa o plunder, por segurança.
+                    Insidious.storage.set({ isPlunderActive: false });
+                    console.error(err);
+                };
             });
     };
 
@@ -143,7 +153,9 @@ class TWFarm {
             if (!ratio.resourceRatio) {
                 ratio = 0.8;
                 Insidious.storage.set({ resourceRatio: 0.8 })
-                    .catch((err) => console.error(err));
+                    .catch((err) => {
+                        if (err instanceof Error) console.error(err);
+                    });
             } else {
                 ratio = ratio.resourceRatio;
             };
@@ -266,8 +278,13 @@ class TWFarm {
                                 }, { signal: attackCtrl.signal });
 
                             }).then(() => sendAttack()).catch((err) => {
-                                if (err instanceof FarmAbort) return;
-                                console.error(err);
+                                if (err instanceof FarmAbort) {
+                                    if (err.reason) console.error(err.reason);
+                                    return;
+
+                                } else if (err instanceof Error) {
+                                    console.error(err);
+                                };
                             });
                         };
                     };
@@ -299,11 +316,14 @@ class TWFarm {
             // Alea iacta est.
             sendAttack();
             setPlunderTimeout().catch((err) => {
-                if (err instanceof FarmAbort) return;
+                if (err instanceof FarmAbort) {
+                    if (err.reason) console.error(err.reason);
+                    return;
+                };
             });
 
         } catch (err) {
-            console.error(err);
+            if (err instanceof Error) console.error(err);
         };
     };
 
@@ -382,7 +402,7 @@ class TWFarm {
             };
 
         } catch (err) {
-            console.error(err);
+            if (err instanceof Error) console.error(err);
         };
     };
 
@@ -445,7 +465,8 @@ class TWFarm {
                         return result;
                     };
 
-                    function getAmount(span: HTMLElement) {
+                    // É preciso adicionar tratamento para casos onde os recursos não estão visíveis, pois não houve ataque de explorador.
+                    function getAmount(span: HTMLElement): string {
                         const querySpan = (className: string) => {
                             const resSpan = span.querySelector(`.${className}`);
                             if (!resSpan) return false;
@@ -473,6 +494,7 @@ class TWFarm {
                         };
 
                         for (const text of findValidClass()) if (text) return text;
+                        throw new InsidiousError('Não foi encontrada informação sobre a quantidade de recursos disponíveis.');
                     };
 
                     // Muralha.
@@ -548,11 +570,10 @@ class TWFarm {
     static get open() {return this.#open};
 };
 
-class FarmAbort extends Error {  
-    constructor() {
-        super();
-
-        this.name = 'FarmAbort';
-        this.message = 'Operação abortada com sucesso.';
+class FarmAbort {
+    reason;
+    
+    constructor(reason?: string) {
+        this.reason = reason;
     };
 };

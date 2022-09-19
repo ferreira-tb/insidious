@@ -9,7 +9,11 @@
         "removeComments": true,
         "noUnusedParameters": true,
         "noUnusedLocals": true,
+        "noFallthroughCasesInSwitch": true,
         
+        "noImplicitReturns": true,
+        "useUnknownInCatchVariables": true,
+        "exactOptionalPropertyTypes": true,
         "noImplicitOverride": true,
         "noImplicitThis": true,
         "allowUnreachableCode": false,
@@ -20,10 +24,10 @@
         "index.d.ts",
         "src/insidious.ts",
         "src/background.ts",
+        "src/lib/manatsu.ts",
         "src/modules/assets.ts",
         "src/modules/farm.ts",
-        "src/modules/manatsu.ts",
         "src/modules/map.ts",
         "src/modules/utils.ts"
-    ],
+    ]
 }

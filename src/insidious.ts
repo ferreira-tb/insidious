@@ -1,18 +1,18 @@
 class Insidious {
     static #storage = {
-        set: (value: StandardObject) => {
+        set: (value: { [key: string]: any }) => {
             return new Promise<void>((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-set', value: value })
                     .then(() => resolve())
-                    .catch((err: string) => reject(err));
+                    .catch((err: any) => reject(err));
             });
         },
 
         get: (key: string | string[]) => {
             return new Promise<any>((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-get', key: key })
-                    .then((result: StandardObject) => resolve(result))
-                    .catch((err: string) => reject(err));           
+                    .then((result: { [key: string]: any }) => resolve(result))
+                    .catch((err: any) => reject(err));           
             });
         },
 
@@ -20,7 +20,7 @@ class Insidious {
             return new Promise<void>((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-remove', key: key })
                     .then(() => resolve())
-                    .catch((err: string) => reject(err));
+                    .catch((err: any) => reject(err));
             });
         }
     };
@@ -47,14 +47,14 @@ class Insidious {
                 };
             };
         } catch (err) {
-            console.error(err);
-        };   
+            if (err instanceof Error) console.error(err);      
+        };
     };
 
     static async #fetch() {
         try {
             // Verifica qual foi a hora do último fetch.
-            const now = new Date().getTime();
+            const now: number = new Date().getTime();
             const lastConfigFetch: { worldConfigFetch: number } = await this.#storage.get('worldConfigFetch');
             const lastDataFetch: { worldDataFetch: number } = await this.#storage.get('worldDataFetch');
 
@@ -71,7 +71,7 @@ class Insidious {
             };
 
             // Caso o plunder esteja ativo, impede que a função continue.
-            const plunderStatus = await this.#storage.get('isPlunderActive');
+            const plunderStatus: { isPlunderActive: boolean } = await this.#storage.get('isPlunderActive');
             if (plunderStatus.isPlunderActive === true) return;
             
             // Salva as configurações do mundo, caso ainda não estejam.
@@ -115,8 +115,10 @@ class Insidious {
                     });
 
                 })).catch((err) => {
-                    console.error(err);
-                    this.#storage.remove('worldConfigFetch');
+                    if (err instanceof Error) {
+                        console.error(err);
+                        this.#storage.remove('worldConfigFetch');
+                    };
                 });
             };
             
@@ -225,11 +227,11 @@ class Insidious {
             };
 
         } catch (err) {
-            console.error(err);
+            if (err instanceof Error) console.error(err);
         };
     };
 
-    static #parseXML(configXML: HTMLElement, options: { name: string }) {
+    static #parseXML(configXML: Element, options: { name: string }) {
         return new Promise((resolve, reject) => {
             const getValue = (value: string): number => {
                 const valueField = configXML.querySelector(value);
