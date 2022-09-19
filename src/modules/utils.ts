@@ -1,8 +1,3 @@
-type ResourceSpan = 'wood' | 'stone' | 'iron';
-
-type IconImgName = 'spear' | 'sword' | 'axe' | 'archer' | 'spy' | 'light' | 'marcher' | 'heavy' | 'ram' | 'catapult' | 'knight' | 'snob';
-type IconImgSize = '18';
-
 class Utils {
     static #currentScreen(): string | undefined {
         for (const item of this.#urlFields()) {
@@ -68,6 +63,8 @@ class Utils {
             case 'wood': return 'Madeira';
             case 'stone': return 'Argila';
             case 'iron': return 'Ferro';
+
+            default: return 'Palavra inválida';
         };
     };
 

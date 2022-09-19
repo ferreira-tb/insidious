@@ -1,21 +1,23 @@
 {
     "compilerOptions": {
         "outDir": "dist",
-        "lib": ["DOM", "ES2021"],
-        "target": "ES2021",
-        "removeComments": true,
+        "lib": ["DOM", "es2022"],
+        "target": "es2022",
         "noImplicitAny": true,
         "strictNullChecks": true,
+        "alwaysStrict": true,
+        "removeComments": true,
         "noUnusedParameters": true,
+        "noUnusedLocals": true,
+        
         "noImplicitOverride": true,
         "noImplicitThis": true,
-        "noUnusedLocals": true,
         "allowUnreachableCode": false,
-        "alwaysStrict": true
+        
     },
     
     "files": [
-        "web-ext-v3.d.ts",
+        "index.d.ts",
         "src/insidious.ts",
         "src/background.ts",
         "src/modules/assets.ts",

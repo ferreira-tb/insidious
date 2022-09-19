@@ -67,7 +67,7 @@ class TWMap {
 
                 // Analisa as tags já existentes e remove aquelas que são diferentes do tipo escolhido ao chamar essa função.
                 // Além disso, recolhe os IDs das tags que não foram removidas.
-                const oldTagsID = [];
+                const oldTagsID: string[] = [];
                 const oldCustomTags = document.querySelectorAll('.insidious_map_villageCustomTag');
                 if (oldCustomTags.length > 0) {
                     oldCustomTags.forEach((customTag) => {
@@ -90,7 +90,7 @@ class TWMap {
 
                 // Adiciona as novas tags.
                 Promise.allSettled(mapVillages.map((id) => {
-                    return new Promise((resolve, reject) => {
+                    return new Promise<void>((resolve, reject) => {
                         const village = 'village' + id;
                         const currentVillageID: string | undefined = Utils.currentVillage();
                         if (!currentVillageID) throw new InsidiousError('Não foi possível obter as coordenadas da aldeia atual.');
@@ -109,6 +109,7 @@ class TWMap {
 
                                     const elementStyle: string | null = villageElement.getAttribute('style');
                                     if (!elementStyle) throw new InsidiousError('Não foi possível encontrar a tag de estilo em \"villageElement\".');
+
                                     const leftTopStyle: string[] = elementStyle.split(';').filter((property) => {
                                         if (property.includes('left:') || property.includes('top:')) return true;
                                         return false;
@@ -150,15 +151,15 @@ class TWMap {
 
                                     if (tagType === 'distance') {
                                         const distance = Utils.calcDistance(...getRelativeCoords());
-                                        villageCustomTag.innerText = distance.toFixed(1);
+                                        villageCustomTag.textContent = distance.toFixed(1);
 
                                     } else if (tagType === 'points') {
                                         if (!result[village]?.points) throw new InsidiousError('Aldeia não encontrada no registro.');
-                                        if (result[village]?.player !== 0) villageCustomTag.innerText = result[village].points;
+                                        if (result[village]?.player !== 0) villageCustomTag.textContent = result[village].points;
 
                                     } else if (tagType === 'bbpoints') {
                                         if (!result[village]?.points) throw new InsidiousError('Aldeia não encontrada no registro.');
-                                        if (result[village]?.player === 0) villageCustomTag.innerText = result[village].points;
+                                        if (result[village]?.player === 0) villageCustomTag.textContent = result[village].points;
 
                                     } else if (tagType.startsWith('time_')) {
                                         const unitName = tagType.replace('time_', '');
@@ -187,7 +188,7 @@ class TWMap {
                                             return `${hours}:${minutes}:${seconds}`;
                                         };
 
-                                        villageCustomTag.innerText = getFullHours();
+                                        villageCustomTag.textContent = getFullHours();
                                     };
                                 };
 
@@ -255,7 +256,7 @@ class TWMap {
                         };
                     };
     
-                    isThereArchers().forEach((unit) => {
+                    isThereArchers().forEach((unit: IconImgName) => {
                         const imgIcon = Utils.createIconImg(unit, '18');
                         imgIcon.setAttribute('style', 'cursor: pointer; margin-right: 5px;');
                         actionArea.appendChild(imgIcon);
@@ -292,7 +293,7 @@ class TWMap {
                             if (!villageElement.hasAttribute('class')) {
                                 villageElement.setAttribute('class', 'insidious_map_glow');     
                             } else {
-                                throw new ElementError({ class: villageElement.getAttribute('class') });
+                                throw new ElementError({ class: villageElement.getAttribute('class')! });
                             };
 
                         } catch (err) {
@@ -303,16 +304,18 @@ class TWMap {
 
                 actionArea.addEventListener('mouseout', (e) => {
                     e.stopPropagation();
-                    if (e.target.className === 'insidious_mapActionArea_coords') {
+                    const coordClass = (e.target as Element).getAttribute('class');
+                    if (coordClass === 'insidious_mapActionArea_coords') {
                         try {
-                            const villageID = e.target.id.replace('insidious_mapActionArea_village', '');
+                            const villageID = (e.target as Element).id.replace('insidious_mapActionArea_village', '');
                             const villageElement = document.querySelector('#map_village_' + villageID);
                             if (!villageElement) return;
 
-                            if (villageElement.className === 'insidious_map_glow') {
+                            const villageClass = villageElement.getAttribute('class');
+                            if (villageClass === 'insidious_map_glow') {
                                 villageElement.removeAttribute('class');
-                            } else {
-                                throw new ElementError({ class: villageElement.getAttribute('class') });
+                            } else if (villageClass !== null) {
+                                throw new ElementError({ class: villageClass });
                             };
 
                         } catch (err) {
@@ -324,7 +327,7 @@ class TWMap {
                 // Vasculha os elementos do mapa e retorna aqueles que são aldeias.
                 // Em seguida, filtra o resultado para que hajam apenas bárbaras.
                 Promise.all(this.#getVillagesID().map((id) => {
-                    return new Promise((resolve, reject) => {
+                    return new Promise<void>((resolve, reject) => {
                         const village = 'village' + id;
                         Insidious.storage.get(village)
                             .then((result) => {
@@ -332,7 +335,7 @@ class TWMap {
                                     const coords = document.createElement('span');
                                     coords.setAttribute('class', 'insidious_mapActionArea_coords');
                                     coords.setAttribute('id', 'insidious_mapActionArea_' + 'village' + id);
-                                    coords.innerText = `${result[village].x}\|${result[village].y}`;
+                                    coords.textContent = `${result[village].x}\|${result[village].y}`;
                                     actionArea.appendChild(coords);
 
                                     coords.addEventListener('click', () => {
@@ -340,11 +343,15 @@ class TWMap {
                                         range.selectNodeContents(coords);
 
                                         const selection = window.getSelection();
-                                        selection.removeAllRanges();
-                                        selection.addRange(range);
+                                        if (selection) {
+                                            selection.removeAllRanges();
+                                            selection.addRange(range);
+                                        };
 
-                                        navigator.clipboard.writeText(coords.innerText)
-                                            .catch((err) => console.error(err));
+                                        if (coords.textContent !== null) {
+                                            navigator.clipboard.writeText(coords.textContent)
+                                                .catch((err) => console.error(err));
+                                        };
 
                                     }, { signal: getBBCoordsCtrl.signal });
                                 };
@@ -360,14 +367,17 @@ class TWMap {
             // CONFIGURAÇÕES
             // Ativa a última tag utilizada.
             Insidious.storage.get('lastCustomTag')
-                .then(async (result) => {
+                .then(async (result: StringObject) => {
                     const tagStatus = await Insidious.storage.get('customTagStatus');
+                    const tagsCheckbox = document.querySelector('#insidious_customTags_checkbox');
+                    if (!tagsCheckbox) return;
+
                     if (tagStatus?.customTagStatus === 'disabled') {
-                        document.querySelector('#insidious_customTags_checkbox').checked = false;
+                        tagsCheckbox.removeAttribute('checked');
                         return;
                     };
-
-                    document.querySelector('#insidious_customTags_checkbox').checked = true;
+                    
+                    tagsCheckbox.setAttribute('checked', '');
 
                     if (result.lastCustomTag) {
                         // O jogo comumente demora a carregar o #map_container, o que impede o carregamento das tags.
@@ -381,8 +391,8 @@ class TWMap {
 
                 }).catch((err) => console.error(err));
 
-            function delayCustomTags(lastCustomTag) {
-                return new Promise((resolve, reject) => {
+            function delayCustomTags(lastCustomTag: string) {
+                return new Promise<void>((resolve, reject) => {
                     setTimeout(() => {
                         // Caso #map_container ainda não exista, rejeita a promise.
                         // Isso porquê o problema pode já não ser relacionado ao carregamento da página.
@@ -403,7 +413,7 @@ class TWMap {
     };
 
     static #getVillagesID() {
-        const villages = [];
+        const villages: string[] = [];
         const mapImages = document.querySelectorAll('#map_container div img');
         mapImages.forEach((img) => {
             if (img.id.startsWith('map_village_') && img.id !== 'map_village_undefined') {

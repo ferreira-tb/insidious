@@ -1,27 +1,26 @@
 class Insidious {
     static #storage = {
-        // Precisa ser um objeto.
-        set: (value) => {
-            return new Promise((resolve, reject) => {
+        set: (value: StandardObject) => {
+            return new Promise<void>((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-set', value: value })
                     .then(() => resolve())
-                    .catch((err) => reject(err));
+                    .catch((err: string) => reject(err));
             });
         },
 
         get: (key: string | string[]) => {
-            return new Promise((resolve, reject) => {
+            return new Promise<any>((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-get', key: key })
-                    .then((result) => resolve(result))
-                    .catch((err) => reject(err));           
+                    .then((result: StandardObject) => resolve(result))
+                    .catch((err: string) => reject(err));           
             });
         },
 
         remove: (key: string | string[]) => {
-            return new Promise((resolve, reject) => {
+            return new Promise<void>((resolve, reject) => {
                 browser.runtime.sendMessage({ name: 'storage-remove', key: key })
                     .then(() => resolve())
-                    .catch((err) => reject(err));
+                    .catch((err: string) => reject(err));
             });
         }
     };
@@ -29,39 +28,42 @@ class Insidious {
     // Inicia a extensão.
     static async #start() {
         Object.freeze(this.#storage);
+        try {
+            if (location.pathname === '\/game.php') {
+                // Faz download dos dados necessários para executar a extensão.
+                await this.#fetch();
+                
+                // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
+                const currentScreen: string | undefined = Utils.currentScreen();
+                if (!currentScreen) throw new InsidiousError('Não foi possível identificar a janela atual.');
 
-        if (location.pathname === '\/game.php') {
-            // Faz download dos dados necessários para executar a extensão.
-            await this.#fetch();
-            
-            // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
-            const currentScreen = Utils.currentScreen();
-            if (currentScreen?.startsWith('map')) {
-                TWMap.open();             
-            } else {
-                switch (currentScreen) {
-                    case 'am_farm': TWFarm.open();
-                        break;
+                if (currentScreen.startsWith('map')) {
+                    TWMap.open();             
+                } else {
+                    switch (currentScreen) {
+                        case 'am_farm': TWFarm.open();
+                            break;
+                    };
                 };
             };
-        };
+        } catch (err) {
+            console.error(err);
+        };   
     };
 
     static async #fetch() {
         try {
             // Verifica qual foi a hora do último fetch.
             const now = new Date().getTime();
-            const lastFetch = [
-                await this.#storage.get('worldConfigFetch'),
-                await this.#storage.get('worldDataFetch')
-            ];
+            const lastConfigFetch: { worldConfigFetch: number } = await this.#storage.get('worldConfigFetch');
+            const lastDataFetch: { worldDataFetch: number } = await this.#storage.get('worldDataFetch');
 
             // Informa a data do último fetch na barra inferior, onde se encontra a hora do servidor.
-            if (lastFetch[1].worldDataFetch) {
-                const lastFetchInfo = document.createElement('span');
-                lastFetchInfo.setAttribute('id', 'insidious_lastFetchInfo');
-                const hourFormat = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
-                lastFetchInfo.innerText = `Insidious: ${new Date(lastFetch[1].worldDataFetch).toLocaleDateString('pt-br', hourFormat)} @ `;
+            if (lastDataFetch.worldDataFetch) {
+                const lastFetchInfo = new Manatsu('span', { id: 'insidious_lastFetchInfo' }).create();
+                lastFetchInfo.textContent = `Insidious: ${new Date(lastDataFetch.worldDataFetch).toLocaleDateString('pt-br', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                })} @ `;
 
                 const serverInfo = document.querySelector('p.server_info');
                 if (!serverInfo) throw new ElementError({ class: 'p.server_info' });
@@ -73,7 +75,7 @@ class Insidious {
             if (plunderStatus.isPlunderActive === true) return;
             
             // Salva as configurações do mundo, caso ainda não estejam.
-            if (!lastFetch[0].worldConfigFetch) {
+            if (!lastConfigFetch.worldConfigFetch) {
                 await this.#storage.set({ worldConfigFetch: now });
 
                 const configSource = [
@@ -88,12 +90,16 @@ class Insidious {
 
                         // Para detalhes sobre os códigos de status HTTP:
                         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-                        worldConfigRequest.addEventListener("error", (e) => reject(worldConfigRequest.status));
-                        worldConfigRequest.addEventListener("timeout", (e) => reject(worldConfigRequest.status));
-                        worldConfigRequest.addEventListener("load", (e) => {
-                            this.#parseXML(worldConfigRequest.responseXML.documentElement, { name: source.name })
-                                .then((result) => resolve({ name: source.name, result: result }))
-                                .catch((err) => reject(err));
+                        worldConfigRequest.addEventListener("error", () => reject(worldConfigRequest.status));
+                        worldConfigRequest.addEventListener("timeout", () => reject(worldConfigRequest.status));
+                        worldConfigRequest.addEventListener("load", () => {
+                            if (worldConfigRequest.responseXML) {
+                                this.#parseXML(worldConfigRequest.responseXML.documentElement, { name: source.name })
+                                    .then((result) => resolve({ name: source.name, result: result }))
+                                    .catch((err) => reject(err));
+                            } else {
+                                reject(new InsidiousError('\"XMLHttpRequest.responseXML\" não está presente.'));
+                            };
                         });
 
                         worldConfigRequest.open('GET', source.url, true);
@@ -101,8 +107,8 @@ class Insidious {
                     });
                 }));
 
-                Promise.all(worldConfigData.map((config) => {
-                    return new Promise((resolve, reject) => {
+                Promise.all(worldConfigData.map((config: { name: string, result: any }) => {
+                    return new Promise<void>((resolve, reject) => {
                         this.#storage.set({ [config.name]: config.result })
                             .then(() => resolve())
                             .catch((err) => reject(err));
@@ -115,7 +121,7 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastFetch[1].worldDataFetch || now - lastFetch[1].worldDataFetch > (3600000 * 1.2)) {
+            if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 1.2)) {
                 await this.#storage.set({ worldDataFetch: now });
 
                 Utils.modal('Aguarde');
@@ -138,7 +144,7 @@ class Insidious {
                 const fetchEventTarget = new EventTarget();
                 // Cria uma porta para comunicação com o background durante o processamento das promises.
                 const fetchPort = browser.runtime.connect({ name: 'insidious-set' });
-                fetchPort.onMessage.addListener((message) => {
+                fetchPort.onMessage.addListener((message: { err: string, id: string }) => {
                     if (message.err) {
                         errorLog.push(message.err);
                         fetchEventTarget.dispatchEvent(new Event('err' + message.id));
@@ -148,7 +154,7 @@ class Insidious {
                 });
 
                 Promise.allSettled(villages.map((village) => {
-                    return new Promise((resolve, reject) => {
+                    return new Promise<void>((resolve, reject) => {
                         const thisID = village.slice(0, village.indexOf(','));
                         const otherData = (village.replace(thisID + ',', '')).split(',');
                         
@@ -167,10 +173,10 @@ class Insidious {
                             promiseCtrl.abort();
                             if (!document.querySelector('#insidious_progressInfo')) {
                                 new Manatsu({ id: 'insidious_progressInfo' }, document.querySelector('#insidious_modal')).create();
-                                document.querySelector('#insidious_modal').setAttribute('style', 'cursor: wait;');
+                                document.querySelector('#insidious_modal')?.setAttribute('style', 'cursor: wait;');
                             };
                         
-                            document.querySelector('#insidious_progressInfo').innerText = `${villageName} (${otherData[1]}|${otherData[2]})`;
+                            document.querySelector('#insidious_progressInfo')!.textContent = `${villageName} (${otherData[1]}|${otherData[2]})`;
                             resolve();
                         }, { signal: promiseCtrl.signal });
 
@@ -185,13 +191,16 @@ class Insidious {
                 })).then((results) => {
                     fetchPort.disconnect();
 
-                    document.querySelector('#insidious_modal').removeAttribute('style');
-                    document.querySelector('#insidious_modal_h1').innerText = 'Concluído';
+                    document.querySelector('#insidious_modal')?.removeAttribute('style');
+                    const modalh1 = document.querySelector('#insidious_modal_h1');
+                    if (modalh1) modalh1.textContent = 'Concluído';
 
                     // Remove o estilo do cursor.
                     const villageProgressInfo = document.querySelector('#insidious_progressInfo');
-                    villageProgressInfo.innerText = `${results.length} aldeias processadas.`;
-                    villageProgressInfo.removeAttribute('style');
+                    if (villageProgressInfo) {
+                        villageProgressInfo.textContent = `${results.length} aldeias processadas.`;
+                        villageProgressInfo.removeAttribute('style');
+                    };
 
                     // Cria uma área para os botões.
                     const logButtonArea = new Manatsu(document.querySelector('#insidious_modal')).create();
@@ -210,7 +219,7 @@ class Insidious {
 
                     new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Fechar' }, logButtonArea).create()
                         .addEventListener('click', () => {
-                            document.querySelector('#insidious_blurBG').dispatchEvent(new Event('closemodal'));
+                            document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
                         });
                 });
             };
@@ -220,10 +229,13 @@ class Insidious {
         };
     };
 
-    static #parseXML(configXML, options: { name: string }) {
+    static #parseXML(configXML: HTMLElement, options: { name: string }) {
         return new Promise((resolve, reject) => {
             const getValue = (value: string): number => {
-                return parseFloat(configXML.querySelector(value).textContent);
+                const valueField = configXML.querySelector(value);
+                if (!valueField) throw new InsidiousError(`O campo \"${value}\" não foi encontrado no documento XML.`);
+                if (valueField.textContent === null) throw new InsidiousError(`O campo \"${value}\" foi encontrado no documento XML, mas está vazio.`);
+                return parseFloat(valueField.textContent);
             };
 
             if (options.name === 'config') {

@@ -62,12 +62,12 @@ class TWFarm {
                 const result = await Insidious.storage.get('isPlunderActive');
                 if (result.isPlunderActive === true) {
                     await Insidious.storage.set({ isPlunderActive: false });
-                    startPlunderBtn.innerText = 'Saquear';
+                    startPlunderBtn.textContent = 'Saquear';
 
                 } else if (result.isPlunderActive === false) {
                     await Insidious.storage.set({ isPlunderActive: true });
                     await Insidious.storage.remove('totalPlundered');
-                    startPlunderBtn.innerText = 'Parar';
+                    startPlunderBtn.textContent = 'Parar';
                     this.#plunder();
                 };
 
@@ -87,15 +87,15 @@ class TWFarm {
             .then((result) => {
                 buttonArea.appendChild(startPlunderBtn);
                 if (result.isPlunderActive === true) {
-                    startPlunderBtn.innerText = 'Parar';
+                    startPlunderBtn.textContent = 'Parar';
                     this.#plunder();
 
                 } else if (result.isPlunderActive === false) {
-                    startPlunderBtn.innerText = 'Saquear';
+                    startPlunderBtn.textContent = 'Saquear';
                     Insidious.storage.remove('totalPlundered');
 
                 } else if (result.isPlunderActive === undefined) {
-                    startPlunderBtn.innerText = 'Saquear';
+                    startPlunderBtn.textContent = 'Saquear';
                     Insidious.storage.set({ isPlunderActive: false });
                 };
 
@@ -148,7 +148,7 @@ class TWFarm {
                 ratio = ratio.resourceRatio;
             };
 
-            const sendAttack = async () => {
+            const sendAttack = async (): Promise<void> => {
                 for (const village of document.querySelectorAll('tr[data-insidious-tr-farm="true"]')) {
                     if (village.getAttribute('style')?.includes('display: none')) continue;
 
@@ -163,8 +163,8 @@ class TWFarm {
                     if (bestRatio.value > ratio) {
                         const getUnitElem = (unit: string) => {
                             const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
-                            if (!unitElem) throw new ElementError({ id: `#farm_units #units_home tbody tr td#${unit}` });
-                            return parseInt(unitElem.innerText, 10);
+                            if (!unitElem || unitElem.textContent === null) throw new ElementError({ id: `#farm_units #units_home tbody tr td#${unit}` });
+                            return parseInt(unitElem.textContent, 10);
                         };
 
                         // Lista das tropas disponíveis.
@@ -185,21 +185,21 @@ class TWFarm {
                             // É possível usar a mesma chave em ambas, pois a estrutura é exatamente igual.
                             for (const key in availableTroops) {
                                 // Se houver menos tropas do que consta no modelo, a função deve ser interrompida.
-                                if (availableTroops[key] < bestModel[key]) return false;
+                                if (availableTroops[key as keyof typeof availableTroops] < bestModel[key]) return false;
                             };
                             return true;
                         };
 
                         // Se as tropas estiverem disponíveis, envia o ataque após um delay aleatório.
                         if (checkAvailability()) {
-                            return new Promise((resolve, reject) => {
+                            return new Promise<void>((resolve, reject) => {
                                 const attackCtrl = new AbortController();
 
                                 const timerID = setTimeout(async () => {
                                     attackCtrl.abort();
                                     // O plunder cumpre sua tarefa bem mais rápido que o servidor consegue responder.
                                     // No entanto, como ele depende do número de tropas ditado pelo jogo, é necessário esperar o valor ser atualizado.
-                                    await new Promise((resolve, reject) => {
+                                    await new Promise<void>((resolve, reject) => {
                                         const observerTimeout = setTimeout(handleTimeout, 5000);
                                         const observeTroops = new MutationObserver(() => {
                                             clearTimeout(observerTimeout);
@@ -259,7 +259,7 @@ class TWFarm {
                                     reject(new FarmAbort());
                                 }, { signal: attackCtrl.signal });
 
-                                document.querySelector('#insidious_startPlunderBtn').addEventListener('click', () => {
+                                document.querySelector('#insidious_startPlunderBtn')?.addEventListener('click', () => {
                                     clearTimeout(timerID);
                                     attackCtrl.abort();
                                     reject(new FarmAbort());
@@ -326,7 +326,7 @@ class TWFarm {
 
         const woodAmount = Utils.createResourceSpanLabel('wood');
         woodAmount.setAttribute('id', 'insidious_plundered_wood');
-        woodAmount.innerText = plundered.totalPlundered?.wood ?? 0;
+        woodAmount.textContent = plundered.totalPlundered?.wood ?? 0;
         spanContainer.appendChild(woodAmount);
 
         // ARGILA
@@ -335,7 +335,7 @@ class TWFarm {
 
         const stoneAmount = Utils.createResourceSpanLabel('stone');
         stoneAmount.setAttribute('id', 'insidious_plundered_stone');
-        stoneAmount.innerText = plundered.totalPlundered?.stone ?? 0;
+        stoneAmount.textContent = plundered.totalPlundered?.stone ?? 0;
         spanContainer.appendChild(stoneAmount);
 
         // FERRO
@@ -344,14 +344,18 @@ class TWFarm {
 
         const ironAmount = Utils.createResourceSpanLabel('iron');
         ironAmount.setAttribute('id', 'insidious_plundered_iron');
-        ironAmount.innerText = plundered.totalPlundered?.iron ?? 0;
+        ironAmount.textContent = plundered.totalPlundered?.iron ?? 0;
         spanContainer.appendChild(ironAmount);
     };
 
     static async #updatePlunderedAmount(...args: number[]) {
         const [wood, stone, iron] = args;
+        const woodLabel = document.querySelector('#insidious_plundered_wood');
+        const stoneLabel = document.querySelector('#insidious_plundered_stone');
+        const ironLabel = document.querySelector('#insidious_plundered_iron');
+
         try {
-            const plundered = await Insidious.storage.get('totalPlundered');
+            const plundered: Plundered = await Insidious.storage.get('totalPlundered');
             if (plundered.totalPlundered) {
                 const updatedValues = {
                     wood: plundered.totalPlundered.wood + wood,
@@ -361,9 +365,9 @@ class TWFarm {
 
                 await Insidious.storage.set({ totalPlundered: updatedValues });
 
-                document.querySelector('#insidious_plundered_wood').innerText = updatedValues.wood;
-                document.querySelector('#insidious_plundered_stone').innerText = updatedValues.stone;
-                document.querySelector('#insidious_plundered_iron').innerText = updatedValues.iron;
+                if (woodLabel) woodLabel.textContent = String(updatedValues.wood);
+                if (stoneLabel) stoneLabel.textContent = String(updatedValues.stone);
+                if (ironLabel) ironLabel.textContent = String(updatedValues.iron);
 
             } else {
                 await Insidious.storage.set({ totalPlundered: {
@@ -372,9 +376,9 @@ class TWFarm {
                     iron: iron
                 }});
 
-                document.querySelector('#insidious_plundered_wood').innerText = wood;
-                document.querySelector('#insidious_plundered_stone').innerText = stone;
-                document.querySelector('#insidious_plundered_iron').innerText = iron;
+                if (woodLabel) woodLabel.textContent = String(wood);
+                if (stoneLabel) stoneLabel.textContent = String(stone);
+                if (ironLabel) ironLabel.textContent = String(iron);
             };
 
         } catch (err) {
@@ -428,7 +432,7 @@ class TWFarm {
 
                     const lastBattleDate = reportLinkBtn.nextElementSibling;
                     lastBattleDate.setAttribute('data-insidious-td-type', 'date');
-                    child.setAttribute('data-insidious-date', Utils.decipherDate(lastBattleDate.innerText));
+                    child.setAttribute('data-insidious-date', Utils.decipherDate(lastBattleDate.textContent));
 
                     // Quantidade de recursos.
                     const expectedResources = lastBattleDate.nextElementSibling;
@@ -441,12 +445,12 @@ class TWFarm {
                         return result;
                     };
 
-                    function getAmount(span) {
+                    function getAmount(span: HTMLElement) {
                         const querySpan = (className: string) => {
-                            const resSpan = span.querySelector(`.${className}`);                        
+                            const resSpan = span.querySelector(`.${className}`);
                             if (!resSpan) return false;
 
-                            let resValue = resSpan.innerText.includes('.') ? resSpan.innerText.replaceAll('.', '') : resSpan.innerText;
+                            let resValue = resSpan.textContent.includes('.') ? resSpan.textContent.replaceAll('.', '') : resSpan.textContent;
                             resValue = resValue.replace(/\s+/g, '');
 
                             const resType = resSpan.previousElementSibling.dataset.title;
@@ -474,12 +478,12 @@ class TWFarm {
                     // Muralha.
                     const wallLevel = expectedResources.nextElementSibling;
                     wallLevel.setAttribute('data-insidious-td-type', 'wall');
-                    child.setAttribute('data-insidious-wall', String(wallLevel.innerText));
+                    child.setAttribute('data-insidious-wall', String(wallLevel.textContent));
 
                     // Distância.
                     const villageDistance = wallLevel.nextElementSibling;
                     villageDistance.setAttribute('data-insidious-td-type', 'distance');
-                    child.setAttribute('data-insidious-distance', String(villageDistance.innerText));
+                    child.setAttribute('data-insidious-distance', String(villageDistance.textContent));
 
                     // A
                     const aFarmBtnTD = villageDistance.nextElementSibling;

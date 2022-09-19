@@ -1,9 +1,11 @@
+type Possibilities = (string | { [index: string]: string } | Element | null)[];
+
 class Manatsu {
     #element: string = 'div';
-    #options;
-    #parent:  HTMLElement;
+    #options: { [index: string]: string };
+    #parent: Element | undefined;
 
-    constructor(...args: any) {
+    constructor(...args: Possibilities) {
         for (const arg of args) this.#setProperty(arg);
     };
 
@@ -16,7 +18,7 @@ class Manatsu {
                 if (typeof value !== 'string') throw new SyntaxError('option must be a string.');
     
                 switch (key) {
-                    case 'text': newElement.innerText = value;
+                    case 'text': newElement.textContent = value;
                         break;
                     case 'html': newElement.innerHTML = value;
                         break;
@@ -40,8 +42,11 @@ class Manatsu {
         } else if (isValidObject()) {
             this.#options = value;
 
-        } else if (value instanceof HTMLElement) {
+        } else if (value instanceof Element) {
             this.#parent = value;
+
+        } else if (value === null || value === undefined) {
+            throw new ManatsuError('value must not be null nor undefined.');
         };
 
         function isValidObject() {
@@ -61,4 +66,13 @@ class Manatsu {
 
     // STATIC GETTERS
     static get removeChildren() {return this.#removeChildren};
+};
+
+class ManatsuError extends Error {
+    constructor(message: string) {
+        super();
+
+        this.name = 'ManatsuError';
+        this.message = message;
+    };
 };
