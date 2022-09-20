@@ -415,6 +415,7 @@ class TWFarm {
         if (!spearElem) throw new ElementError({ id: `#farm_units #units_home tbody tr td#spear` });
 
         // Tabela com as tropas disponíveis.
+        //if (!spearElem.parentElement) throw new ElementError({ id: `#farm_units #units_home tbody tr td#spear` });
         spearElem.parentElement.setAttribute('data-insidious-available-unit-table', 'true');
 
         TWAssets.list.farm_units.forEach((unit) => {
@@ -431,7 +432,7 @@ class TWFarm {
             // Desconecta qualquer observer que esteja ativo.
             infoEventTarget.dispatchEvent(new Event('stopinfoobserver'));
 
-            for (const child of plunderList.children) {
+            for (const child of (plunderList.children as unknown) as HTMLElement[]) {
                 if (child.id?.startsWith('village_') && !child.hasAttribute('data-insidious-village')) {
                     const villageID = child.id.replace('village_', '');
                     child.setAttribute('data-insidious-village', villageID);

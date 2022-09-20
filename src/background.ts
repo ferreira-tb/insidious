@@ -7,21 +7,21 @@ browser.runtime.onMessage.addListener((message: BackgroundListener) => {
                     if (!message.value) reject();
                     browser.storage.local.set(message.value)
                         .then(() => resolve())
-                        .catch((err: any) => reject(err));
+                        .catch((err: unknown) => reject(err));
                     break;
 
                 case 'get':
                     if (!message.key) reject();
                     browser.storage.local.get(message.key)
                         .then((result: any) => resolve(result))
-                        .catch((err: any) => reject(err));
+                        .catch((err: unknown) => reject(err));
                     break;
 
                 case 'remove':
                     if (!message.key) reject();
                     browser.storage.local.remove(message.key)
                         .then(() => resolve())
-                        .catch((err: any) => reject(err));
+                        .catch((err: unknown) => reject(err));
                     break;
             };
 
@@ -38,7 +38,7 @@ browser.runtime.onConnect.addListener((port: any) => {
         insidiousPort.onMessage.addListener((message: PortMessage) => {
             browser.storage.local.set(message.value)
                 .then(() => insidiousPort.postMessage({ id: message.id }))
-                .catch((err: any) => insidiousPort.postMessage({ id: message.id, err: err }));
+                .catch((err: unknown) => insidiousPort.postMessage({ id: message.id, err: err }));
         });
     };
 });

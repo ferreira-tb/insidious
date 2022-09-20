@@ -3,14 +3,12 @@ class Utils {
         for (const item of this.#urlFields()) {
             if (item.includes('screen=')) return item.replace('screen=', '');
         };
-        return;
     };
 
     static #currentVillage(): string | undefined {
         for (const item of this.#urlFields()) {
             if (item.includes('village=')) return item.replace('village=', '');
         };
-        return;
     };
 
     static #currentPlayer() {
