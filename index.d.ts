@@ -1,4 +1,20 @@
-declare const browser: any;
+declare namespace browser {
+    const storage: any;
+    const action: any;
+}
+
+type SSObject = { [coord: string]: string }
+type SNObject = { [coord: string]: number }
+
+// insidious.ts
+interface VillageInfo {
+    name: string,
+    x: number,
+    y: number,
+    player: number,
+    points: number,
+    rank: number
+}
 
 // background.ts
 interface BackgroundListener {

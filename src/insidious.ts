@@ -7,10 +7,10 @@ class Insidious {
                 await this.#fetch();
 
                 // Armazena as configurações do mundo para que as outras classes tenham acesso.
-                this.#worldInfo = await Insidious.storage.get('config');
-                this.#unitInfo = await Insidious.storage.get('unit');
+                this.#worldInfo = await browser.storage.local.get('config');
+                this.#unitInfo = await browser.storage.local.get('unit');
                 if (!this.#worldInfo.config || !this.#unitInfo.unit) {
-                    await this.#storage.remove('worldConfigFetch');
+                    await browser.storage.local.remove('worldConfigFetch');
                 };
                 
                 // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
@@ -27,8 +27,6 @@ class Insidious {
                 };
             };
 
-            Object.freeze(this.#storage);
-
         } catch (err) {
             if (err instanceof Error) console.error(err);      
         };
@@ -38,8 +36,8 @@ class Insidious {
         try {
             // Verifica qual foi a hora do último fetch.
             const now: number = new Date().getTime();
-            const lastConfigFetch: { worldConfigFetch: number } = await this.#storage.get('worldConfigFetch');
-            const lastDataFetch: { worldDataFetch: number } = await this.#storage.get('worldDataFetch');
+            const lastConfigFetch: { worldConfigFetch: number } = await browser.storage.local.get('worldConfigFetch');
+            const lastDataFetch: { worldDataFetch: number } = await browser.storage.local.get('worldDataFetch');
 
             // Informa a data do último fetch na barra inferior, onde se encontra a hora do servidor.
             if (lastDataFetch.worldDataFetch) {
@@ -54,12 +52,12 @@ class Insidious {
             };
 
             // Caso o plunder esteja ativo, impede que a função continue.
-            const plunderStatus: { isPlunderActive: boolean } = await this.#storage.get('isPlunderActive');
+            const plunderStatus: { isPlunderActive: boolean } = await browser.storage.local.get('isPlunderActive');
             if (plunderStatus.isPlunderActive === true) return;
             
             // Salva as configurações do mundo, caso ainda não estejam.
             if (!lastConfigFetch.worldConfigFetch) {
-                await this.#storage.set({ worldConfigFetch: now });
+                await browser.storage.local.set({ worldConfigFetch: now });
 
                 const configSource = [
                     { name: 'config', url: TWAssets.world.get_config },
@@ -79,7 +77,7 @@ class Insidious {
                             if (worldConfigRequest.responseXML) {
                                 this.#parseXML(worldConfigRequest.responseXML.documentElement, { name: source.name })
                                     .then((result) => resolve({ name: source.name, result: result }))
-                                    .catch((err) => reject(err));
+                                    .catch((err: unknown) => reject(err));
                             } else {
                                 reject(new InsidiousError('\"XMLHttpRequest.responseXML\" não está presente.'));
                             };
@@ -91,117 +89,76 @@ class Insidious {
                 }));
 
                 Promise.all(worldConfigData.map((config: { name: string, result: any }) => {
-                    return new Promise<void>((resolve, reject) => {
-                        this.#storage.set({ [config.name]: config.result })
-                            .then(() => resolve())
-                            .catch((err) => reject(err));
-                    });
-
+                        browser.storage.local.set({ [config.name]: config.result })
                 })).catch((err) => {
                     if (err instanceof Error) {
                         console.error(err);
-                        this.#storage.remove('worldConfigFetch');
+                        browser.storage.local.remove('worldConfigFetch');
                     };
                 });
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
             if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 5)) {
-                await this.#storage.set({ worldDataFetch: now });
+                await browser.storage.local.set({ worldDataFetch: now });
 
                 Utils.modal('Aguarde');
-                new Manatsu({
+                const modalWindow = document.querySelector('#insidious_modal');
+                if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal (#insidious_modal).');
+                modalWindow.setAttribute('style', 'cursor: wait;');
+
+                let progressInfo = new Manatsu({
                     id: 'insidious_progressInfo',
                     style: 'cursor: wait;',
                     text: 'Obtendo dados do servidor.'
-                }, document.querySelector('#insidious_modal')).create();
+                }, modalWindow).create();
 
                 const villages: string[] = await new Promise((resolve, reject) => {
                     fetch(TWAssets.world.village)
                         .then((raw) => raw.text())
                         .then((text) => resolve(text.split(/\r?\n/)))
-                        .catch((err) => reject(err));
+                        .catch((err: unknown) => reject(err));
                 });
 
-                // Registro de erros.
-                const errorLog: string[] = [];
-                // É usado para filtrar mensagens recebidas do background.
-                const fetchEventTarget = new EventTarget();
-                // Cria uma porta para comunicação com o background durante o processamento das promises.
-                const fetchPort = browser.runtime.connect({ name: 'insidious-set' });
-                fetchPort.onMessage.addListener((message: { err: string, id: string }) => {
-                    if (message.err) {
-                        errorLog.push(message.err);
-                        fetchEventTarget.dispatchEvent(new Event('err' + message.id));
-                    } else {
-                        fetchEventTarget.dispatchEvent(new Event(message.id));
-                    };
-                });
-
+                // Armazena individualmente as aldeias no banco de dados.
                 Promise.allSettled(villages.map((village) => {
-                    return new Promise<void>((resolve, reject) => {
+                    return new Promise<void>(async (resolve, reject) => {
                         const thisID = village.slice(0, village.indexOf(','));
                         const otherData = (village.replace(thisID + ',', '')).split(',');
                         
-                        const villageName = Utils.urlDecode(otherData[0]);
-                        const villageInfo = {
+                        const villageName: string = Utils.urlDecode(otherData[0]);
+                        const villageInfo: VillageInfo = {
                             name: villageName,
-                            x: parseInt(otherData[1], 10),
-                            y: parseInt(otherData[2], 10),
-                            player: parseInt(otherData[3], 10),
-                            points: parseInt(otherData[4], 10),
-                            rank: parseInt(otherData[5], 10)
+                            x: Number.parseInt(otherData[1], 10),
+                            y: Number.parseInt(otherData[2], 10),
+                            player: Number.parseInt(otherData[3], 10),
+                            points: Number.parseInt(otherData[4], 10),
+                            rank: Number.parseInt(otherData[5], 10)
                         };
-
-                        const promiseCtrl = new AbortController();
-                        fetchEventTarget.addEventListener(thisID, () => {
-                            promiseCtrl.abort();
-                            if (!document.querySelector('#insidious_progressInfo')) {
-                                new Manatsu({ id: 'insidious_progressInfo' }, document.querySelector('#insidious_modal')).create();
-                                document.querySelector('#insidious_modal')?.setAttribute('style', 'cursor: wait;');
-                            };
-                        
-                            document.querySelector('#insidious_progressInfo')!.textContent = `${villageName} (${otherData[1]}|${otherData[2]})`;
+                    
+                        try {
+                            await browser.storage.local.set({ ['village' + thisID]: villageInfo })
+                            progressInfo.textContent = `${villageName} (${otherData[1]}|${otherData[2]})`;
                             resolve();
-                        }, { signal: promiseCtrl.signal });
 
-                        fetchEventTarget.addEventListener('err' + thisID, () => {
-                            promiseCtrl.abort();
-                            reject();
-                        }, { signal: promiseCtrl.signal });
-
-                        fetchPort.postMessage({ id: thisID, value: { ['village' + thisID]: villageInfo } });
+                        } catch (err) {
+                            reject(err);
+                        };              
                     });
 
                 })).then((results) => {
-                    fetchPort.disconnect();
-
-                    document.querySelector('#insidious_modal')?.removeAttribute('style');
+                    modalWindow?.removeAttribute('style');
                     const modalh1 = document.querySelector('#insidious_modal_h1');
                     if (modalh1) modalh1.textContent = 'Concluído';
 
                     // Remove o estilo do cursor.
                     const villageProgressInfo = document.querySelector('#insidious_progressInfo');
                     if (villageProgressInfo) {
-                        villageProgressInfo.textContent = `${results.length} aldeias processadas.`;
                         villageProgressInfo.removeAttribute('style');
+                        villageProgressInfo.textContent = `${results.length} aldeias processadas.`;
                     };
 
-                    // Cria uma área para os botões.
                     const logButtonArea = new Manatsu(document.querySelector('#insidious_modal')).create();
-
-                    // Casos alguma promise tenha sido rejeitada, informa a quantidade.
-                    // Além disso, oferece uma opção para verificar os erros no console.                  
-                    if (errorLog.length > 0) {
-                        new Manatsu({ text: `${errorLog.length} erros.` }, logButtonArea).create();
-
-                        // Cria um botão que permite listar os erros no console do navegador.
-                        new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Relatório' }, logButtonArea).create()
-                            .addEventListener('click', () => {
-                                for (const err of errorLog) console.log(err);
-                            });
-                    };
-
                     new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Fechar' }, logButtonArea).create()
                         .addEventListener('click', () => {
                             document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
@@ -220,7 +177,7 @@ class Insidious {
                 const valueField = configXML.querySelector(value);
                 if (!valueField) throw new InsidiousError(`O campo \"${value}\" não foi encontrado no documento XML.`);
                 if (valueField.textContent === null) throw new InsidiousError(`O campo \"${value}\" foi encontrado no documento XML, mas está vazio.`);
-                return parseFloat(valueField.textContent);
+                return Number.parseFloat(valueField.textContent);
             };
 
             if (options.name === 'config') {
@@ -264,35 +221,8 @@ class Insidious {
     static #worldInfo: any;
     static #unitInfo: any;
 
-    static #storage = {
-        set: (value: { [key: string]: any }) => {
-            return new Promise<void>((resolve, reject) => {
-                browser.runtime.sendMessage({ name: 'storage-set', value: value })
-                    .then(() => resolve())
-                    .catch((err: any) => reject(err));
-            });
-        },
-
-        get: (key: string | string[]) => {
-            return new Promise<any>((resolve, reject) => {
-                browser.runtime.sendMessage({ name: 'storage-get', key: key })
-                    .then((result: { [key: string]: any }) => resolve(result))
-                    .catch((err: any) => reject(err));           
-            });
-        },
-
-        remove: (key: string | string[]) => {
-            return new Promise<void>((resolve, reject) => {
-                browser.runtime.sendMessage({ name: 'storage-remove', key: key })
-                    .then(() => resolve())
-                    .catch((err: any) => reject(err));
-            });
-        }
-    };
-
     static get worldInfo() {return this.#worldInfo};
     static get unitInfo() {return this.#unitInfo};
-    static get storage() {return this.#storage};
     static get start() {return this.#start};
 };
 

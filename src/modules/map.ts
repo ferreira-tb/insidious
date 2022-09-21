@@ -58,12 +58,12 @@ class TWMap {
                 // Desconecta qualquer observer que esteja ativo no mapa.
                 mapEventTarget.dispatchEvent(new Event('stopmapobserver'));
 
-                const tagStatus = await Insidious.storage.get('customTagStatus');
+                const tagStatus = await browser.storage.local.get('customTagStatus');
                 if (tagStatus?.customTagStatus === 'disabled') return;
 
                 // Salva no registro a última tag utilizada, para que seja ativada automaticamente na próxima vez.
-                Insidious.storage.set({ lastCustomTag: tagType })
-                    .catch((err) => {
+                browser.storage.local.set({ lastCustomTag: tagType })
+                    .catch((err: unknown) => {
                         if (err instanceof Error) console.error(err);
                     });
 
@@ -97,15 +97,15 @@ class TWMap {
                         const currentVillageID: string | null = Utils.currentVillage();
                         if (currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
 
-                        Insidious.storage.get([village, 'village' + currentVillageID])
-                            .then((result) => {
+                        browser.storage.local.get([village, 'village' + currentVillageID])
+                            .then((result: any) => {
                                 if (id !== currentVillageID) {
-                                    const { x: currentX, y: currentY } = result['village' + currentVillageID] ?? { };
+                                    const { x: currentX, y: currentY }: SNObject = result['village' + currentVillageID] ?? { };
                                     if (currentX === undefined || currentY === undefined) {
                                         throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual ${currentVillageID}.`);
                                     };
 
-                                    const { x: targetX, y: targetY } = result[village] ?? { };
+                                    const { x: targetX, y: targetY }: SNObject = result[village] ?? { };
                                     if (targetX === undefined || targetY === undefined) {
                                         throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia alvo ${id}.`);
                                     };
@@ -172,7 +172,7 @@ class TWMap {
                                     } else if (tagType.startsWith('time_')) {
                                         const unitName = tagType.replace('time_', '');
                                         if (!Insidious.unitInfo.unit || !Insidious.worldInfo.config) {
-                                            Insidious.storage.remove('worldConfigFetch');
+                                            browser.storage.local.remove('worldConfigFetch');
                                             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                                         };
 
@@ -203,7 +203,7 @@ class TWMap {
 
                                 resolve();
 
-                            }).catch((err) => reject(err));
+                            }).catch((err: unknown) => reject(err));
                     });
 
                 })).then(() => {
@@ -233,13 +233,13 @@ class TWMap {
 
             toggleTags.addEventListener('change', async () => {
                 if ((toggleTags as HTMLInputElement).checked) {
-                    await Insidious.storage.set({ customTagStatus: 'enabled' });
+                    await browser.storage.local.set({ customTagStatus: 'enabled' });
 
-                    const lastTag: { lastCustomTag: string } = await Insidious.storage.get('lastCustomTag');
+                    const lastTag: { lastCustomTag: string } = await browser.storage.local.get('lastCustomTag');
                     if (lastTag?.lastCustomTag) addCustomTags(lastTag.lastCustomTag);
                     
                 } else {
-                    await Insidious.storage.set({ customTagStatus: 'disabled' });
+                    await browser.storage.local.set({ customTagStatus: 'disabled' });
 
                     const oldCustomTags = document.querySelectorAll('.insidious_map_villageCustomTag');
                     oldCustomTags.forEach((customTag) => customTag.parentNode?.removeChild(customTag));
@@ -249,7 +249,7 @@ class TWMap {
             showTimeBtn.addEventListener('click', async () => {
                 try {
                     if (!Insidious.worldInfo.config.game) {
-                        await Insidious.storage.remove('worldConfigFetch');
+                        await browser.storage.local.remove('worldConfigFetch');
                         throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                     };
 
@@ -301,7 +301,7 @@ class TWMap {
                     if (coordClass === 'insidious_mapActionArea_coords') {
                         try {
                             const villageID = (e.target as Element).id.replace('insidious_mapActionArea_village', '');
-                            const villageElement = document.querySelector('#map_village_' + villageID);
+                            const villageElement = document.querySelector(`#map_village_${villageID}`);
                             if (!villageElement) return;
 
                             if (!villageElement.hasAttribute('class')) {
@@ -347,7 +347,7 @@ class TWMap {
                     return new Promise<void>(async (resolve, reject) => {
                         try {
                             const village = 'village' + id;
-                            const result = await Insidious.storage.get(village);
+                            const result = await browser.storage.local.get(village);
                             if (!result[village]) reject(new InsidiousError(`Aldeia não encontrada no registro: ${village}`));
 
                             if (result[village].player === 0) {
@@ -389,9 +389,9 @@ class TWMap {
 
             // CONFIGURAÇÕES
             // Ativa a última tag utilizada.
-            Insidious.storage.get('lastCustomTag')
+            browser.storage.local.get('lastCustomTag')
                 .then(async (result: { lastCustomTag: string }) => {
-                    const tagStatus: { customTagStatus: string } = await Insidious.storage.get('customTagStatus');
+                    const tagStatus: { customTagStatus: string } = await browser.storage.local.get('customTagStatus');
                     if (tagStatus?.customTagStatus === 'disabled') return;
 
                     const tagsCheckbox = document.querySelector('#insidious_customTags_checkbox');
@@ -408,7 +408,7 @@ class TWMap {
                         };
                     };
 
-                }).catch((err) => {
+                }).catch((err: unknown) => {
                     if (err instanceof Error) console.error(err);
                 });
 
@@ -435,14 +435,11 @@ class TWMap {
 
     static #getVillagesID() {
         const villages: string[] = [];
-        const mapImages = document.querySelectorAll('#map_container div img');
+        const mapImages = document.querySelectorAll('#map_container div img[id^="map_village_"]:not([id*="undefined"])');
         mapImages.forEach((img) => {
             const imgID = img.getAttribute('id');
-            if (!imgID) return;
-
-            if (imgID.startsWith('map_village_') && imgID !== 'map_village_undefined') {
-                villages.push(imgID.replace('map_village_', ''));
-            };
+            if (imgID === null || imgID === '') return;
+            villages.push(imgID.replace('map_village_', ''));
         });
 
         return villages;

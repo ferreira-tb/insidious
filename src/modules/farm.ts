@@ -62,8 +62,8 @@ class TWFarm {
         };
 
         // Salva os modelos no banco de dados.
-        Insidious.storage.set({ amodel: parentRow.a, bmodel: parentRow.b })
-            .catch((err) => {
+        browser.storage.local.set({ amodel: parentRow.a, bmodel: parentRow.b })
+            .catch((err: unknown) => {
                 if (err instanceof Error) console.error(err);
             });
 
@@ -74,16 +74,16 @@ class TWFarm {
 
             try {
                 // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
-                const result: { isPlunderActive: boolean } = await Insidious.storage.get('isPlunderActive');
+                const result: { isPlunderActive: boolean } = await browser.storage.local.get('isPlunderActive');
                 // Se estiver ativo no momento do clique, desativa o plunder e troca o texto do botão.
                 if (result.isPlunderActive === true) {
-                    await Insidious.storage.set({ isPlunderActive: false });
+                    await browser.storage.local.set({ isPlunderActive: false });
                     startPlunderBtn.textContent = 'Saquear';
 
                 // Em caso contrário, ativa o plunder.
                 } else if (result.isPlunderActive === false) {
-                    await Insidious.storage.set({ isPlunderActive: true });
-                    await Insidious.storage.remove('totalPlundered');
+                    await browser.storage.local.set({ isPlunderActive: true });
+                    await browser.storage.local.remove('totalPlundered');
                     startPlunderBtn.textContent = 'Parar';
                     this.#plunder();
                 };
@@ -100,8 +100,8 @@ class TWFarm {
 
         // Configura o botão de saque de acordo com o status do plunder.
         // Além disso, se o plunder já estiver marcado como ativo, chama #plunder() automaticamente.
-        Insidious.storage.get('isPlunderActive')
-            .then((result) => {
+        browser.storage.local.get('isPlunderActive')
+            .then((result: any) => {
                 buttonArea.appendChild(startPlunderBtn);
                 if (result.isPlunderActive === true) {
                     startPlunderBtn.textContent = 'Parar';
@@ -110,17 +110,17 @@ class TWFarm {
                 // Caso não esteja ativo, apaga o histórico de recursos saqueados.
                 } else if (result.isPlunderActive === false) {
                     startPlunderBtn.textContent = 'Saquear';
-                    Insidious.storage.remove('totalPlundered');
+                    browser.storage.local.remove('totalPlundered');
 
                 } else if (result.isPlunderActive === undefined) {
                     startPlunderBtn.textContent = 'Saquear';
-                    Insidious.storage.set({ isPlunderActive: false });
+                    browser.storage.local.set({ isPlunderActive: false });
                 };
 
-            }).catch((err) => {
+            }).catch((err: unknown) => {
                 if (err instanceof Error) {
                     // Caso haja algum erro, desativa o plunder, por segurança.
-                    Insidious.storage.set({ isPlunderActive: false });
+                    browser.storage.local.set({ isPlunderActive: false });
                     console.error(err);
                 };
             });
@@ -137,12 +137,12 @@ class TWFarm {
 
             // Informações sobre cada tipo de unidade do jogo.
             if (!Insidious.unitInfo.unit) {
-                await Insidious.storage.remove('worldConfigFetch');
+                await browser.storage.local.remove('worldConfigFetch');
                 throw new InsidiousError('Não foi possível obter as informações sobre as unidades do jogo.');
             };
 
             // Modelos de saque do usuário.
-            const models = await Insidious.storage.get(['amodel', 'bmodel']);
+            const models = await browser.storage.local.get(['amodel', 'bmodel']);
             if (!models.amodel) throw new InsidiousError('Os dados do modelo A não estão presentes no banco de dados.');
             if (!models.bmodel) throw new InsidiousError('Os dados do modelo B não estão presentes no banco de dados.');
 
@@ -171,7 +171,7 @@ class TWFarm {
             };
 
             const sendAttack = async (): Promise<void> => {
-                const plunderStatus: { isPlunderActive: boolean } = await Insidious.storage.get('isPlunderActive');
+                const plunderStatus: { isPlunderActive: boolean } = await browser.storage.local.get('isPlunderActive');
                 if (plunderStatus.isPlunderActive === false) return;
 
                 try {
@@ -265,7 +265,7 @@ class TWFarm {
                             };
 
                             if (!Insidious.worldInfo.config.game) {
-                                Insidious.storage.remove('worldConfigFetch');
+                                browser.storage.local.remove('worldConfigFetch');
                                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                             };
 
@@ -468,8 +468,8 @@ class TWFarm {
             if (!actionArea) throw new InsidiousError('Não foi possível exibir a estimativa de saque, pois #insidious_farmActionArea não existe.');
             Manatsu.removeChildren(actionArea);
 
-            const plundered: TotalPlundered = await Insidious.storage.get('totalPlundered');
-            const { wood = "0", stone = "0", iron = "0" } = plundered.totalPlundered ?? { };
+            const plundered: TotalPlundered = await browser.storage.local.get('totalPlundered');
+            const { wood = 0, stone = 0, iron = 0 }: SNObject = plundered.totalPlundered ?? { };
 
             const spanContainer = new Manatsu('span', {
                 class: 'nowrap',
@@ -512,7 +512,7 @@ class TWFarm {
         const ironLabel = document.querySelector('#insidious_plundered_iron');
 
         try {
-            const plundered: TotalPlundered = await Insidious.storage.get('totalPlundered');
+            const plundered: TotalPlundered = await browser.storage.local.get('totalPlundered');
             if (plundered.totalPlundered) {
                 const updatedValues = {
                     wood: plundered.totalPlundered.wood + wood,
@@ -520,7 +520,7 @@ class TWFarm {
                     iron: plundered.totalPlundered.iron + iron
                 };
 
-                await Insidious.storage.set({ totalPlundered: updatedValues });
+                await browser.storage.local.set({ totalPlundered: updatedValues });
 
                 if (woodLabel && stoneLabel && ironLabel) {
                     woodLabel.textContent = String(updatedValues.wood);
@@ -529,7 +529,7 @@ class TWFarm {
                 };
 
             } else {
-                await Insidious.storage.set({ totalPlundered: {
+                await browser.storage.local.set({ totalPlundered: {
                     wood: wood,
                     stone: stone,
                     iron: iron
@@ -559,7 +559,7 @@ class TWFarm {
     
             // É necessário verificar se o mundo possui arqueiros.
             if (!Insidious.worldInfo.config.game) {
-                await Insidious.storage.remove('worldConfigFetch');
+                await browser.storage.local.remove('worldConfigFetch');
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
     
@@ -576,6 +576,26 @@ class TWFarm {
                 if (!unitElem) throw new InsidiousError(`DOM: #farm_units #units_home tbody tr td#${unit}`);
                 unitElem.setAttribute('data-insidious-available-units', unit);
             });
+
+            // Dados sobre a aldeia atual.
+            const currentVillageID: string | null = Utils.currentVillage();
+            if (currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
+
+            const currentVillageData = await browser.storage.local.get(`village${currentVillageID}`);
+            if (currentVillageData['village' + currentVillageID] === undefined) {
+                throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${currentVillageID}).`);
+            };
+
+            const { x: currentX, y: currentY }: SNObject = currentVillageData['village' + currentVillageID] ?? { };
+            if (currentX === undefined || currentY === undefined) {
+                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${currentVillageID}).`);
+            };
+
+            // Lista das aldeias que já foram atacadas alguma vez.
+            // É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
+            let alreadyPlunderedVillages: string[] = [];
+            const attackHistory: string[] | undefined = (await browser.storage.local.get('alreadyPlunderedVillages')).alreadyPlunderedVillages;
+            if (attackHistory !== undefined) alreadyPlunderedVillages = attackHistory;
     
             // Ajuda a controlar o MutationObserver.
             const infoEventTarget = new EventTarget();
@@ -586,19 +606,6 @@ class TWFarm {
                 infoEventTarget.dispatchEvent(new Event('stopinfoobserver'));
 
                 try {
-                    const currentVillageID: string | null = Utils.currentVillage();
-                    if (currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
-
-                    const currentVillageData = await Insidious.storage.get(`village${currentVillageID}`);
-                    if (currentVillageData['village' + currentVillageID] === undefined) {
-                        throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${currentVillageID}).`);
-                    };
-
-                    const { x: currentX, y: currentY } = currentVillageData['village' + currentVillageID] ?? { };
-                    if (currentX === undefined || currentY === undefined) {
-                        throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${currentVillageID}).`);
-                    };
-
                     // https://developer.mozilla.org/en-US/docs/Web/CSS/Attribute_selectors
                     const plunderListRows = document.querySelectorAll('#plunder_list tbody tr[id^="village_"]');
                     for (const row of (plunderListRows as unknown) as HTMLElement[]) {
@@ -606,6 +613,11 @@ class TWFarm {
                             // A coerção à string é válida pois já foi verificada a existência do ID ao usar querySelectorAll();
                             let villageID = row.getAttribute('id') as string;
                             villageID = villageID.replace('village_', '');
+
+                            const verifyVillageID: number = Number.parseInt(villageID);
+                            if (Number.isNaN(verifyVillageID)) throw new InsidiousError(`O ID da aldeia é inválido (${villageID})`);
+                            if (!alreadyPlunderedVillages.includes(villageID)) alreadyPlunderedVillages.push(villageID);
+
                             row.setAttribute('data-insidious-village', villageID);
                             row.setAttribute('data-insidious-tr-farm', 'true');
 
@@ -715,8 +727,8 @@ class TWFarm {
                             };
         
                             // Distância (é calculada de forma independente, não dependendo da posição na tabela).
-                            const targetVillageData = await Insidious.storage.get(`village${villageID}`);
-                            const { x: targetX, y: targetY } = targetVillageData['village' + villageID] ?? { };
+                            const targetVillageData = await browser.storage.local.get(`village${villageID}`);
+                            const { x: targetX, y: targetY }: SNObject = targetVillageData['village' + villageID] ?? { };
 
                             if (targetX !== undefined && targetY !== undefined) {
                                 const getRelativeCoords = (): number[] => {
@@ -729,6 +741,8 @@ class TWFarm {
     
                                 const distance = Utils.calcDistance(...getRelativeCoords());
                                 row.setAttribute('data-insidious-distance', distance.toFixed(1));
+                                row.setAttribute('data-insidious-x', String(targetX));
+                                row.setAttribute('data-insidious-y', String(targetY));
 
                             } else {
                                 // Nesse caso, muito provavelmente a aldeia não está salva no banco de dados.
@@ -754,6 +768,11 @@ class TWFarm {
                             placeButton.setAttribute('data-insidious-place-btn', `place_${villageID}`);
                         };
                     };
+
+                    browser.storage.local.set({ alreadyPlunderedVillages: alreadyPlunderedVillages })
+                        .catch((err: unknown) => {
+                            if (err instanceof Error) console.error(err);
+                        });
 
                 } catch (err) {
                     if (err instanceof Error) console.error(err);

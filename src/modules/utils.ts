@@ -16,9 +16,9 @@ class Utils {
     static #currentPlayer() {
         return new Promise((resolve, reject) => {
             const village = 'village' + this.#currentVillage();
-            Insidious.storage.get(village)
-                .then((result) => resolve(result[village]?.player))
-                .catch((err) => reject(err));
+            browser.storage.local.get(village)
+                .then((result: any) => resolve(result[village]?.player))
+                .catch((err: unknown) => reject(err));
         });
     };
 
@@ -27,7 +27,7 @@ class Utils {
     };
 
     // Corrige os nomes codificados ("Aldeia+de+b%C3%A1rbaros" se torna "Aldeia de bárbaros").
-    static #urlDecode(url: string) {
+    static #urlDecode(url: string): string {
         return decodeURIComponent(url.replace(/\+/g, ' '));
     };
 
