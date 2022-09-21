@@ -40,6 +40,7 @@ class TWMap {
             const showBBPointsBtn = addTagButton('PT - Bárbaras');
             const showTimeBtn = addTagButton('Tempo');
             const showDistanceBtn = addTagButton('Distância');
+            const showUnknownBtn = addTagButton('Não atacadas');
             
             const getBBCoordsBtn = new Manatsu('button', {
                 text: 'Bárbaras',
@@ -91,145 +92,146 @@ class TWMap {
                 });
 
                 // Adiciona as novas tags.
-                Promise.allSettled(mapVillages.map((id) => {
-                    return new Promise<void>((resolve, reject) => {
+                Promise.allSettled(mapVillages.map((id: string) => {
+                    return new Promise<void>(async (resolve, reject) => {
                         const village = 'village' + id;
                         const currentVillageID: string | null = Utils.currentVillage();
                         if (currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
+                        try {
+                            const result = await browser.storage.local.get([village, 'village' + currentVillageID])
+                            if (id !== currentVillageID) {
+                                const { x: currentX, y: currentY }: SNObject = result['village' + currentVillageID] ?? { };
+                                if (currentX === undefined || currentY === undefined) {
+                                    throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual ${currentVillageID}.`);
+                                };
 
-                        browser.storage.local.get([village, 'village' + currentVillageID])
-                            .then((result: any) => {
-                                if (id !== currentVillageID) {
-                                    const { x: currentX, y: currentY }: SNObject = result['village' + currentVillageID] ?? { };
-                                    if (currentX === undefined || currentY === undefined) {
-                                        throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual ${currentVillageID}.`);
+                                const { x: targetX, y: targetY }: SNObject = result[village] ?? { };
+                                if (targetX === undefined || targetY === undefined) {
+                                    throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia alvo ${id}.`);
+                                };
+
+                                const villageCustomTag = new Manatsu({
+                                    class: 'insidious_map_villageCustomTag',
+                                    ['data-insidious-tag-type']: tagType,
+                                    ['data-insidious-village']: id
+                                }).create();
+
+                                const villageElement = document.querySelector(`#map_village_${id}`);
+                                if (!villageElement) throw new InsidiousError(`DOM: #map_village_${id}`);
+
+                                const elementStyle: string | null = villageElement.getAttribute('style');
+                                if (!elementStyle) throw new InsidiousError(`Não foi possível encontrar a tag de estilo em \"villageElement\" (${id}).`);
+
+                                const leftTopStyle: string[] = elementStyle.split(';').filter((property) => {
+                                    if (property.includes('left:') || property.includes('top:')) return true;
+                                    return false;
+                                });
+
+                                if (leftTopStyle.length > 0) {
+                                    const adjustTop = () => {
+                                        let topValue = leftTopStyle[0].includes('top') ? leftTopStyle[0] : leftTopStyle[1];
+                                        topValue = topValue.replace('top:', '').replace('px', '').trim();
+                                        return `top: ${String(Number(topValue) + 20)}px;`;
                                     };
 
-                                    const { x: targetX, y: targetY }: SNObject = result[village] ?? { };
-                                    if (targetX === undefined || targetY === undefined) {
-                                        throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia alvo ${id}.`);
+                                    const adjustLeft = () => {
+                                        let leftValue = leftTopStyle[0].includes('left') ? leftTopStyle[0] : leftTopStyle[1];
+                                        return ` ${leftValue};`;
                                     };
 
-                                    const villageCustomTag = new Manatsu({
-                                        class: 'insidious_map_villageCustomTag',
-                                        ['data-insidious-tag-type']: tagType,
-                                        ['data-insidious-village']: id
-                                    }).create();
+                                    const elementPosition = adjustTop().concat(adjustLeft());
+                                    villageCustomTag.setAttribute('style', elementPosition);
 
-                                    const villageElement = document.querySelector(`#map_village_${id}`);
-                                    if (!villageElement) throw new InsidiousError(`DOM: #map_village_${id}`);
+                                    if (!villageElement.parentNode) throw new InsidiousError(`Não foi possível encontrar o elemento pai de \"villageElement\" (${id}).`);
+                                    villageElement.parentNode.insertBefore(villageCustomTag, villageElement);
 
-                                    const elementStyle: string | null = villageElement.getAttribute('style');
-                                    if (!elementStyle) throw new InsidiousError(`Não foi possível encontrar a tag de estilo em \"villageElement\" (${id}).`);
+                                } else {
+                                    throw new InsidiousError(`Não existem \"left\" e \"top\" entre os elementos de \"villageElement\" (${id})`);
+                                };
 
-                                    const leftTopStyle: string[] = elementStyle.split(';').filter((property) => {
-                                        if (property.includes('left:') || property.includes('top:')) return true;
-                                        return false;
-                                    });
+                                const getRelativeCoords = (): number[] => {
+                                    const coords: number[] = [currentX, currentY, targetX, targetY];
+                                    if (coords.some(coord => !Number.isInteger(coord))) {
+                                        throw new InsidiousError(`As coordenadas obtidas são inválidas (${currentVillageID} e/ou ${id}).`);
+                                    };
+                                    return coords;
+                                };
 
-                                    if (leftTopStyle.length > 0) {
-                                        const adjustTop = () => {
-                                            let topValue = leftTopStyle[0].includes('top') ? leftTopStyle[0] : leftTopStyle[1];
-                                            topValue = topValue.replace('top:', '').replace('px', '').trim();
-                                            return `top: ${String(Number(topValue) + 20)}px;`;
-                                        };
-    
-                                        const adjustLeft = () => {
-                                            let leftValue = leftTopStyle[0].includes('left') ? leftTopStyle[0] : leftTopStyle[1];
-                                            return ` ${leftValue};`;
-                                        };
-    
-                                        const elementPosition = adjustTop().concat(adjustLeft());
-                                        villageCustomTag.setAttribute('style', elementPosition);
-    
-                                        if (!villageElement.parentNode) throw new InsidiousError(`Não foi possível encontrar o elemento pai de \"villageElement\" (${id}).`);
-                                        villageElement.parentNode.insertBefore(villageCustomTag, villageElement);
+                                if (tagType === 'distance') {
+                                    const distance = Utils.calcDistance(...getRelativeCoords());
+                                    villageCustomTag.textContent = distance.toFixed(1);
 
-                                    } else {
-                                        throw new InsidiousError(`Não existem \"left\" e \"top\" entre os elementos de \"villageElement\" (${id})`);
+                                } else if (tagType === 'points') {
+                                    if (!result[village].points) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
+                                    if (result[village].player !== 0) villageCustomTag.textContent = result[village].points;
+
+                                } else if (tagType === 'bbpoints') {
+                                    if (!result[village].points) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
+                                    if (result[village].player === 0) villageCustomTag.textContent = result[village].points;
+
+                                } else if (tagType.startsWith('time_')) {
+                                    const unitName = tagType.replace('time_', '');
+                                    if (!Insidious.unitInfo.unit || !Insidious.worldInfo.config) {
+                                        browser.storage.local.remove('worldConfigFetch');
+                                        throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                                     };
 
-                                    const getRelativeCoords = (): number[] => {
-                                        const coords: number[] = [currentX, currentY, targetX, targetY];
-                                        if (coords.some(coord => !Number.isInteger(coord))) {
-                                            throw new InsidiousError(`As coordenadas obtidas são inválidas (${currentVillageID} e/ou ${id}).`);
-                                        };
-                                        return coords;
+                                    const millisecondsPerField = 60000 * (Insidious.unitInfo.unit[unitName].speed * Insidious.worldInfo.config.unit_speed);
+                                    const fieldAmount = Utils.calcDistance(...getRelativeCoords());
+                                    const travelTime = millisecondsPerField * fieldAmount;
+
+                                    const getFullHours = () => {
+                                        // É necessário usar Math.trunc(), pois toFixed() arredonda o número.
+                                        let hours = String(Math.trunc(travelTime / 3600000));
+                                        let remainder = travelTime % 3600000;
+                                        if (hours.length === 1) hours = hours.padStart(2, '0');
+
+                                        let minutes = String(Math.trunc(remainder / 60000));
+                                        remainder = remainder % 60000;
+                                        if (minutes.length === 1) minutes = minutes.padStart(2, '0');
+
+                                        // No entanto, no caso dos segundos, o arredondamento é desejado.
+                                        let seconds = (remainder / 1000).toFixed(0);
+                                        if (seconds.length === 1) seconds = seconds.padStart(2, '0');
+
+                                        return `${hours}:${minutes}:${seconds}`;
                                     };
 
-                                    if (tagType === 'distance') {
-                                        const distance = Utils.calcDistance(...getRelativeCoords());
-                                        villageCustomTag.textContent = distance.toFixed(1);
+                                    villageCustomTag.textContent = getFullHours();
 
-                                    } else if (tagType === 'points') {
-                                        if (!result[village].points) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
-                                        if (result[village].player !== 0) villageCustomTag.textContent = result[village].points;
-
-                                    } else if (tagType === 'bbpoints') {
-                                        if (!result[village].points) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
-                                        if (result[village].player === 0) villageCustomTag.textContent = result[village].points;
-
-                                    } else if (tagType.startsWith('time_')) {
-                                        const unitName = tagType.replace('time_', '');
-                                        if (!Insidious.unitInfo.unit || !Insidious.worldInfo.config) {
-                                            browser.storage.local.remove('worldConfigFetch');
-                                            throw new InsidiousError('Não foi possível obter as configurações do mundo.');
-                                        };
-
-                                        const millisecondsPerField = 60000 * (Insidious.unitInfo.unit[unitName].speed * Insidious.worldInfo.config.unit_speed);
-                                        const fieldAmount = Utils.calcDistance(...getRelativeCoords());
-                                        const travelTime = millisecondsPerField * fieldAmount;
-
-                                        const getFullHours = () => {
-                                            // É necessário usar Math.trunc(), pois toFixed() arredonda o número.
-                                            let hours = String(Math.trunc(travelTime / 3600000));
-                                            let remainder = travelTime % 3600000;
-                                            if (hours.length === 1) hours = hours.padStart(2, '0');
-
-                                            let minutes = String(Math.trunc(remainder / 60000));
-                                            remainder = remainder % 60000;
-                                            if (minutes.length === 1) minutes = minutes.padStart(2, '0');
-
-                                            // No entanto, no caso dos segundos, o arredondamento é desejado.
-                                            let seconds = (remainder / 1000).toFixed(0);
-                                            if (seconds.length === 1) seconds = seconds.padStart(2, '0');
-
-                                            return `${hours}:${minutes}:${seconds}`;
-                                        };
-
-                                        villageCustomTag.textContent = getFullHours();
-                                    };
                                 };
 
                                 resolve();
-
-                            }).catch((err: unknown) => reject(err));
+                            };
+                            
+                        } catch (err) {
+                            reject(err);
+                        };
                     });
 
-                })).then(() => {
-                    const mapContainer = document.querySelector('#map_container');
-                    if (!mapContainer) throw new InsidiousError('DOM: #map_container');
+                }));
 
-                    // Verifica se houve mudança no DOM decorrente da movimentação do mapa.
-                    // Em caso positivo, dispara a função novamente.
-                    const observeMap = new MutationObserver(() => addCustomTags(tagType));
-                    observeMap.observe(mapContainer, { subtree: true, childList: true });
+                const mapContainer = document.querySelector('#map_container');
+                if (!mapContainer) throw new InsidiousError('DOM: #map_container');
 
-                    const customTagsCtrl = new AbortController();
-                    mapEventTarget.addEventListener('stopmapobserver', () => {
-                        observeMap.disconnect();
-                        customTagsCtrl.abort();
-                    }, { signal: customTagsCtrl.signal });
+                // Verifica se houve mudança no DOM decorrente da movimentação do mapa.
+                // Em caso positivo, dispara a função novamente.
+                const observeMap = new MutationObserver(() => addCustomTags(tagType));
+                observeMap.observe(mapContainer, { subtree: true, childList: true });
 
-                }).catch((err) => {
-                    if (err instanceof Error) console.error(err);
-                });
+                const customTagsCtrl = new AbortController();
+                mapEventTarget.addEventListener('stopmapobserver', () => {
+                    observeMap.disconnect();
+                    customTagsCtrl.abort();
+                }, { signal: customTagsCtrl.signal });
             };
 
             ////// EVENTOS
             showDistanceBtn.addEventListener('click', () => addCustomTags('distance'));
             showPointsBtn.addEventListener('click', () => addCustomTags('points'));
             showBBPointsBtn.addEventListener('click', () => addCustomTags('bbpoints'));
+
+            showUnknownBtn.addEventListener('click', () => addCustomTags('bbunknown'));
 
             toggleTags.addEventListener('change', async () => {
                 if ((toggleTags as HTMLInputElement).checked) {
@@ -357,7 +359,7 @@ class TWMap {
                                 coords.textContent = `${result[village].x}\|${result[village].y}`;
                                 actionArea.appendChild(coords);
 
-                                coords.addEventListener('click', async () => {
+                                coords.addEventListener('click', () => {
                                     const range = document.createRange();
                                     range.selectNodeContents(coords);
 
@@ -368,21 +370,20 @@ class TWMap {
                                     };
 
                                     if (coords.textContent !== null) {
-                                        try {
-                                            await navigator.clipboard.writeText(coords.textContent);
-                                        } catch (err) {
-                                            if (err instanceof Error) console.error(err);
-                                        };
+                                        navigator.clipboard.writeText(coords.textContent)
+                                            .catch((err: unknown) => {
+                                                if (err instanceof Error) console.error(err);
+                                            });
                                     };
+
                                 }, { signal: getBBCoordsCtrl.signal });
                             };
 
                             resolve();
 
                         } catch (err) {
-                            if (err instanceof Error) console.error(err);
                             reject();
-                        };                             
+                        };
                     });
                 }));
             });
