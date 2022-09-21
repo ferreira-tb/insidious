@@ -1,51 +1,34 @@
 class Insidious {
-    static #storage = {
-        set: (value: { [key: string]: any }) => {
-            return new Promise<void>((resolve, reject) => {
-                browser.runtime.sendMessage({ name: 'storage-set', value: value })
-                    .then(() => resolve())
-                    .catch((err: any) => reject(err));
-            });
-        },
-
-        get: (key: string | string[]) => {
-            return new Promise<any>((resolve, reject) => {
-                browser.runtime.sendMessage({ name: 'storage-get', key: key })
-                    .then((result: { [key: string]: any }) => resolve(result))
-                    .catch((err: any) => reject(err));           
-            });
-        },
-
-        remove: (key: string | string[]) => {
-            return new Promise<void>((resolve, reject) => {
-                browser.runtime.sendMessage({ name: 'storage-remove', key: key })
-                    .then(() => resolve())
-                    .catch((err: any) => reject(err));
-            });
-        }
-    };
-
     // Inicia a extensão.
     static async #start() {
-        Object.freeze(this.#storage);
         try {
             if (location.pathname === '\/game.php') {
                 // Faz download dos dados necessários para executar a extensão.
                 await this.#fetch();
+
+                // Armazena as configurações do mundo para que as outras classes tenham acesso.
+                this.#worldInfo = await Insidious.storage.get('config');
+                this.#unitInfo = await Insidious.storage.get('unit');
+                if (!this.#worldInfo.config || !this.#unitInfo.unit) {
+                    await this.#storage.remove('worldConfigFetch');
+                };
                 
                 // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
-                const currentScreen: string | undefined = Utils.currentScreen();
+                const currentScreen: string | null = Utils.currentScreen();
                 if (!currentScreen) throw new InsidiousError('Não foi possível identificar a janela atual.');
 
                 if (currentScreen.startsWith('map')) {
                     TWMap.open();             
                 } else {
                     switch (currentScreen) {
-                        case 'am_farm': TWFarm.open();
+                        case 'am_farm': await TWFarm.open();
                             break;
                     };
                 };
             };
+
+            Object.freeze(this.#storage);
+
         } catch (err) {
             if (err instanceof Error) console.error(err);      
         };
@@ -66,7 +49,7 @@ class Insidious {
                 })} @ `;
 
                 const serverInfo = document.querySelector('p.server_info');
-                if (!serverInfo) throw new ElementError({ class: 'p.server_info' });
+                if (!serverInfo) throw new InsidiousError('DOM: p.server_info');
                 serverInfo.insertBefore(lastFetchInfo, serverInfo.firstChild);  // Não se deve usar firstElementChild aqui.
             };
 
@@ -123,7 +106,7 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 1.2)) {
+            if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 5)) {
                 await this.#storage.set({ worldDataFetch: now });
 
                 Utils.modal('Aguarde');
@@ -244,7 +227,6 @@ class Insidious {
                 const worldConfigSchema = {
                     speed: getValue('speed'),
                     unit_speed: getValue('unit_speed'),
-                    moral: getValue('moral'),
                     game: { archer: getValue('archer') }
                 };
 
@@ -279,33 +261,39 @@ class Insidious {
         });
     };
 
+    static #worldInfo: any;
+    static #unitInfo: any;
+
+    static #storage = {
+        set: (value: { [key: string]: any }) => {
+            return new Promise<void>((resolve, reject) => {
+                browser.runtime.sendMessage({ name: 'storage-set', value: value })
+                    .then(() => resolve())
+                    .catch((err: any) => reject(err));
+            });
+        },
+
+        get: (key: string | string[]) => {
+            return new Promise<any>((resolve, reject) => {
+                browser.runtime.sendMessage({ name: 'storage-get', key: key })
+                    .then((result: { [key: string]: any }) => resolve(result))
+                    .catch((err: any) => reject(err));           
+            });
+        },
+
+        remove: (key: string | string[]) => {
+            return new Promise<void>((resolve, reject) => {
+                browser.runtime.sendMessage({ name: 'storage-remove', key: key })
+                    .then(() => resolve())
+                    .catch((err: any) => reject(err));
+            });
+        }
+    };
+
+    static get worldInfo() {return this.#worldInfo};
+    static get unitInfo() {return this.#unitInfo};
     static get storage() {return this.#storage};
     static get start() {return this.#start};
-};
-
-// Usado quando um elemento do DOM original não está mais acessível.
-// Isso pode ocorrer devido a mudanças feitas pelos desenvolvedores do jogo.
-class ElementError extends Error {
-    tag: string | undefined;
-    id: string | undefined;
-    class: string | undefined;
-    attribute: string | undefined;
-    
-    constructor(options: { tag?: string, id?: string, class?: string, attribute?: string }) {
-        super();
-
-        this.name = 'ElementError';
-        this.message = '';
-
-        this.tag = options.tag;
-        this.id = options.id;
-        this.class = options.class;
-        this.attribute = options.attribute;
-        
-        for (const [key, value] of Object.entries(options)) {
-            this.message += `${key}: ${value} `;
-        };
-    };
 };
 
 class InsidiousError extends Error {

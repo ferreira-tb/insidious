@@ -37,7 +37,8 @@ class TWAssets {
     static #list = {
         all_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'ram', 'catapult', 'knight', 'snob'],
         all_units_archer: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob'],
-        farm_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'knight']
+        farm_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'knight'],
+        farm_units_archer: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'knight']
     };
 
     static #freeze() {

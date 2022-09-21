@@ -13,7 +13,19 @@ type PortMessage = {
 }
 
 // farm.ts
-interface Plundered {
+type AB = 'a' | 'b' | null;
+
+interface AvailableTroops {
+    spear: number,
+    sword: number,
+    axe: number,
+    spy: number,
+    light: number,
+    heavy: number,
+    knight: number
+}
+
+interface TotalPlundered {
     totalPlundered: {
         wood: number,
         stone: number,
@@ -22,6 +34,4 @@ interface Plundered {
 }
 
 // utils.ts
-type ResourceSpan = 'wood' | 'stone' | 'iron';
 type IconImgName = 'spear' | 'sword' | 'axe' | 'archer' | 'spy' | 'light' | 'marcher' | 'heavy' | 'ram' | 'catapult' | 'knight' | 'snob';
-type IconImgSize = '18';

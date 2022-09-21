@@ -34,6 +34,8 @@ class Manatsu {
         return newElement;
     };
 
+    // #createBefore() com insertBefore.
+
     #setProperty(value: AcceptableProperty) {
         if (typeof value === 'string') {
             if (!Manatsu.isValidElementName(value)) return;
@@ -47,16 +49,18 @@ class Manatsu {
         };
     };
 
-    #addOptions(item: { [index: string]: string } | null) {
+    #addOptions(item: { [index: string]: string }, overwrite: boolean = true) {
         if (Manatsu.isValidOption(item)) {
-            const oldOptions = { ...this.#options };
+            const oldOptions = this.#options ? { ...this.#options } : { };
             for (const [attribute, content] of Object.entries(item as object)) {
+                if (this.#options && overwrite === false && attribute in this.#options) continue;
                 Object.defineProperty(oldOptions, attribute, {
                     value: content,
                     enumerable: true
                 });
             };
             this.#options = oldOptions;
+            return this;
 
         } else {
             throw new ManatsuError('O item fornecido é inválido.');
@@ -119,18 +123,18 @@ class Manatsu {
         return collection;
     };
 
-    static #duplicate(item: Manatsu, options?: { [index: string]: string }): Manatsu | undefined {
+    static #fromTemplate(item: Manatsu, options?: { [index: string]: string }): Manatsu {
         if (item instanceof Manatsu) {
             const properties: ConstructorArgs = [item.element, item.parent];
             if (options && this.#isValidOption(options)) {
-                return new Manatsu(...properties, options);
+                return new Manatsu(...properties, item.options).addOptions(options, true);
 
             } else {
                 return new Manatsu(...properties, item.options);
             };
 
         } else {
-            throw new ManatsuError('O item não pode ser duplicado.');
+            throw new ManatsuError('O item escolhido é inválido.');
         };
     };
 
@@ -187,7 +191,7 @@ class Manatsu {
 
     static get repeat() {return this.#repeat};
     static get createAll() {return this.#createAll};
-    static get duplicate() {return this.#duplicate};
+    static get fromTemplate() {return this.#fromTemplate};
     static get removeChildren() {return this.#removeChildren};
 
     static get isValidOption() {return this.#isValidOption};
