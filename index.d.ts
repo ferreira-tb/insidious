@@ -6,7 +6,6 @@ declare namespace browser {
 type SSObject = { [coord: string]: string }
 type SNObject = { [coord: string]: number }
 
-// insidious.ts
 interface VillageInfo {
     name: string,
     x: number,
@@ -15,6 +14,8 @@ interface VillageInfo {
     points: number,
     rank: number
 }
+
+type VillageQuery = { [village: string]: VillageInfo }
 
 // background.ts
 interface BackgroundListener {

@@ -138,8 +138,27 @@ class Manatsu {
         };
     };
 
-    static #removeChildren(element: Element) {
-        while (element.firstChild) element.removeChild(element.firstChild);
+    static #removeChildren(parentElement: Element) {
+        if (!(parentElement instanceof Element)) throw new ManatsuError('O elemento fornecido é inválido.');
+        while (parentElement.firstChild) parentElement.removeChild(parentElement.firstChild);
+    };
+
+    static #enableChildren(parentElement: Element, selector: string) {
+        if (!(parentElement instanceof Element)) throw new ManatsuError('O elemento fornecido é inválido.');
+        if (typeof selector !== 'string') throw new ManatsuError('O seletor precisa ser uma string.');
+
+        const children = parentElement.querySelectorAll(selector);
+        children.forEach((child: Element) => {
+            if (child.hasAttribute('disabled')) child.removeAttribute('disabled');
+        });
+    };
+
+    static #disableChildren(parentElement: Element, selector: string) {
+        if (!(parentElement instanceof Element)) throw new ManatsuError('O elemento fornecido é inválido.');
+        if (typeof selector !== 'string') throw new ManatsuError('O seletor precisa ser uma string.');
+
+        const children = parentElement.querySelectorAll(selector);
+        children.forEach((child: Element) => child.setAttribute('disabled', ''));
     };
 
     static #isValidElementName(name: string) {
@@ -192,7 +211,10 @@ class Manatsu {
     static get repeat() {return this.#repeat};
     static get createAll() {return this.#createAll};
     static get fromTemplate() {return this.#fromTemplate};
+
     static get removeChildren() {return this.#removeChildren};
+    static get enableChildren() {return this.#enableChildren};
+    static get disableChildren() {return this.#disableChildren};
 
     static get isValidOption() {return this.#isValidOption};
     static get isValidElementName() {return this.#isValidElementName};

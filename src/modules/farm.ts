@@ -45,7 +45,7 @@ class TWFarm {
 
             // Verifica se o campo pertence ao modelo A.
             if (field.parentElement?.parentElement === aRow) {
-                field.setAttribute('data-insidious-model-a', fieldType);
+                field.setAttribute('insidious-model-a', fieldType);
                 Object.defineProperty(parentRow.a, fieldType, {
                     value: parseInt(fieldValue, 10),
                     enumerable: true
@@ -53,7 +53,7 @@ class TWFarm {
 
             // Em caso contrário, assume que pertence ao modelo B.
             } else {
-                field.setAttribute('data-insidious-model-b', fieldType);
+                field.setAttribute('insidious-model-b', fieldType);
                 Object.defineProperty(parentRow.b, fieldType, {
                     value: parseInt(fieldValue, 10),
                     enumerable: true
@@ -171,12 +171,9 @@ class TWFarm {
             };
 
             const sendAttack = async (): Promise<void> => {
-                const plunderStatus: { isPlunderActive: boolean } = await browser.storage.local.get('isPlunderActive');
-                if (plunderStatus.isPlunderActive === false) return;
-
                 try {
                     // Representa cada linha na tabela.
-                    const villageRows = document.querySelectorAll('tr[data-insidious-tr-farm="true"]');
+                    const villageRows = document.querySelectorAll('tr[insidious-tr-farm="true"]');
                     for (const village of (villageRows as unknown) as HTMLElement[]) {
                         // Ignora a linha caso ela esteja oculta.
                         // Elas automaticamente ficam ocultas assim que são atacadas.
@@ -184,14 +181,14 @@ class TWFarm {
                         
                         // Caso não hajam informações obtidas por exploradores, a linha é ignorada.
                         // No entanto, provoca um erro caso a função addInfo() tiver falhado em criar o atributo.
-                        const spyStatus = village.getAttribute('data-insidious-spy-status');
+                        const spyStatus = village.getAttribute('insidious-spy-status');
                         if (spyStatus === null || spyStatus === '') {
                             throw new InsidiousError('A linha não possui atributo indicando se foi explorada ou não.');
                         } else if (spyStatus === 'false') {
                             continue;
                         };
 
-                        const resourceData: string | number | null = village.getAttribute('data-insidious-resources');
+                        const resourceData: string | number | null = village.getAttribute('insidious-resources');
                         if (resourceData === null || resourceData === '') {
                             throw new InsidiousError('A linha não possui atributo indicando a situação dos recursos.');
                         };
@@ -311,53 +308,56 @@ class TWFarm {
                             
                             // Se as tropas estiverem disponíveis, envia o ataque após um delay aleatório.
                             if (attackIsPossible) {
-                                console.log(`${(bestRatio as string).toUpperCase()} (TOTAL: ${resourceAmount} | CARGA: ${carryCapacity[bestRatio]})`);
                                 return new Promise<void>((resolve, reject) => {
                                     const attackCtrl = new AbortController();
-
                                     const timerID = setTimeout(async () => {
-                                        attackCtrl.abort();
-                                        
-                                        // Envia o ataque e espera até que o servidor dê uma resposta.
-                                        await handleAttack();
-
-                                        // Calcula a quantidade recursos esperada no saque (sempre pressupondo carga total).
-                                        const calcExpected = () => {
-                                            const woodAmount: string | null = village.getAttribute('data-insidious-wood');
-                                            const stoneAmount: string | null = village.getAttribute('data-insidious-stone');
-                                            const ironAmount: string | null = village.getAttribute('data-insidious-iron');
-
-                                            if (!woodAmount || !stoneAmount || !ironAmount) {
-                                                throw new InsidiousError('O atributo que informa a quantidade de recursos está ausente.');
-                                            };
-
-                                            const allResources: number[] = [woodAmount, stoneAmount, ironAmount].map((resource: string) => {
-                                                const parsed = Number.parseInt(resource, 10);
-                                                if (Number.isNaN(parsed)) throw new InsidiousError(`O valor dos recursos não é válido (${parsed}).`);
-                                                return parsed;
-                                            });
-
-                                            let totalAmount = allResources.reduce((previous, current) => {
-                                                return previous + current;
-                                            }, 0);
-                                            
-                                            // Caso a soma resulte em zero, "totalAmount = Infinity" garante que não surja uma divisão por zero mais adiante.
-                                            // Qualquer valor dividido por Infinity é igual a zero.
-                                            if (totalAmount === 0) totalAmount = Infinity;
-
-                                            return allResources.map((amount: number) => {
-                                                // Se houver mais recursos do que a carga suporta, calcula quanto de cada recurso deve ser saqueado.
-                                                if (totalAmount > carryCapacity[bestRatio as string]) {
-                                                    return Math.floor((amount / totalAmount) * carryCapacity[bestRatio as string]);
-                                                } else {
-                                                    return amount;
+                                        try {
+                                            // Envia o ataque e espera até que o servidor dê uma resposta.
+                                            await handleAttack();
+    
+                                            // Calcula a quantidade recursos esperada no saque (sempre pressupondo carga total).
+                                            const calcExpected = () => {
+                                                const woodAmount: string | null = village.getAttribute('insidious-wood');
+                                                const stoneAmount: string | null = village.getAttribute('insidious-stone');
+                                                const ironAmount: string | null = village.getAttribute('insidious-iron');
+    
+                                                if (!woodAmount || !stoneAmount || !ironAmount) {
+                                                    throw new InsidiousError('O atributo que informa a quantidade de recursos está ausente.');
                                                 };
-                                            });
-                                        };
+    
+                                                const allResources: number[] = [woodAmount, stoneAmount, ironAmount].map((resource: string) => {
+                                                    const parsed = Number.parseInt(resource, 10);
+                                                    if (Number.isNaN(parsed)) throw new InsidiousError(`O valor dos recursos não é válido (${parsed}).`);
+                                                    return parsed;
+                                                });
+    
+                                                let totalAmount = allResources.reduce((previous, current) => {
+                                                    return previous + current;
+                                                }, 0);
+                                                
+                                                // Caso a soma resulte em zero, "totalAmount = Infinity" garante que não surja uma divisão por zero mais adiante.
+                                                // Qualquer valor dividido por Infinity é igual a zero.
+                                                if (totalAmount === 0) totalAmount = Infinity;
+    
+                                                return allResources.map((amount: number) => {
+                                                    // Se houver mais recursos do que a carga suporta, calcula quanto de cada recurso deve ser saqueado.
+                                                    if (totalAmount > carryCapacity[bestRatio as string]) {
+                                                        return Math.floor((amount / totalAmount) * carryCapacity[bestRatio as string]);
+                                                    } else {
+                                                        return amount;
+                                                    };
+                                                });
+                                            };
+    
+                                            await this.#updatePlunderedAmount(...calcExpected());
+                                            attackCtrl.abort();
+                                            resolve();
 
-                                        await this.#updatePlunderedAmount(...calcExpected());
-                                        resolve();
-                                        
+                                        } catch (err) {
+                                            attackCtrl.abort();
+                                            reject(err);
+                                        };
+ 
                                     // O jogo possui um limite de cinco ações por segundo.
                                     }, Utils.generateIntegerBetween(300, 500));
     
@@ -386,7 +386,7 @@ class TWFarm {
                                 // O plunder cumpre sua tarefa bem mais rápido que o servidor consegue responder.
                                 // No entanto, como ele depende do número de tropas ditado pelo jogo, é necessário esperar o valor ser atualizado.
                                 function handleAttack() {
-                                    return new Promise<void>((resolve, reject) => {
+                                    return new Promise<void>((resolve) => {
                                         const observerTimeout = setTimeout(handleTimeout, 5000);
                                         const observeTroops = new MutationObserver(() => {
                                             clearTimeout(observerTimeout);
@@ -394,24 +394,24 @@ class TWFarm {
                                             resolve();
                                         });
 
-                                        // Caso o observer não perceber mudanças mesmo após cinco segundos, rejeita a promise.
+                                        // Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro.
                                         function handleTimeout() {
                                             observeTroops.disconnect();
-                                            reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.'));
+                                            throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder.');
                                         };
 
-                                        const unitTable = document.querySelector('tr[data-insidious-available-unit-table="true"]');
-                                        if (!unitTable) throw new InsidiousError('DOM: tr[data-insidious-available-unit-table]');
+                                        const unitTable = document.querySelector('tr[insidious-available-unit-table="true"]');
+                                        if (!unitTable) throw new InsidiousError('DOM: tr[insidious-available-unit-table]');
                                         observeTroops.observe(unitTable, { subtree: true, childList: true, characterData: true });
                                         
-                                        const targetVillageID = village.getAttribute('data-insidious-village');
+                                        const targetVillageID = village.getAttribute('insidious-village');
                                         if (targetVillageID === null || targetVillageID === '') {
                                             throw new InsidiousError('Não foi possível obter o ID da aldeia alvo.');
                                         };
 
                                         // Como a promise superior está esperando a resolução dessa, o plunder só irá continuar após isso acontecer.
                                         const attackButton = document.querySelector(
-                                            `a[data-insidious-farm-btn^="${bestRatio}" i][data-insidious-farm-btn$="${targetVillageID}"]`
+                                            `a[insidious-farm-btn^="${bestRatio}" i][insidious-farm-btn$="${targetVillageID}"]`
                                         );
                                         if (!attackButton) throw new InsidiousError(`O botão ${(bestRatio as string).toUpperCase()} não foi encontrado.`);
                                         attackButton.dispatchEvent(new Event('click')); 
@@ -473,7 +473,7 @@ class TWFarm {
 
             const spanContainer = new Manatsu('span', {
                 class: 'nowrap',
-                ['data-insidious-custom']: 'true'
+                ['insidious-custom']: 'true'
             }, actionArea).create();
 
             // MADEIRA
@@ -555,7 +555,7 @@ class TWFarm {
     
             // Tabela com as tropas disponíveis.
             if (!spearElem.parentElement) throw new InsidiousError('Não foi possível encontrar a linha que abriga a lista de tropas disponíveis.');
-            spearElem.parentElement.setAttribute('data-insidious-available-unit-table', 'true');
+            spearElem.parentElement.setAttribute('insidious-available-unit-table', 'true');
     
             // É necessário verificar se o mundo possui arqueiros.
             if (!Insidious.worldInfo.config.game) {
@@ -574,7 +574,7 @@ class TWFarm {
             isThereArchers().forEach((unit) => {
                 const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
                 if (!unitElem) throw new InsidiousError(`DOM: #farm_units #units_home tbody tr td#${unit}`);
-                unitElem.setAttribute('data-insidious-available-units', unit);
+                unitElem.setAttribute('insidious-available-units', unit);
             });
 
             // Dados sobre a aldeia atual.
@@ -593,8 +593,8 @@ class TWFarm {
 
             // Lista das aldeias que já foram atacadas alguma vez.
             // É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
-            let alreadyPlunderedVillages: string[] = [];
-            const attackHistory: string[] | undefined = (await browser.storage.local.get('alreadyPlunderedVillages')).alreadyPlunderedVillages;
+            let alreadyPlunderedVillages: Set<string> = new Set();
+            const attackHistory: Set<string> | undefined = (await browser.storage.local.get('alreadyPlunderedVillages')).alreadyPlunderedVillages;
             if (attackHistory !== undefined) alreadyPlunderedVillages = attackHistory;
     
             // Ajuda a controlar o MutationObserver.
@@ -609,22 +609,22 @@ class TWFarm {
                     // https://developer.mozilla.org/en-US/docs/Web/CSS/Attribute_selectors
                     const plunderListRows = document.querySelectorAll('#plunder_list tbody tr[id^="village_"]');
                     for (const row of (plunderListRows as unknown) as HTMLElement[]) {
-                        if (!row.hasAttribute('data-insidious-village')) {
+                        if (!row.hasAttribute('insidious-village')) {
                             // A coerção à string é válida pois já foi verificada a existência do ID ao usar querySelectorAll();
-                            let villageID = row.getAttribute('id') as string;
+                            let villageID: string = row.getAttribute('id') as string;
                             villageID = villageID.replace('village_', '');
 
                             const verifyVillageID: number = Number.parseInt(villageID);
                             if (Number.isNaN(verifyVillageID)) throw new InsidiousError(`O ID da aldeia é inválido (${villageID})`);
-                            if (!alreadyPlunderedVillages.includes(villageID)) alreadyPlunderedVillages.push(villageID);
+                            alreadyPlunderedVillages.add(villageID);
 
-                            row.setAttribute('data-insidious-village', villageID);
-                            row.setAttribute('data-insidious-tr-farm', 'true');
+                            row.setAttribute('insidious-village', villageID);
+                            row.setAttribute('insidious-tr-farm', 'true');
 
                             // Relatório.
                             const reportLink = row.querySelector('td a[href*="screen=report" i]');
                             if (!reportLink) throw new InsidiousError(`Não foi possível encontrar o link do relatório (${villageID}).`);
-                            reportLink.setAttribute('data-insidious-td-type', 'report');
+                            reportLink.setAttribute('insidious-td-type', 'report');
                             
                             // Data do último ataque.
                             const findDateField = (): HTMLElement | null => {
@@ -634,7 +634,7 @@ class TWFarm {
                                     const date = this.#decipherPlunderListDate(field.textContent);
                                     if (!date) continue;
 
-                                    row.setAttribute('data-insidious-date', String(date));
+                                    row.setAttribute('insidious-date', String(date));
                                     return field;
                                 };
 
@@ -643,7 +643,7 @@ class TWFarm {
 
                             const lastBattleDate = findDateField();
                             if (!lastBattleDate) throw new InsidiousError(`Não foi possível encontrar o campo com a data do último ataque (${villageID}).`);
-                            lastBattleDate.setAttribute('data-insidious-td-type', 'date');
+                            lastBattleDate.setAttribute('insidious-td-type', 'date');
         
                             // Quantidade de recursos.
                             const findResourcesField = (): HTMLElement | null => {
@@ -687,20 +687,20 @@ class TWFarm {
                                         });
 
                                         if (resName === false) throw new InsidiousError(`Não foi possível determinar o tipo de recurso (${villageID}).`);
-                                        row.setAttribute(`data-insidious-${resType}`, resAmount);  
+                                        row.setAttribute(`insidious-${resType}`, resAmount);  
                                     });
 
-                                    field.setAttribute('data-insidious-td-type', 'resources');
-                                    row.setAttribute('data-insidious-resources', String(totalAmount));
+                                    field.setAttribute('insidious-td-type', 'resources');
+                                    row.setAttribute('insidious-resources', String(totalAmount));
 
                                     // Indica que exploradores obtiveram informações sobre a aldeia.
-                                    row.setAttribute('data-insidious-spy-status', 'true');
+                                    row.setAttribute('insidious-spy-status', 'true');
                                     return field;
                                 };
                           
                                 // Caso não hajam informações de exploradores, marca com os atributos adequados.
-                                row.setAttribute('data-insidious-resources', 'unknown');
-                                row.setAttribute('data-insidious-spy-status', 'false');
+                                row.setAttribute('insidious-resources', 'unknown');
+                                row.setAttribute('insidious-spy-status', 'false');
                                 return null;
                             };
 
@@ -719,8 +719,8 @@ class TWFarm {
                                         throw new InsidiousError(`O valor encontrado não corresponde ao nível da muralha (${villageID}).`);
                                     };
 
-                                    row.setAttribute('data-insidious-wall', wallLevel);
-                                    wallLevelField.setAttribute('data-insidious-td-type', 'wall');
+                                    row.setAttribute('insidious-wall', wallLevel);
+                                    wallLevelField.setAttribute('insidious-td-type', 'wall');
                                 } else {
                                     throw new InsidiousError(`O nível da muralha não foi encontrado (${villageID}).`);
                                 };
@@ -740,32 +740,32 @@ class TWFarm {
                                 };
     
                                 const distance = Utils.calcDistance(...getRelativeCoords());
-                                row.setAttribute('data-insidious-distance', distance.toFixed(1));
-                                row.setAttribute('data-insidious-x', String(targetX));
-                                row.setAttribute('data-insidious-y', String(targetY));
+                                row.setAttribute('insidious-distance', distance.toFixed(1));
+                                row.setAttribute('insidious-x', String(targetX));
+                                row.setAttribute('insidious-y', String(targetY));
 
                             } else {
                                 // Nesse caso, muito provavelmente a aldeia não está salva no banco de dados.
-                                row.setAttribute('data-insidious-distance', 'unknown');
+                                row.setAttribute('insidious-distance', 'unknown');
                             };
 
                             // A
                             const aFarmBtn = row.querySelector('td a[class*="farm_icon_a" i]:not([class*="disabled" i])');
-                            if (aFarmBtn) aFarmBtn.setAttribute('data-insidious-farm-btn', `a_${villageID}`);
+                            if (aFarmBtn) aFarmBtn.setAttribute('insidious-farm-btn', `a_${villageID}`);
                                     
                             // B
                             const bFarmBtn = row.querySelector('td a[class*="farm_icon_b" i]:not([class*="disabled" i])');
-                            if (bFarmBtn) bFarmBtn.setAttribute('data-insidious-farm-btn', `b_${villageID}`);
+                            if (bFarmBtn) bFarmBtn.setAttribute('insidious-farm-btn', `b_${villageID}`);
         
                             // C
                             const cFarmBtn = row.querySelector('td a[class*="farm_icon_c" i]:not([class*="disabled" i])');
-                            if (cFarmBtn) cFarmBtn.setAttribute('data-insidious-farm-btn', `c_${villageID}`);
+                            if (cFarmBtn) cFarmBtn.setAttribute('insidious-farm-btn', `c_${villageID}`);
 
                             // Praça de reunião.
                             const placeButton = row.querySelector('td a[href*="screen=place" i][onclick]');
                             if (!placeButton) throw new InsidiousError(`O botão para praça de reunião não foi encontrado. ${villageID}`);
-                            placeButton.setAttribute('data-insidious-td-type', 'place');
-                            placeButton.setAttribute('data-insidious-place-btn', `place_${villageID}`);
+                            placeButton.setAttribute('insidious-td-type', 'place');
+                            placeButton.setAttribute('insidious-place-btn', `place_${villageID}`);
                         };
                     };
 

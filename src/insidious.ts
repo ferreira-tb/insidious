@@ -18,7 +18,7 @@ class Insidious {
                 if (!currentScreen) throw new InsidiousError('Não foi possível identificar a janela atual.');
 
                 if (currentScreen.startsWith('map')) {
-                    TWMap.open();             
+                    await TWMap.open();
                 } else {
                     switch (currentScreen) {
                         case 'am_farm': await TWFarm.open();
@@ -99,7 +99,7 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 5)) {
+            if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 1.5)) {
                 await browser.storage.local.set({ worldDataFetch: now });
 
                 Utils.modal('Aguarde');
