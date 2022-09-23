@@ -50,5 +50,8 @@ interface TotalPlundered {
     };
 }
 
+// map.ts
+type FilterContext = Set<string> | undefined;
+
 // utils.ts
 type IconImgName = 'spear' | 'sword' | 'axe' | 'archer' | 'spy' | 'light' | 'marcher' | 'heavy' | 'ram' | 'catapult' | 'knight' | 'snob';

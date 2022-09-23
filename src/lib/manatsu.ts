@@ -19,8 +19,6 @@ class Manatsu {
                 switch (key) {
                     case 'text': newElement.textContent = value;
                         break;
-                    case 'html': newElement.innerHTML = value;
-                        break;
                     case 'inner': newElement.innerText = value;
                         break;
     

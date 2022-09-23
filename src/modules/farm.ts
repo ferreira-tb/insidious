@@ -359,7 +359,7 @@ class TWFarm {
                                         };
  
                                     // O jogo possui um limite de cinco ações por segundo.
-                                    }, Utils.generateIntegerBetween(300, 500));
+                                    }, Utils.generateIntegerBetween(250, 350));
     
                                     plunderEventTarget.addEventListener('stopplundering', () => {
                                         clearTimeout(timerID);

@@ -8,9 +8,6 @@ class TWMap {
             const mapBig = document.querySelector('#map_big');
             if (!mapBig) throw new InsidiousError('DOM: #map_big');
 
-            const mapContainer = document.querySelector('#map_container');
-            if (!mapContainer) throw new InsidiousError('DOM: #map_container');
-
             // Elementos da extensão.
             const menuArea = new Manatsu({ id: 'insidious_mapMenuArea' }).create();
             mapBig.insertBefore(menuArea, mapLegend);
@@ -97,31 +94,28 @@ class TWMap {
                         if (err instanceof Error) console.error(err);
                     });
 
-                // Analisa as tags já existentes e remove aquelas que são diferentes do tipo escolhido ao chamar essa função.
-                // Além disso, recolhe os IDs das tags que não foram removidas.
-                const oldTagsID: (string | null)[] = [];
+                // Vasculha os elementos do mapa e retorna aqueles que são aldeias.
+                const mapVillages: Set<string> = this.#getVillagesID();
+                // Em seguida, analisa as tags possivelmente presentes.
                 const oldCustomTags = document.querySelectorAll('.insidious_map_villageCustomTag');
                 if (oldCustomTags.length > 0) {
                     oldCustomTags.forEach((customTag) => {
-                        if (customTag.getAttribute('insidious-tag-type') !== tagType) {
+                        const previousTagType = customTag.getAttribute('insidious-tag-type');
+                        if (!previousTagType) return;
+                        // Tags de outros tipos são removidas para a escolhida poder ser aplicada.
+                        if (previousTagType !== tagType) {
                             customTag.parentNode?.removeChild(customTag);
-
+                        
+                        // Não inclui na lista as aldeias que já possuem a tag escolhida.
                         } else {
-                            oldTagsID.push(customTag.getAttribute('insidious-village'));
+                            const oldVillageID = customTag.getAttribute('insidious-village');
+                            if (oldVillageID !== null) mapVillages.delete(oldVillageID);
                         };
                     });
                 };
 
-                // Vasculha os elementos do mapa e retorna aqueles que são aldeias.
-                // Em seguida, remove aquelas que já possuem a tag escolhida.
-                let mapVillages: string[] = this.#getVillagesID();
-                mapVillages = mapVillages.filter((villageID) => {
-                    if (oldTagsID.includes(villageID)) return false;
-                    return true;
-                });
-
                 // Adiciona as novas tags.
-                Promise.allSettled(mapVillages.map((id: string) => {
+                Promise.allSettled(Array.from(mapVillages).map((id: string) => {
                     return new Promise<void>(async (resolve, reject) => {
                         if (id === currentVillageID) {
                             reject();
@@ -237,6 +231,9 @@ class TWMap {
 
                 }));
 
+                const mapContainer = document.querySelector('#map_container');
+                if (!mapContainer) throw new InsidiousError('DOM: #map_container');
+
                 // Verifica se houve mudança no DOM decorrente da movimentação do mapa.
                 // Em caso positivo, dispara a função novamente.
                 const observeTag = new MutationObserver(() => addCustomTags(tagType));
@@ -265,44 +262,47 @@ class TWMap {
                         if (err instanceof Error) console.error(err);
                     });
 
-                // Remove filtros diferentes do tipo escolhido ao chamar essa função.
-                // Além disso, recolhe os IDs das aldeias que não tiveram filtro removido.
-                const filteredVillagesID: string[] = [];
+
+                // Vasculha os elementos do mapa e retorna aqueles que são aldeias.  
+                const mapVillages: Set<string> = this.#getVillagesID();
+                // Em seguida, analisa os filtros possivelmente presentes.
                 const filteredElements = document.querySelectorAll('[insidious-filter-type]');
                 if (filteredElements.length > 0) {
                     filteredElements.forEach((filtered) => {
-                        if (filtered.getAttribute('insidious-filter-type') !== filterType) {
+                        const previousFilterType = filtered.getAttribute('insidious-filter-type');
+                        if (!previousFilterType) return;
+                        // Filtros de outros tipos são removidos para o escolhido poder ser aplicado.
+                        if (previousFilterType !== filterType) {
                             filtered.removeAttribute('insidious-filter-type');
                             filtered.removeAttribute('insidious-map-filter');
 
+                        // Não inclui na lista as aldeias que já possuem o filtro escolhido.
                         } else {
                             const elementID = filtered.getAttribute('id');
                             if (elementID && elementID.startsWith('map_village_')) {
-                                filteredVillagesID.push(elementID.replace('map_village_', ''));
+                                mapVillages.delete(elementID.replace('map_village_', ''));
                             };
                         };
                     });
                 };
 
-                // Vasculha os elementos do mapa e retorna aqueles que são aldeias.
-                // Em seguida, remove aquelas que já possuem o filtro escolhido.
-                let mapVillages: string[] = this.#getVillagesID();
-                mapVillages = mapVillages.filter((villageID) => {
-                    if (filteredVillagesID.includes(villageID)) return false;
-                    return true;
-                });
-
                 // Guarda informações que serão usadas pelas promises.
-                let filterContext: any;
+                let filterContext: FilterContext;
                 if (filterType === 'bbunknown') {
                     const attackHistory: Set<string> | undefined = (await browser.storage.local.get('alreadyPlunderedVillages')).alreadyPlunderedVillages;
                     // Se não há aldeias registradas no banco de dados, não há o que filtrar.
                     if (attackHistory === undefined) return;
                     filterContext = attackHistory;
+
+                    // Adiciona aldeias que estejam sendo atacadas.
+                    // Isso permite que as aldeias não registradas sejam ocultas logo após um ataque ser enviado a elas.
+                    mapVillages.forEach((value: string) => {
+                        if (document.querySelector(`img[id^="map_cmdicons_${value}"]`)) (filterContext as Set<string>).add(value);
+                    });
                 };
 
                 // Adiciona os filtros.
-                Promise.allSettled(mapVillages.map((id: string) => {
+                Promise.allSettled(Array.from(mapVillages).map((id: string) => {
                     return new Promise<void>(async (resolve, reject) => {
                         if (id === currentVillageID) {
                             reject();
@@ -345,19 +345,19 @@ class TWMap {
                             };
 
                             // Se a aldeia já tenha sido atacada ou seja de jogador, esconde-a.
-                            if (filterType === 'bbunknown' && (filterContext.has(id) || result[village].player !== 0)) {
+                            if (filterType === 'bbunknown' && ((filterContext as Set<string>).has(id) || result[village].player !== 0)) {
                                 hideMapItem(villageElement);
                                 // Em seguida, busca outros elementos que tenham relação com essa aldeia e os esconde também.
                                 const relatedElements = villageParent.querySelectorAll(`[id*="${id}"]:not([id^="map_village_"])`);
                                 if (relatedElements.length > 0) relatedElements.forEach((element) => hideMapItem(element));
 
-                                // Caso o elemento possua tags, oculta-as também.
-                                const relatedTags = villageParent.querySelectorAll(`div.insidious_map_villageCustomTag[insidious-village="${id}"]`);
-                                if (relatedTags.length > 0) relatedTags.forEach((element) => hideMapItem(element));
-
-                                // Por último, verifica se há algum canvas relacionado à aldeia.
+                                // Verifica se há algum canvas relacionado à aldeia.
                                 const canvasElement = getCanvas();
                                 if (canvasElement !== null) hideMapItem(canvasElement);
+
+                                // Caso o elemento possua alguma tag, oculta-a também.
+                                const relatedTag = villageParent.querySelector(`div.insidious_map_villageCustomTag[insidious-village="${id}"]`);
+                                if (relatedTag) hideMapItem(relatedTag);
                             };
 
                             resolve();
@@ -373,6 +373,9 @@ class TWMap {
                     elementToHide.setAttribute('insidious-map-filter', 'hidden');
                     elementToHide.setAttribute('insidious-filter-type', filterType);
                 };
+
+                const mapContainer = document.querySelector('#map_container');
+                if (!mapContainer) throw new InsidiousError('DOM: #map_container');
 
                 // Verifica se houve mudança no DOM decorrente da movimentação do mapa.
                 // Em caso positivo, dispara a função novamente.
@@ -404,6 +407,10 @@ class TWMap {
                     await browser.storage.local.set({ customTagStatus: 'disabled' });
                     Manatsu.disableChildren(tagArea, 'button');
 
+                    // Interrompe observers que possam estar ativos.
+                    mapEventTarget.dispatchEvent(new Event('stoptagobserver'));
+
+                    // Remove todas as tags.
                     const oldCustomTags = document.querySelectorAll('.insidious_map_villageCustomTag');
                     oldCustomTags.forEach((customTag) => customTag.parentNode?.removeChild(customTag));
                 };
@@ -458,16 +465,20 @@ class TWMap {
                     Manatsu.enableChildren(filterArea, 'button');
 
                     const lastFilter: { lastMapFilter: string } = await browser.storage.local.get('lastMapFilter');
-                    if (lastFilter?.lastMapFilter) addMapFilters(lastFilter.lastMapFilter);
+                    if (lastFilter.lastMapFilter) addMapFilters(lastFilter.lastMapFilter);
                     
                 } else {
                     await browser.storage.local.set({ mapFiltersStatus: 'disabled' });
                     Manatsu.disableChildren(filterArea, 'button');
 
-                    const oldFilters = document.querySelectorAll('[insidious-map-filter="hidden" i]');
+                    // Interrompe observers que possam estar ativos.
+                    mapEventTarget.dispatchEvent(new Event('stopfilterobserver'));
+
+                    // Remove todos os filtros.
+                    const oldFilters = document.querySelectorAll('[insidious-map-filter]');
                     oldFilters.forEach((filteredElem) => {
                         filteredElem.removeAttribute('insidious-map-filter');
-                        filteredElem.removeAttribute('insidious-map-filter-type');
+                        filteredElem.removeAttribute('insidious-filter-type');
                     });
                 };
             });
@@ -528,7 +539,7 @@ class TWMap {
                 }, { signal: getBBCoordsCtrl.signal });
                 
                 // Vasculha os elementos do mapa e retorna aqueles que representam aldeias bárbaras.
-                Promise.allSettled(this.#getVillagesID().map((id: string) => {
+                Promise.allSettled(Array.from(this.#getVillagesID()).map((id: string) => {
                     return new Promise<void>(async (resolve, reject) => {
                         try {
                             const village = 'village' + id;
@@ -624,13 +635,13 @@ class TWMap {
         };
     };
 
-    static #getVillagesID() {
-        const villages: string[] = [];
+    static #getVillagesID(): Set<string> {
+        const villages: Set<string> = new Set();
         const mapImages = document.querySelectorAll('#map_container div img[id^="map_village_"]:not([id*="undefined"])');
         mapImages.forEach((img) => {
             const imgID = img.getAttribute('id');
             if (imgID === null || imgID === '') return;
-            villages.push(imgID.replace('map_village_', ''));
+            villages.add(imgID.replace('map_village_', ''));
         });
 
         return villages;
