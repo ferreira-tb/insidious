@@ -107,18 +107,25 @@ class Insidious {
                 if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal (#insidious_modal).');
                 modalWindow.setAttribute('style', 'cursor: wait;');
 
-                let progressInfo = new Manatsu({
+                // Elementos do modal.
+                const progressInfo = new Manatsu({
                     id: 'insidious_progressInfo',
-                    style: 'cursor: wait;',
                     text: 'Obtendo dados do servidor.'
                 }, modalWindow).create();
 
+                const percentageInfo = new Manatsu({ id: 'insidious_percentageInfo' }, modalWindow).create();
+
+                // Faz download do arquivo contendo a lista de aldeias.
                 const villages: string[] = await new Promise((resolve, reject) => {
                     fetch(TWAssets.world.village)
                         .then((raw) => raw.text())
                         .then((text) => resolve(text.split(/\r?\n/)))
                         .catch((err: unknown) => reject(err));
                 });
+
+                // Calcula a porcentagem de aldeias processadas.
+                let settledPromises = 0;
+                const calcPercentage = () => ((++settledPromises / villages.length) * 100).toFixed(1);
 
                 // Armazena individualmente as aldeias no banco de dados.
                 Promise.allSettled(villages.map((village) => {
@@ -143,11 +150,16 @@ class Insidious {
 
                         } catch (err) {
                             reject(err);
-                        };              
+
+                        } finally {
+                            percentageInfo.textContent = `${calcPercentage()}%`;
+                        };
                     });
 
                 })).then((results) => {
-                    modalWindow?.removeAttribute('style');
+                    modalWindow.removeAttribute('style');
+                    modalWindow.removeChild(percentageInfo);
+
                     const modalh1 = document.querySelector('#insidious_modal_h1');
                     if (modalh1) modalh1.textContent = 'Concluído';
 

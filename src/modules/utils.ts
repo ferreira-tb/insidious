@@ -42,6 +42,15 @@ class Utils {
         return Math.floor(Math.random() * (max - min) + min);
     };
 
+    static #isThereCaptcha() {
+        const botCheck = document.querySelector('#bot_check');
+        const hcaptcha = document.querySelector('.captcha');
+        const hcaptchaFrame = document.querySelector('iframe[data-title*="hCaptcha" i]');
+
+        if (botCheck || hcaptcha || hcaptchaFrame) return true;
+        return false;
+    };
+
     static #modal(modalTitle: string) {
         const blurBG = new Manatsu({ id: 'insidious_blurBG' }, document.body).create();
         const modalWindow = new Manatsu({ id: 'insidious_modal' }, document.body).create();
@@ -69,4 +78,5 @@ class Utils {
     static get urlDecode() {return this.#urlDecode};
     static get calcDistance() {return this.#calcDistance};
     static get generateIntegerBetween() {return this.#generateIntegerBetween};
+    static get isThereCaptcha() {return this.#isThereCaptcha};
 };

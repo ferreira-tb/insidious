@@ -312,7 +312,6 @@ class TWMap {
                         try {
                             const village = 'village' + id;
                             const result: VillageQuery = await browser.storage.local.get(village);
-                            if (!result[village]) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
 
                             const villageElement = document.querySelector(`#map_village_${id}`);
                             if (!villageElement) throw new InsidiousError(`DOM: #map_village_${id}`);
@@ -344,8 +343,20 @@ class TWMap {
                                 return null;
                             };
 
+                            const isThisVillageRegistered = (): boolean => {
+                                if (result[village]) {
+                                    switch (filterType) {
+                                        case 'bbunknown': return result[village].player !== 0;
+                                        default: return false;
+                                    };
+   
+                                } else {
+                                    return false;
+                                };
+                            };
+
                             // Se a aldeia já tenha sido atacada ou seja de jogador, esconde-a.
-                            if (filterType === 'bbunknown' && ((filterContext as Set<string>).has(id) || result[village].player !== 0)) {
+                            if (filterType === 'bbunknown' && ((filterContext as Set<string>).has(id) || isThisVillageRegistered())) {
                                 hideMapItem(villageElement);
                                 // Em seguida, busca outros elementos que tenham relação com essa aldeia e os esconde também.
                                 const relatedElements = villageParent.querySelectorAll(`[id*="${id}"]:not([id^="map_village_"])`);

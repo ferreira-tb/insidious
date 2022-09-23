@@ -309,6 +309,14 @@ class TWFarm {
                             // Se as tropas estiverem disponíveis, envia o ataque após um delay aleatório.
                             if (attackIsPossible) {
                                 return new Promise<void>((resolve, reject) => {
+                                    if (Utils.isThereCaptcha()) {
+                                        browser.storage.local.set({ isPlunderActive: false });
+                                        plunderEventTarget.dispatchEvent(new Event('stopplundering'));
+                                        plunderEventTarget.dispatchEvent(new Event('cancelautoreload'));
+                                        reject(new FarmAbort());
+                                        return;   
+                                    };
+
                                     const attackCtrl = new AbortController();
                                     const timerID = setTimeout(async () => {
                                         try {
@@ -430,21 +438,27 @@ class TWFarm {
             // Como isPlunderActive === true, o plunder voltará a atacar automaticamente.
             const setPlunderTimeout = () => {
                 return new Promise<void>((resolve, reject) => {
-                    const timeoutCtrl = new AbortController();
+                    const autoReloadCtrl = new AbortController();
 
                     const plunderTimeoutID = setTimeout(() => {
                         // Interrompe qualquer atividade no plunder e inicia a preparação para o recarregamento.
                         plunderEventTarget.dispatchEvent(new Event('stopplundering'));
-                        timeoutCtrl.abort();
+                        autoReloadCtrl.abort();
                         setTimeout(() => window.location.reload(), 5000);
                         resolve();
                     }, Utils.generateIntegerBetween((60000 * 20), (60000 * 30)));
 
                     document.querySelector('#insidious_startPlunderBtn')?.addEventListener('click', () => {
                         clearTimeout(plunderTimeoutID);
-                        timeoutCtrl.abort();
+                        autoReloadCtrl.abort();
                         reject(new FarmAbort());
-                    }, { signal: timeoutCtrl.signal });
+                    }, { signal: autoReloadCtrl.signal });
+
+                    plunderEventTarget.addEventListener('cancelautoreload', () => {
+                        clearTimeout(plunderTimeoutID);
+                        autoReloadCtrl.abort();
+                        resolve();
+                    }, { signal: autoReloadCtrl.signal });
                 });
             };
 
@@ -649,11 +663,9 @@ class TWFarm {
                             const findResourcesField = (): HTMLElement | null => {
                                 const fields = row.querySelectorAll('td');
                                 for (const field of (fields as unknown) as HTMLElement[]) {
-                                    if (field.getAttribute('colspan') !== "3") continue;
-
-                                    const woodField = field.querySelector('.nowrap span[class*="wood"][data-title*="Madeira" i] + span');
-                                    const stoneField = field.querySelector('.nowrap span[class*="stone"][data-title*="Argila" i] + span');
-                                    const ironField = field.querySelector('.nowrap span[class*="iron"][data-title*="Ferro" i] + span');
+                                    const woodField = field.querySelector('.nowrap span[class*="wood"] + span');
+                                    const stoneField = field.querySelector('.nowrap span[class*="stone"] + span');
+                                    const ironField = field.querySelector('.nowrap span[class*="iron"] + span');
                                     if (!woodField || !stoneField || !ironField) continue;
 
                                     let totalAmount: number = 0;
@@ -726,7 +738,7 @@ class TWFarm {
                                 };
                             };
         
-                            // Distância (é calculada de forma independente, não dependendo da posição na tabela).
+                            // Distância e coordenadas (adquirido de forma independente, não dependendo da posição na tabela).
                             const targetVillageData = await browser.storage.local.get(`village${villageID}`);
                             const { x: targetX, y: targetY }: SNObject = targetVillageData['village' + villageID] ?? { };
 
@@ -804,33 +816,36 @@ class TWFarm {
     static #decipherPlunderListDate(date: string): number | null {
         // Exemplos de data: hoje às 00:05:26 | ontem às 16:29:50 | em 21.09. às 12:36:38
         const writtenDate = date.toLowerCase();
-        if (!writtenDate.includes('às')) throw new InsidiousError('Não foi possível identificar o formato da data.');
+        if (!writtenDate.includes('às')) return null;
 
         // splitDate representa apenas as horas, os minutos e os segundos.
         const splitDate: string | undefined = writtenDate.split(' ').pop();
         if (splitDate) {
             const date: number[] = splitDate.split('\:').map((item: string) => Number.parseInt(item));
-            if (date.length !== 3) throw new InsidiousError('A data possui uma quantidade de valores diferente do esperado.');
-            if (date.some((item) => Number.isNaN(item))) throw new InsidiousError('A data é inválida (NaN).');
+            if (date.length !== 3) return null;
+            if (date.some((item) => Number.isNaN(item))) return null;
 
             // Se o ataque foi hoje, toma o horário atual e apenas ajusta a hora, os minutos e os segundos.
             if (writtenDate.includes('hoje')) {       
                 return new Date().setHours(date[0], date[1], date[2]);
-    
+
             // Se foi ontem, faz a mesma coisa, mas remove 24 horas do resultado.
             } else if (writtenDate.includes('ontem')) {
                 const yesterday = new Date().getTime() - (3600000 * 24);
                 return new Date(yesterday).setHours(date[0], date[1], date[2]);
 
-            } else {
+            } else if (writtenDate.includes('em')) {
                 // Em outros cenários, também altera o dia e o mês.
                 let dayAndMonth: string | number[] = (writtenDate.split(' '))[1];
                 dayAndMonth = dayAndMonth.split('.').map((item: string) => Number.parseInt(item));
                 dayAndMonth.filter((item) => !Number.isNaN(item));
 
                 let anyDay = new Date().setHours(date[0], date[1], date[2]);
-                anyDay = new Date(anyDay).setMonth(dayAndMonth[1], dayAndMonth[0]);
-                if (anyDay > new Date().getTime()) throw new InsidiousError('Issue #2: https://github.com/ferreira-tb/insidious-firefox/issues/2');
+                // O valor para o mês começa com índica zero, por isso é preciso diminuir em 1.
+                anyDay = new Date(anyDay).setMonth(dayAndMonth[1] - 1, dayAndMonth[0]);
+
+                // Caso essa condição for verdadeira, há diferença de ano entre a data atual e a data do ataque.
+                if (anyDay > new Date().getTime()) throw new InsidiousError('Issue #2: https://github.com/ferreira-tb/insidious/issues/2');
                 
                 return anyDay;
             };
