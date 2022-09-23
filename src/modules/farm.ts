@@ -802,25 +802,37 @@ class TWFarm {
     };
 
     static #decipherPlunderListDate(date: string): number | null {
+        // Exemplos de data: hoje às 00:05:26 | ontem às 16:29:50 | em 21.09. às 12:36:38
         const writtenDate = date.toLowerCase();
-        if (!writtenDate.includes('às')) return null;
+        if (!writtenDate.includes('às')) throw new InsidiousError('Não foi possível identificar o formato da data.');
 
+        // splitDate representa apenas as horas, os minutos e os segundos.
         const splitDate: string | undefined = writtenDate.split(' ').pop();
         if (splitDate) {
-            const date: number[] = splitDate.split('\:').map((item: string) => Number(item));
-            if (date.length !== 3) return null;
-            if (date.some((item) => Number.isNaN(item))) return null;
+            const date: number[] = splitDate.split('\:').map((item: string) => Number.parseInt(item));
+            if (date.length !== 3) throw new InsidiousError('A data possui uma quantidade de valores diferente do esperado.');
+            if (date.some((item) => Number.isNaN(item))) throw new InsidiousError('A data é inválida (NaN).');
 
+            // Se o ataque foi hoje, toma o horário atual e apenas ajusta a hora, os minutos e os segundos.
             if (writtenDate.includes('hoje')) {       
                 return new Date().setHours(date[0], date[1], date[2]);
     
+            // Se foi ontem, faz a mesma coisa, mas remove 24 horas do resultado.
             } else if (writtenDate.includes('ontem')) {
                 const yesterday = new Date().getTime() - (3600000 * 24);
                 return new Date(yesterday).setHours(date[0], date[1], date[2]);
 
             } else {
-                // Essa parte é apenas temporária.
-                return new Date().setHours(date[0], date[1], date[2]);
+                // Em outros cenários, também altera o dia e o mês.
+                let dayAndMonth: string | number[] = (writtenDate.split(' '))[1];
+                dayAndMonth = dayAndMonth.split('.').map((item: string) => Number.parseInt(item));
+                dayAndMonth.filter((item) => !Number.isNaN(item));
+
+                let anyDay = new Date().setHours(date[0], date[1], date[2]);
+                anyDay = new Date(anyDay).setMonth(dayAndMonth[1], dayAndMonth[0]);
+                if (anyDay > new Date().getTime()) throw new InsidiousError('Issue #2: https://github.com/ferreira-tb/insidious-firefox/issues/2');
+                
+                return anyDay;
             };
         };
 
