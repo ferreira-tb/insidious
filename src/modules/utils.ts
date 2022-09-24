@@ -47,7 +47,11 @@ class Utils {
         const hcaptcha = document.querySelector('.captcha');
         const hcaptchaFrame = document.querySelector('iframe[data-title*="hCaptcha" i]');
 
-        if (botCheck || hcaptcha || hcaptchaFrame) return true;
+        if (botCheck || hcaptcha || hcaptchaFrame) {
+            browser.storage.local.set({ lastCaptcha: new Date().getTime() });
+            return true;
+        };
+
         return false;
     };
 

@@ -1,4 +1,7 @@
 class TWFarm {
+    static #models: UnitModels;
+    static #carryCapacity: SNObject;
+
     static async #open() {
         // Elementos originais.
         const plunderListFilters = document.querySelector('#plunder_list_filters');
@@ -142,33 +145,11 @@ class TWFarm {
             };
 
             // Modelos de saque do usuário.
-            const models = await browser.storage.local.get(['amodel', 'bmodel']);
-            if (!models.amodel) throw new InsidiousError('Os dados do modelo A não estão presentes no banco de dados.');
-            if (!models.bmodel) throw new InsidiousError('Os dados do modelo B não estão presentes no banco de dados.');
+            this.#models = await browser.storage.local.get(['amodel', 'bmodel']);
+            if (!this.#models.amodel) throw new InsidiousError('Os dados do modelo A não estão presentes no banco de dados.');
+            if (!this.#models.bmodel) throw new InsidiousError('Os dados do modelo B não estão presentes no banco de dados.');
 
-            // Calcula a capacidade total de carga com base nos dados salvos.
-            const calcCarryCapacity = (unitModel: any) => {
-                let result: number = 0;
-                for (const key in unitModel) {
-                    // Ignora o explorador, já que ele não pode carregar recursos.
-                    if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo.unit[key].carry;
-                };
-
-                if (!Number.isInteger(result)) {
-                    throw new InsidiousError('O valor calculado para a capacidade de carga é inválido.');
-                };
-                return result;
-            };
-
-            const capacityA: number = calcCarryCapacity(models.amodel);
-            const capacityB: number = calcCarryCapacity(models.bmodel);
-
-            // Caso o valor seja zero, surge uma divisão por zero no cálculo da razão.
-            // Qualquer valor dividido por Infinity se torna zero, o que o torna a melhor opção lá.
-            const carryCapacity: { [index: string]: number } = {
-                a: capacityA === 0 ? Infinity : capacityA,
-                b: capacityB === 0 ? Infinity : capacityB,
-            };
+            this.#carryCapacity = this.#getCarryCapacity();
 
             const sendAttack = async (): Promise<void> => {
                 try {
@@ -180,7 +161,7 @@ class TWFarm {
                         if (village.getAttribute('style')?.includes('display: none')) continue;
                         
                         // Caso não hajam informações obtidas por exploradores, a linha é ignorada.
-                        // No entanto, provoca um erro caso a função addInfo() tiver falhado em criar o atributo.
+                        // No entanto, emite um erro caso a função addInfo() tiver falhado em criar o atributo.
                         const spyStatus = village.getAttribute('insidious-spy-status');
                         if (spyStatus === null || spyStatus === '') {
                             throw new InsidiousError('A linha não possui atributo indicando se foi explorada ou não.');
@@ -199,30 +180,30 @@ class TWFarm {
                         // Caso um modelo não seja adequado, será marcado como null.
                         let bestRatio: AB = null, otherRatio: AB = null;
                         const verifyRatio = (): boolean => {
-                            let bigger: AB = carryCapacity.a >= carryCapacity.b ? 'a' : 'b';
-                            let smaller: AB = carryCapacity.a < carryCapacity.b ? 'a' : 'b';
+                            const bigger: AB = this.#carryCapacity.a >= this.#carryCapacity.b ? 'a' : 'b';
+                            const smaller: AB = this.#carryCapacity.a < this.#carryCapacity.b ? 'a' : 'b';
 
                             // Se ambos são menores que a quantidade de recursos, basta mandar o maior.
                             // A diferença entre a carga do maior e a quantidade de recursos não é relevante nesse caso.
-                            if (resourceAmount >= carryCapacity[bigger]) {
+                            if (resourceAmount >= this.#carryCapacity[bigger]) {
                                 bestRatio = bigger;
                                 otherRatio = smaller;
                                 return true;
 
                             // Se os dois são maiores, descartam-se aqueles que estejam fora da zona aceitável.
                             // Se todos forem descartados, a função será obrigada a retornar false.
-                            } else if (resourceAmount <= carryCapacity[smaller]) {
-                                bestRatio = resourceAmount / carryCapacity[smaller] >= 0.8 ? smaller : null;
-                                otherRatio = resourceAmount / carryCapacity[bigger] >= 0.8 ? bigger : null;
+                            } else if (resourceAmount <= this.#carryCapacity[smaller]) {
+                                bestRatio = resourceAmount / this.#carryCapacity[smaller] >= 0.8 ? smaller : null;
+                                otherRatio = resourceAmount / this.#carryCapacity[bigger] >= 0.8 ? bigger : null;
                                 if (bestRatio !== null) return true;
                                 return false;
 
                             // Nesse caso, a quantidade de recursos é maior que a carga de um, mas menor que a de outro.
                             } else {
                                 // Razão em relação ao maior (será sempre MENOR que 1).
-                                const ratioB = resourceAmount / carryCapacity[bigger];
+                                const ratioB = resourceAmount / this.#carryCapacity[bigger];
                                 // Razão em relação ao menor (será sempre MAIOR que 1).
-                                const ratioS = resourceAmount / carryCapacity[smaller];
+                                const ratioS = resourceAmount / this.#carryCapacity[smaller];
 
                                 // O de maior carga é descartado caso seja grande demais.
                                 // O menor é dado como válido pois valores menores são sempre adequados.
@@ -244,61 +225,19 @@ class TWFarm {
                         if (verifyRatio()) {
                             if (bestRatio === null) throw new InsidiousError('Não foi atribuído valor a uma variável de controle (ratio).');
 
-                            const getUnitElem = (unit: string): number => {
-                                const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
-                                if (!unitElem || unitElem.textContent === null) throw new InsidiousError(`DOM: #farm_units #units_home tbody tr td#${unit}`);
-                                return Number.parseInt(unitElem.textContent, 10);
-                            };
-
-                            // Lista das tropas disponíveis.
-                            const availableTroops: AvailableTroops = {
-                                spear: getUnitElem('spear'),
-                                sword: getUnitElem('sword'),
-                                axe: getUnitElem('axe'),
-                                spy: getUnitElem('spy'),
-                                light: getUnitElem('light'),
-                                heavy: getUnitElem('heavy'),
-                                knight: getUnitElem('knight')
-                            };
-
-                            if (!Insidious.worldInfo.config.game) {
-                                browser.storage.local.remove('worldConfigFetch');
-                                throw new InsidiousError('Não foi possível obter as configurações do mundo.');
-                            };
-
-                            // Caso o mundo tenha arqueiros, adiciona-os à lista.
-                            if (Insidious.worldInfo.config.game.archer === 1) {
-                                Object.defineProperties(availableTroops, {
-                                    archer: {
-                                        value: getUnitElem('archer'),
-                                        enumerable: true
-                                    },
-
-                                    marcher: {
-                                        value: getUnitElem('marcher'),
-                                        enumerable: true
-                                    }
-                                });
-                            };
-
-                            // Modelo escolhido pela função.
-                            const bestModel = models[bestRatio + 'model'];
-
-                            const checkAvailability = (model: any): boolean => {
-                                // É possível usar a mesma chave em ambas, pois a estrutura é exatamente igual.
-                                for (const key in availableTroops) {
-                                    // Se houver menos tropas do que consta no modelo, a função deve ser interrompida.
-                                    if (availableTroops[key as keyof typeof availableTroops] < model[key]) return false;
-                                };
-                                return true;
-                            };
+                            // Retorna uma função, que então é guardada em checkAvailability.
+                            // Essa nova função guarda o escopo de this.#getAvailableTroops.
+                            const checkAvailability = this.#getAvailableTroops();
+                            
+                            // Modelo escolhido pela função verifyRatio.
+                            const bestModel: SNObject = this.#models[bestRatio + 'model'];
 
                             // Esse boolean determina se o ataque é enviado ou não.
                             let attackIsPossible: boolean = checkAvailability(bestModel);
 
                             // Caso não hajam tropas disponíveis, verifica se um ataque usando o outro modelo seria aceitável.
                             if (otherRatio !== null && !attackIsPossible) {
-                                const otherModel = models[otherRatio + 'model'];
+                                const otherModel = this.#models[otherRatio + 'model'];
                                 // Em caso positivo, determina o outro modelo como bestRatio.
                                 if (checkAvailability(otherModel)) {
                                     bestRatio = otherRatio;
@@ -308,6 +247,7 @@ class TWFarm {
                             
                             // Se as tropas estiverem disponíveis, envia o ataque após um delay aleatório.
                             if (attackIsPossible) {
+                                // Esse return não pode ser removido, caso contrário o código após o FOR será executado indevidamente.
                                 return new Promise<void>((resolve, reject) => {
                                     if (Utils.isThereCaptcha()) {
                                         browser.storage.local.set({ isPlunderActive: false });
@@ -349,8 +289,8 @@ class TWFarm {
     
                                                 return allResources.map((amount: number) => {
                                                     // Se houver mais recursos do que a carga suporta, calcula quanto de cada recurso deve ser saqueado.
-                                                    if (totalAmount > carryCapacity[bestRatio as string]) {
-                                                        return Math.floor((amount / totalAmount) * carryCapacity[bestRatio as string]);
+                                                    if (totalAmount > this.#carryCapacity[bestRatio as string]) {
+                                                        return Math.floor((amount / totalAmount) * this.#carryCapacity[bestRatio as string]);
                                                     } else {
                                                         return amount;
                                                     };
@@ -427,7 +367,12 @@ class TWFarm {
                                 };
                             };
                         };
+                    // Fim do FOR OF.    
                     };
+
+                    // Caso, em toda tabela, não haja aldeia adequada para envio do ataque, verifica se há mais páginas.
+                    // Em caso positivo, navega para a próxima após um breve delay.
+                    setTimeout(() => this.#navigateToNextPlunderPage(), Utils.generateIntegerBetween(2000, 3000));
 
                 } catch (err) {
                     if (err instanceof Error) console.error(err);
@@ -470,6 +415,146 @@ class TWFarm {
                     return;
                 };
             });
+
+        } catch (err) {
+            if (err instanceof Error) console.error(err);
+        };
+    };
+
+    static #getCarryCapacity(): SNObject {
+        // Calcula a capacidade total de carga com base nos dados salvos.
+        const calcEachCarryCapacity = (unitModel: SNObject) => {
+            let result: number = 0;
+            for (const key in unitModel) {
+                // Ignora o explorador, já que ele não pode carregar recursos.
+                if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo.unit[key].carry;
+            };
+
+            if (!Number.isInteger(result)) {
+                throw new InsidiousError('O valor calculado para a capacidade de carga é inválido.');
+            };
+            return result;
+        };
+
+        const capacityA: number = calcEachCarryCapacity(this.#models.amodel);
+        const capacityB: number = calcEachCarryCapacity(this.#models.bmodel);
+
+        // Caso o valor seja zero, surge uma divisão por zero no cálculo da razão.
+        // Qualquer valor dividido por Infinity se torna zero, o que o torna a melhor opção lá.
+        return {
+            a: capacityA === 0 ? Infinity : capacityA,
+            b: capacityB === 0 ? Infinity : capacityB,
+        };
+    };
+
+    static #getAvailableTroops() {
+        const getUnitElem = (unit: string): number => {
+            const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
+            if (!unitElem || unitElem.textContent === null) throw new InsidiousError(`DOM: #farm_units #units_home tbody tr td#${unit}`);
+            return Number.parseInt(unitElem.textContent, 10);
+        };
+
+        // Lista das tropas disponíveis.
+        const availableTroops: AvailableTroops = {
+            spear: getUnitElem('spear'),
+            sword: getUnitElem('sword'),
+            axe: getUnitElem('axe'),
+            spy: getUnitElem('spy'),
+            light: getUnitElem('light'),
+            heavy: getUnitElem('heavy'),
+            knight: getUnitElem('knight')
+        };
+
+        if (!Insidious.worldInfo.config.game) {
+            browser.storage.local.remove('worldConfigFetch');
+            throw new InsidiousError('Não foi possível obter as configurações do mundo.');
+        };
+
+        // Caso o mundo tenha arqueiros, adiciona-os à lista.
+        if (Insidious.worldInfo.config.game.archer === 1) {
+            Object.defineProperties(availableTroops, {
+                archer: {
+                    value: getUnitElem('archer'),
+                    enumerable: true
+                },
+
+                marcher: {
+                    value: getUnitElem('marcher'),
+                    enumerable: true
+                }
+            });
+        };
+
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures
+        return function(model: SNObject): boolean {
+            // É possível usar a mesma chave em ambas, pois a estrutura é exatamente igual.
+            for (const key in availableTroops) {
+                // Se houver menos tropas do que consta no modelo, a função deve ser interrompida.
+                if (availableTroops[key as keyof typeof availableTroops] < model[key]) return false;
+            };
+            return true;
+        };
+    };
+
+    static #navigateToNextPlunderPage() {
+        // Antes de ir para a próxima página, verifica se há tropas disponíveis em algum dos modelos.
+        const checkAvailability = this.#getAvailableTroops();
+        // this.#getCarryCapacity atribui Infinity caso a capacidade seja igual a zero.
+        // Isso é feito para evitar divisões por zero.
+        let statusA: boolean = false, statusB: boolean = false;
+        if (checkAvailability(this.#models.amodel) && this.#carryCapacity.a !== Infinity) statusA = true;
+        if (checkAvailability(this.#models.bmodel) && this.#carryCapacity.b !== Infinity) statusB = true;
+        if (statusA === false && statusB === false) return;
+
+        try {
+            // Linha da tabela com os números das páginas.
+            const plunderListNav = document.querySelector('#plunder_list_nav table tbody tr td');
+
+            if (plunderListNav) {
+                const currentPageElement = plunderListNav.querySelector('strong.paged-nav-item');
+
+                // Analisa os links disponíveis para determinar quantos existem.
+                const getPageNumber = (element: Element) => Number.parseInt((element.textContent as string).replace(/\D/g, ''), 10);
+                let plunderPages: number[] = Array.from(plunderListNav.querySelectorAll('a.paged-nav-item'), getPageNumber);
+                plunderPages = plunderPages.filter((item) => !Number.isNaN(item));
+                if (!currentPageElement?.textContent || plunderPages.length === 0) return;
+
+                // Identifica a página atual.
+                const currentPage = Number.parseInt(currentPageElement.textContent.replace(/\D/g, ''), 10);
+                if (Number.isNaN(currentPage)) throw new InsidiousError('Não foi possível identificar a página atual.');
+                // Anexa a página atual na array e em seguida a ordena.
+                plunderPages.push(currentPage);
+                plunderPages.sort((a, b) => a - b);
+
+                // Seleciona um link arbitrário para servir como referência para a construção do novo.
+                // Exemplo de link: "/game.php?village=23215&screen=am_farm&order=distance&dir=asc&Farm_page=1".
+                const plunderPageArbitraryLink = plunderListNav.querySelector('a.paged-nav-item');
+                if (!plunderPageArbitraryLink) throw new InsidiousError('Não foi encontrado um link de referência para a navegação.');
+                const plunderPageURL = plunderPageArbitraryLink.getAttribute('href');
+                if (!plunderPageURL) throw new InsidiousError('Não foi possível obter a URL para a navegação entre as páginas.');
+
+                // Determina qual página foi escolhida arbitrariamente.
+                let arbitraryPage: string | string[] = plunderPageURL.split('&').filter((item) => item.includes('Farm_page='));
+                arbitraryPage = arbitraryPage[0].replace(/\D/g, '');
+
+                // Caso a página atual seja a última página, volta para a primeira.
+                // Ao contrário de como acontece na lista, as páginas no link começam no índice zero.
+                // Ou seja, no link, a página 2 é representada por "Farm_page=1", e a página 5 por "Farm_page=4".
+                // Então é necessário diminuir em um o valor quando se quer ir para uma página em espécifico.
+                if (currentPage === plunderPages.at(-1)) {
+                    location.href = newLocation(plunderPages[0] - 1);
+
+                // Para navegar para a próxima página, é preciso usar currentPage ao atribuir o link.
+                // Isso porquê currentPage é a numeração na lista (começa no indíce 1) e o link começa no índice zero.
+                // Logo, se a página atual é a 3, seu link é "Farm_page=2", com o link da próxima sendo "Farm_page=3".
+                } else {
+                    location.href = newLocation(currentPage);
+                };
+
+                function newLocation(pageIndex: number) {
+                    return plunderPageURL!.replace(`Farm_page=${arbitraryPage}`, `Farm_page=${String(pageIndex)}`);
+                };
+            };
 
         } catch (err) {
             if (err instanceof Error) console.error(err);
@@ -626,9 +711,9 @@ class TWFarm {
                         if (!row.hasAttribute('insidious-village')) {
                             // A coerção à string é válida pois já foi verificada a existência do ID ao usar querySelectorAll();
                             let villageID: string = row.getAttribute('id') as string;
-                            villageID = villageID.replace('village_', '');
+                            villageID = villageID.replace(/\D/g, '');
 
-                            const verifyVillageID: number = Number.parseInt(villageID);
+                            const verifyVillageID: number = Number.parseInt(villageID, 10);
                             if (Number.isNaN(verifyVillageID)) throw new InsidiousError(`O ID da aldeia é inválido (${villageID})`);
                             alreadyPlunderedVillages.add(villageID);
 
@@ -670,21 +755,16 @@ class TWFarm {
 
                                     let totalAmount: number = 0;
                                     [woodField, stoneField, ironField].forEach((resField) => {
-                                        const resText: string | null = resField.textContent;
-                                        if (resText === null) throw new InsidiousError(`Os campos de recursos foram encontrados, mas estão vazios (${villageID}).`);
-                                        let resAmount: string = '';
-
-                                        for (const char of resText) {
-                                            const parsed = parseInt(char, 10);
-                                            if (!Number.isNaN(parsed)) resAmount += char;
-                                        };
+                                        let resAmount: string | null = resField.textContent;
+                                        if (resAmount === null) throw new InsidiousError(`Os campos de recursos foram encontrados, mas estão vazios (${villageID}).`);
+                                        resAmount = resAmount.replace(/\D/g, '');
 
                                         // Adiciona o valor à quantia total.
                                         const parsedResAmount: number = parseInt(resAmount, 10);
                                         if (!Number.isNaN(parsedResAmount)) {
                                             totalAmount += parsedResAmount;
                                         } else {
-                                            throw new InsidiousError(`A quantia calculada não é válida (${villageID}).`);
+                                            throw new InsidiousError(`A quantia de recursos calculada não é válida (${villageID}).`);
                                         };
 
                                         // A coerção é possível pois a existência já foi verificada ao usar querySelector() com o seletor "+".
@@ -821,7 +901,7 @@ class TWFarm {
         // splitDate representa apenas as horas, os minutos e os segundos.
         const splitDate: string | undefined = writtenDate.split(' ').pop();
         if (splitDate) {
-            const date: number[] = splitDate.split('\:').map((item: string) => Number.parseInt(item));
+            const date: number[] = splitDate.split('\:').map((item: string) => Number.parseInt(item, 10));
             if (date.length !== 3) return null;
             if (date.some((item) => Number.isNaN(item))) return null;
 
@@ -837,10 +917,10 @@ class TWFarm {
             } else if (writtenDate.includes('em')) {
                 // Em outros cenários, também altera o dia e o mês.
                 let dayAndMonth: string | number[] = (writtenDate.split(' '))[1];
-                dayAndMonth = dayAndMonth.split('.').map((item: string) => Number.parseInt(item));
+                dayAndMonth = dayAndMonth.split('.').map((item: string) => Number.parseInt(item, 10));
                 dayAndMonth.filter((item) => !Number.isNaN(item));
 
-                let anyDay = new Date().setHours(date[0], date[1], date[2]);
+                let anyDay: number = new Date().setHours(date[0], date[1], date[2]);
                 // O valor para o mês começa com índica zero, por isso é preciso diminuir em 1.
                 anyDay = new Date(anyDay).setMonth(dayAndMonth[1] - 1, dayAndMonth[0]);
 

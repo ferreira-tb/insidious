@@ -280,7 +280,7 @@ class TWMap {
                         } else {
                             const elementID = filtered.getAttribute('id');
                             if (elementID && elementID.startsWith('map_village_')) {
-                                mapVillages.delete(elementID.replace('map_village_', ''));
+                                mapVillages.delete(elementID.replace(/\D/g, ''));
                             };
                         };
                     });
@@ -508,7 +508,7 @@ class TWMap {
                     const coordClass = (e.target as Element).getAttribute('class');
                     if (coordClass === 'insidious_mapActionArea_coords') {
                         try {
-                            const villageID = (e.target as Element).id.replace('insidious_mapActionArea_village', '');
+                            const villageID = (e.target as Element).id.replace(/\D/g, '');
                             const villageElement = document.querySelector(`#map_village_${villageID}`);
                             if (!villageElement) return;
 
@@ -531,7 +531,7 @@ class TWMap {
                         try {
                             let villageID: string | null = (e.target as Element).getAttribute('id');
                             if (villageID === null) throw new InsidiousError('Não foi possível obter o ID relacionado a essa aldeia.');
-                            villageID = villageID.replace('insidious_mapActionArea_village', '');
+                            villageID = villageID.replace(/\D/g, '');
 
                             const villageElement = document.querySelector('#map_village_' + villageID);
                             if (!villageElement) return;
@@ -652,7 +652,7 @@ class TWMap {
         mapImages.forEach((img) => {
             const imgID = img.getAttribute('id');
             if (imgID === null || imgID === '') return;
-            villages.add(imgID.replace('map_village_', ''));
+            villages.add(imgID.replace(/\D/g, ''));
         });
 
         return villages;

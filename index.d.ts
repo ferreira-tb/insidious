@@ -3,8 +3,8 @@ declare namespace browser {
     const action: any;
 }
 
-type SSObject = { [coord: string]: string }
-type SNObject = { [coord: string]: number }
+type SSObject = { [index: string]: string }
+type SNObject = { [index: string]: number }
 
 interface VillageInfo {
     name: string,
@@ -48,6 +48,10 @@ interface TotalPlundered {
         stone: number,
         iron: number
     };
+}
+
+interface UnitModels {
+    [model: string]: SNObject
 }
 
 // map.ts
