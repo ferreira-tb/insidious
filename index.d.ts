@@ -6,6 +6,23 @@ declare namespace browser {
 type SSObject = { [index: string]: string }
 type SNObject = { [index: string]: number }
 
+type ResourceList = 'wood'
+    | 'stone'
+    | 'iron';
+
+type UnitList = 'spear'
+    | 'sword'
+    | 'axe'
+    | 'archer'
+    | 'spy'
+    | 'light'
+    | 'marcher'
+    | 'heavy'
+    | 'ram'
+    | 'catapult'
+    | 'knight'
+    | 'snob';
+
 interface VillageInfo {
     name: string,
     x: number,
@@ -17,17 +34,18 @@ interface VillageInfo {
 
 type VillageQuery = { [village: string]: VillageInfo }
 
-// background.ts
-interface BackgroundListener {
-    name: string;
-    value?: { [item: string]: string };
-    key?: string | string[];
+// insidious.ts
+interface WorldInfo {
+    speed: number,
+    unit_speed: number,
+    game: {
+        archer: number
+    }
 }
 
-type PortMessage = {
-    value: { [item: string]: string },
-    id: string
-}
+type UnitInfo = {
+    [index in UnitList]: { speed: number; carry: number; };
+};
 
 // farm.ts
 type AB = 'a' | 'b' | null;
@@ -42,12 +60,8 @@ interface AvailableTroops {
     knight: number
 }
 
-interface TotalPlundered {
-    totalPlundered: {
-        wood: number,
-        stone: number,
-        iron: number
-    };
+type TotalPlundered = {
+    totalPlundered: { [index in ResourceList]: number };
 }
 
 interface UnitModels {
@@ -56,6 +70,5 @@ interface UnitModels {
 
 // map.ts
 type FilterContext = Set<string> | undefined;
-
-// utils.ts
-type IconImgName = 'spear' | 'sword' | 'axe' | 'archer' | 'spy' | 'light' | 'marcher' | 'heavy' | 'ram' | 'catapult' | 'knight' | 'snob';
+type TagType = 'distance' | 'points' | 'bbpoints' | `time_${UnitList}`;
+type FilterType = 'bbunknown';

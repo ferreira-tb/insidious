@@ -427,7 +427,7 @@ class TWFarm {
             let result: number = 0;
             for (const key in unitModel) {
                 // Ignora o explorador, já que ele não pode carregar recursos.
-                if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo.unit[key].carry;
+                if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo.unit[key as UnitList].carry;
             };
 
             if (!Number.isInteger(result)) {

@@ -1,4 +1,9 @@
 class Insidious {
+    static #worldInfo: { config: WorldInfo };
+    static #unitInfo: { unit: UnitInfo };
+    static readonly currentScreen: string | null = Utils.currentScreen();
+    static readonly currentVillageID: string | null = Utils.currentVillage();
+    
     // Inicia a extensão.
     static async #start() {
         try {
@@ -12,15 +17,13 @@ class Insidious {
                 if (!this.#worldInfo.config || !this.#unitInfo.unit) {
                     await browser.storage.local.remove('worldConfigFetch');
                 };
-                
+      
                 // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
-                const currentScreen: string | null = Utils.currentScreen();
-                if (!currentScreen) throw new InsidiousError('Não foi possível identificar a janela atual.');
-
-                if (currentScreen.startsWith('map')) {
+                if (!this.currentScreen) throw new InsidiousError('Não foi possível identificar a janela atual.');
+                if (this.currentScreen.startsWith('map')) {
                     await TWMap.open();
                 } else {
-                    switch (currentScreen) {
+                    switch (this.currentScreen) {
                         case 'am_farm': await TWFarm.open();
                             break;
                     };
@@ -187,51 +190,58 @@ class Insidious {
         return new Promise((resolve, reject) => {
             const getValue = (value: string): number => {
                 const valueField = configXML.querySelector(value);
-                if (!valueField) throw new InsidiousError(`O campo \"${value}\" não foi encontrado no documento XML.`);
+                if (!valueField) {
+                    // Caso não exista campo para arqueiros, assume que o mundo não possui arqueiros.
+                    if (value.includes('archer')) {
+                        return 0;
+                    } else {
+                        throw new InsidiousError(`O campo \"${value}\" não foi encontrado no documento XML.`);
+                    };
+                };
+
                 if (valueField.textContent === null) throw new InsidiousError(`O campo \"${value}\" foi encontrado no documento XML, mas está vazio.`);
                 return Number.parseFloat(valueField.textContent);
             };
 
             if (options.name === 'config') {
-                const worldConfigSchema = {
+                const worldInfoSchema: WorldInfo = {
                     speed: getValue('speed'),
                     unit_speed: getValue('unit_speed'),
                     game: { archer: getValue('archer') }
                 };
 
-                if (!worldConfigSchema.speed) {
+                if (!Object.hasOwn(worldInfoSchema, 'speed')) {
                     reject(new InsidiousError(`Erro na leitura do documento XML (${options.name}).`))
                 } else {
-                    resolve(worldConfigSchema);
+                    resolve(worldInfoSchema);
                 };
                 
             } else if (options.name === 'unit') {
-                const worldConfigSchema = {
-                    spear: { speed: getValue('spear speed'), carry: getValue('spear carry') },
-                    sword: { speed: getValue('sword speed'), carry: getValue('sword carry') },
-                    axe: { speed: getValue('axe speed'), carry: getValue('axe carry') },
-                    spy: { speed: getValue('spy speed'), carry: getValue('spy carry') },
-                    light: { speed: getValue('light speed'), carry: getValue('light carry') },
-                    heavy: { speed: getValue('heavy speed'), carry: getValue('heavy carry') },
-                    ram: { speed: getValue('ram speed'), carry: getValue('ram carry') },
-                    catapult: { speed: getValue('catapult speed'), carry: getValue('catapult carry') },
-                    knight: { speed: getValue('knight speed'), carry: getValue('knight carry') },
-                    snob: { speed: getValue('snob speed'), carry: getValue('snob carry') }
+                const unitList: UnitList[] = [
+                    'spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob'
+                ];
+
+                const unitInfoSchema = { };
+                for (const unit of unitList) {
+                    Object.defineProperty(unitInfoSchema, unit, {
+                        value: {
+                            speed: getValue(`${unit} speed`),
+                            carry: getValue(`${unit} carry`)
+                        },
+                        enumerable: true
+                    });
                 };
 
-                if (!worldConfigSchema.spear.speed) {
+                if (!Object.hasOwn(unitInfoSchema, 'spear')) {
                     reject(new InsidiousError(`Erro na leitura do documento XML (${options.name}).`))
                 } else {
-                    resolve(worldConfigSchema);
+                    resolve(unitInfoSchema);
                 };
             };
 
             reject(new InsidiousError('O nome do documento XML é inválido.'));
         });
     };
-
-    static #worldInfo: any;
-    static #unitInfo: any;
 
     static get worldInfo() {return this.#worldInfo};
     static get unitInfo() {return this.#unitInfo};
