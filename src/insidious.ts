@@ -102,7 +102,7 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 1.5)) {
+            if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 24)) {
                 await browser.storage.local.set({ worldDataFetch: now });
 
                 Utils.modal('Aguarde');

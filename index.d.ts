@@ -48,7 +48,8 @@ type UnitInfo = {
 };
 
 // farm.ts
-type AB = 'a' | 'b' | null;
+type AB = 'a' | 'b';
+type ABNull = 'a' | 'b' | null;
 
 interface AvailableTroops {
     spear: number,
