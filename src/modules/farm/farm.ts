@@ -23,6 +23,8 @@ class TWFarm {
             id: 'insidious_startPlunderBtn'
         }).create();
 
+        
+        
         ////// OPÇÕES
         const optionsAreaItems: Manatsu[] = [];
 
@@ -119,7 +121,7 @@ class TWFarm {
         browser.storage.local.get('isPlunderActive')
             .then((result: any) => {
                 buttonArea.appendChild(startPlunderBtn);
-                // Manatsu.createAll(optionsAreaItems);
+                Manatsu.createAll(optionsAreaItems);
 
                 if (result.isPlunderActive === true) {
                     startPlunderBtn.textContent = 'Parar';

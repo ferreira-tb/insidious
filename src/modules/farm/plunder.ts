@@ -59,9 +59,6 @@ class Plunder extends TWFarm {
                     continue;
                 };
 
-                // Verifica o nível da muralha.
-                ///////////
-
                 const resourceData: string | number | null = village.getAttribute('insidious-resources');
                 if (resourceData === null || resourceData === '') {
                     throw new InsidiousError('A linha não possui atributo indicando a situação dos recursos.');
