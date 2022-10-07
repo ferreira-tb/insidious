@@ -41,15 +41,43 @@ class TWAssets {
         farm_units_archer: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'knight']
     };
 
+    // Aríetes e bárbaros, respectivamente.
+    static #unitsToDestroyWall = {
+        1: [3, 50],
+        2: [5, 50],
+        3: [8, 50],
+        4: [15, 75],
+        5: [20, 100],
+        6: [20, 150],
+        7: [30, 150],
+        8: [40, 300],
+        9: [40, 300],
+        10: [50, 400],
+        11: [60, 400],
+        12: [60, 500],
+        13: [80, 500],
+        14: [100, 600],
+        15: [150, 800],
+        16: [180, 1000],
+        17: [180, 1000],
+        18: [200, 1100],
+        19: [200, 1100],
+        20: [200, 1300]
+    };
+
     static #freeze() {
         Object.freeze(this.#image);
         Object.freeze(this.#world);
         Object.freeze(this.#list);
+
+        Object.freeze(this.#unitsToDestroyWall);
     };
 
     static get image() {return this.#image};
     static get world() {return this.#world};
     static get list() {return this.#list};
+
+    static get unitsToDestroyWall() {return this.#unitsToDestroyWall};
 
     static get freeze() {return this.#freeze};
 };

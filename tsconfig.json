@@ -1,9 +1,9 @@
 {
     "compilerOptions": {
-        "noEmitOnError": true,
         "outDir": "dist",
         "lib": ["DOM", "es2022"],
         "target": "es2022",
+        "noEmitOnError": false,
 
         // Modo estrito
         "alwaysStrict": true,

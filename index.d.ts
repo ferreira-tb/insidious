@@ -34,6 +34,8 @@ interface VillageInfo {
 
 type VillageQuery = { [village: string]: VillageInfo }
 
+type WallLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
+
 // insidious.ts
 interface WorldInfo {
     speed: number,
@@ -65,8 +67,13 @@ type TotalPlundered = {
     totalPlundered: { [index in ResourceList]: number };
 }
 
-interface UnitModels {
+type UnitModels = {
     [model: string]: SNObject
+};
+
+interface PlunderOptions {
+    ignore_wall: boolean,
+    destroy_wall: boolean
 }
 
 // map.ts

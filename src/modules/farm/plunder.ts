@@ -1,6 +1,8 @@
 class Plunder extends TWFarm {
     static #models: UnitModels;
     static #carryCapacity: SNObject;
+    static #options: PlunderOptions;
+    static #ram: number | null = null;
 
     // Ajuda a controlar o estado das promises.
     static readonly #eventTarget = new EventTarget();
@@ -16,6 +18,9 @@ class Plunder extends TWFarm {
                 await browser.storage.local.remove('worldConfigFetch');
                 throw new InsidiousError('Não foi possível obter as informações sobre as unidades do jogo.');
             };
+
+            // Opções do plunder.
+            this.#options = (await browser.storage.local.get('plunderOptions')).plunderOptions ?? {};
 
             // Modelos de saque do usuário.
             this.#models = await browser.storage.local.get(['amodel', 'bmodel']);
@@ -63,6 +68,20 @@ class Plunder extends TWFarm {
                 if (resourceData === null || resourceData === '') {
                     throw new InsidiousError('A linha não possui atributo indicando a situação dos recursos.');
                 };
+
+                // Determina o nível da muralha.
+                let wallLevel: string | number | null = village.getAttribute('insidious-wall');
+                if (!wallLevel) throw new InsidiousError('Não foi possível determinar o nível da muralha.');
+
+                wallLevel = Number.parseInt(wallLevel, 10)
+                if (Number.isNaN(wallLevel)) throw new InsidiousError('O nível da muralha é inválido.');
+
+                // Envia aríetes caso a aldeia possua muralha e "demolir muralha" esteja ativo.
+                if (this.#options.destroy_wall === true && wallLevel !== 0) await this.#destroyWall(village, wallLevel as WallLevel);
+
+                // A aldeia é ignorada caso possua muralha e "ignorar muralha" esteja ativo.
+                if (this.#options.ignore_wall === true && wallLevel !== 0) continue;
+
                 // Representa a quantidade total de recursos disponível na aldeia alvo.
                 const resourceAmount = Number.parseInt(resourceData, 10);
 
@@ -519,5 +538,99 @@ class Plunder extends TWFarm {
         });
     };
 
-    static get start() { return this.#start };
+    static #destroyWall(village: HTMLElement, wallLevel: WallLevel) {
+        return new Promise<void>(async (resolve, reject) => {
+            // Quantidade de bárbaros.
+            const axeField = document.querySelector('td[insidious-available-units="axe"]');
+            if (!axeField || !axeField.textContent) throw new InsidiousError('Não foi possível determinar a quantidade de bárbaros disponíveis.');
+            const axeAmount = Number.parseInt(axeField.textContent, 10);
+            if (Number.isNaN(axeAmount)) throw new InsidiousError('A quantidade de bárbaros obtida é inválida.');
+
+            // Quantidade de exploradores.
+            const spyField = document.querySelector('td[insidious-available-units="spy"]');
+            if (!spyField || !spyField.textContent) throw new InsidiousError('Não foi possível determinar a quantidade de exploradores disponíveis.');
+            const spyAmount = Number.parseInt(spyField.textContent, 10);
+            if (Number.isNaN(spyAmount)) throw new InsidiousError('A quantidade de exploradores obtida é inválida.');
+
+            // Verifica se há tropas disponíveis para destruir a muralha.
+            const canDestroy = (neededRams: number, neededAxes: number) => {
+                if (neededRams > (this.#ram as number) || neededAxes > axeAmount || spyAmount < 1) {
+                    return false;
+                };
+
+                return true;
+            };
+
+            const neededUnits = TWAssets.unitsToDestroyWall[wallLevel];
+            if (typeof this.#ram === 'number' && !canDestroy(...(neededUnits as [number, number]))) {
+                resolve();
+                return;
+            };
+
+            try {
+                this.#ram = await this.#openPlace(village);
+                if (typeof this.#ram !== 'number' || Number.isNaN(this.#ram)) {
+                    this.#ram = null;
+                    throw new InsidiousError('A quantidade de aríetes obtida é inválida.');
+                };
+
+
+
+            } catch (err) {
+                reject(err);
+            };
+        });
+    };
+
+    static #openPlace(village: HTMLElement) {
+        return new Promise<number>((resolve) => {
+            let villageID: string | null = village.getAttribute('id');
+            if (!villageID) throw new InsidiousError('Não foi possível obter o id da aldeia.');
+            villageID = villageID.replace(/\D/g, '');
+
+            const placeButton = village.querySelector(`td a[insidious-place-btn="place_${villageID}"]`) as HTMLElement | null;
+            if (!placeButton) throw new InsidiousError('Não foi possível encontrar o botão da praça de reunião.');
+
+            const observerTimeout = setTimeout(handleTimeout, 5000);
+            const observeRams = new MutationObserver((mutationList) => {
+                for (const mutation of mutationList) {
+                    if (mutation.type === 'childList') {
+                        for (const node of Array.from(mutation.addedNodes)) {
+                            if (node instanceof HTMLElement && node.getAttribute('id') === 'units_entry_all_ram') {
+                                clearTimeout(observerTimeout);
+                                observeRams.disconnect();
+
+                                let ramAmount: string | null = node.textContent;
+                                if (!ramAmount) throw new InsidiousError('Não foi possível determinar a quantidade de aríetes disponíveis.');
+                                ramAmount = ramAmount.replace(/\D/g, '');
+
+                                resolve(Number.parseInt(ramAmount, 10));
+                                break;
+                            };
+                        };
+                    };
+                };
+            });
+
+            // Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro.
+            function handleTimeout() {
+                observeRams.disconnect();
+                throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder.');
+            };
+
+            observeRams.observe(document, { subtree: true, childList: true });
+            placeButton.click();
+        });
+    };
+
+    static get options() {return this.#options};
+    static get start() {return this.#start};
+};
+
+class FarmAbort {
+    reason;
+    
+    constructor(reason?: string) {
+        this.reason = reason;
+    };
 };

@@ -46,6 +46,15 @@ class Manatsu {
         return newElement;
     };
 
+    #createInside(...args: ConstructorArgs): HTMLElement {
+        const newParent = new Manatsu(...args);
+        if (!this.#parent && !newParent.parent) throw new ManatsuError('Não foi especificado um elemento pai para o container.');
+        if (this.#parent && !newParent.parent) newParent.parent = this.#parent;
+
+        this.#parent = newParent.create();
+        return this.#create();
+    };
+
     #setProperty(value: AcceptableProperty) {
         if (typeof value === 'string') {
             if (!Validation.isValidElementName(value)) return;
@@ -187,6 +196,27 @@ class Manatsu {
         };
     };
 
+    static #createCheckbox(options: CheckboxOptions, create: boolean = false, parentElement?: Element): HTMLElement[] | Manatsu[] {
+        if (!options.id || typeof options.id !== 'string') throw new ManatsuError('O id fornecido é inválido.');
+        if (!options.label || typeof options.label !== 'string') throw new ManatsuError('A descrição fornecida é inválida.');
+        if (typeof create !== 'boolean') throw new ManatsuError('O argumento \"create\" precisa ser do tipo boolean.');
+
+        const newCheckbox = new Manatsu('input', { type: 'checkbox', id: options.id });
+        const newLabel = new Manatsu('label', { for: options.id, text: options.label });
+
+        if (parentElement && parentElement instanceof Element) {
+            newCheckbox.parent = parentElement;
+            newLabel.parent = parentElement;
+        };
+
+        if (create === true) {
+            return [(newCheckbox.create()) as HTMLInputElement, (newLabel.create()) as HTMLLabelElement];
+
+        } else {
+            return [newCheckbox, newLabel];
+        };
+    };
+
     ////// GERAL
     static #removeChildren(parentElement: Element, selector?: string) {
         if (!(parentElement instanceof Element)) throw new ManatsuError('O elemento fornecido é inválido.');
@@ -235,6 +265,7 @@ class Manatsu {
 
     get create() {return this.#create};
     get createBefore() {return this.#createBefore};
+    get createInside() {return this.#createInside};
     get addOptions() {return this.#addOptions};
     get element() {return this.#element};
     get parent() {return this.#parent};
@@ -267,6 +298,7 @@ class Manatsu {
     static get repeat() {return this.#repeat};
     static get createAll() {return this.#createAll};
     static get fromTemplate() {return this.#fromTemplate};
+    static get createCheckbox() {return this.#createCheckbox};
 
     static get removeChildren() {return this.#removeChildren};
     static get enableChildren() {return this.#enableChildren};

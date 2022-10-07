@@ -17,28 +17,20 @@ class TWFarm {
         const actionArea = new Manatsu({ id: 'insidious_farmActionArea' }, menuArea).create();
 
         ////// BOTÕES
-        // Esse botão é adicionado à página após o Insidious terminar de verificar o status do plunder.
+        // Os botões são adicionados à página após o Insidious terminar de verificar o status do plunder.
         const startPlunderBtn = new Manatsu('button', {
             class: 'insidious_farmButtonArea_Btn',
             id: 'insidious_startPlunderBtn'
         }).create();
 
-        
+        const showOptionsBtn = new Manatsu('button', {
+            class: 'insidious_farmButtonArea_Btn',
+            id: 'insidious_showOptionsBtn',
+            text: 'Opções'
+        }).create();
         
         ////// OPÇÕES
-        const optionsAreaItems: Manatsu[] = [];
-
-        const ignoreWall = new Manatsu('input', {
-            type: 'checkbox',
-            id: 'insidious_ignore_wall_checkbox'
-        }, optionsArea);
-
-        const ignoreWallLabel = new Manatsu('label', {
-            for: 'insidious_ignore_wall_checkbox',
-            text: 'Ignorar muralha'
-        }, optionsArea);
-
-        optionsAreaItems.push(ignoreWall, ignoreWallLabel);
+        const optionsAreaItems: Manatsu[] = this.#createOptions();
 
         ////// DADOS
         await this.#info();
@@ -86,6 +78,7 @@ class TWFarm {
             });
 
         ////// EVENTOS
+        // Inicia ou para o plunder.
         const plunderBtnEvents = async () => {
             startPlunderBtn.removeEventListener('click', plunderBtnEvents);
             Manatsu.removeChildren(actionArea);
@@ -116,12 +109,39 @@ class TWFarm {
 
         startPlunderBtn.addEventListener('click', plunderBtnEvents);
 
+        // Exibe as opções do plunder.
+        const optionsBtnEvents = () => {
+            Manatsu.createAll(optionsAreaItems);
+            showOptionsBtn.setAttribute('disabled', '');
+
+            const optionsCtrl = new AbortController();
+
+            // Ignora aldeias com muralha.
+            const ignoreWall = optionsArea.querySelector('#insidious_ignore_wall_checkbox') as HTMLInputElement;
+            if (Plunder.options.ignore_wall === true) ignoreWall.checked = true;
+            ignoreWall.addEventListener('change', (e) => this.#saveOptions(e, 'ignore_wall'), { signal: optionsCtrl.signal });
+
+            // Destrói muralhas.
+            const destroyWall = optionsArea.querySelector('#insidious_destroy_wall_checkbox') as HTMLInputElement;
+            if (Plunder.options.destroy_wall === true) destroyWall.checked = true;
+            destroyWall.addEventListener('change', (e) => this.#saveOptions(e, 'destroy_wall'), { signal: optionsCtrl.signal });
+
+            new Manatsu('button', optionsArea, { text: 'Fechar' }).createInside('div')
+                .addEventListener('click', () => {
+                    optionsCtrl.abort();
+                    Manatsu.removeChildren(optionsArea);
+                    showOptionsBtn.removeAttribute('disabled');
+                }, { signal: optionsCtrl.signal });
+        };
+
+        showOptionsBtn.addEventListener('click', optionsBtnEvents);
+
         // Configura o botão de saque de acordo com o status do plunder.
         // Além disso, se o plunder já estiver marcado como ativo, chama #plunder() automaticamente.
         browser.storage.local.get('isPlunderActive')
             .then((result: any) => {
                 buttonArea.appendChild(startPlunderBtn);
-                Manatsu.createAll(optionsAreaItems);
+                buttonArea.appendChild(showOptionsBtn);
 
                 if (result.isPlunderActive === true) {
                     startPlunderBtn.textContent = 'Parar';
@@ -144,6 +164,24 @@ class TWFarm {
                     console.error(err);
                 };
             });
+    };
+
+    static async #saveOptions(event: Event, item: keyof PlunderOptions) {
+        if (event.target instanceof HTMLInputElement) {
+            if (event.target.checked) {
+                Plunder.options[item] = true;
+            } else {
+                Plunder.options[item] = false;
+            };
+        };
+        
+        try {
+            await browser.storage.local.set({ plunderOptions: Plunder.options });
+            console.log(Plunder.options);
+
+        } catch (err) {
+            if (err instanceof Error) console.error(err);
+        };
     };
 
     static async #info() {
@@ -393,6 +431,28 @@ class TWFarm {
         };
     };
 
+    static #createOptions(): Manatsu[] {
+        const optionsArea = document.querySelector('#insidious_farmOptionsArea');
+        if (!optionsArea) throw new InsidiousError('A área de opções não existe.');
+
+        const optionsAreaItems = [];
+
+        // Não ataca aldeias que tenham muralha.
+        optionsAreaItems.push(...Manatsu.createCheckbox({
+            id: 'insidious_ignore_wall_checkbox',
+            label: 'Ignorar muralha'
+        }, false, optionsArea) as Manatsu[]);
+
+        // Envia ataques com aríetes em aldeias com muralha.
+        // Independe de como "ignorar muralha" está configurado.
+        optionsAreaItems.push(...Manatsu.createCheckbox({
+            id: 'insidious_destroy_wall_checkbox',
+            label: 'Demolir muralha'
+        }, false, optionsArea) as Manatsu[]);
+
+        return optionsAreaItems;
+    };
+
     static #decipherPlunderListDate(date: string): number | null {
         // Exemplos de data: hoje às 00:05:26 | ontem às 16:29:50 | em 21.09. às 12:36:38
         const writtenDate = date.toLowerCase();
@@ -435,12 +495,4 @@ class TWFarm {
     };
 
     static get open() { return this.#open };
-};
-
-class FarmAbort {
-    reason;
-    
-    constructor(reason?: string) {
-        this.reason = reason;
-    };
 };
