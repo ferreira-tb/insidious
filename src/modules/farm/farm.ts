@@ -177,7 +177,6 @@ class TWFarm {
         
         try {
             await browser.storage.local.set({ plunderOptions: Plunder.options });
-            console.log(Plunder.options);
 
         } catch (err) {
             if (err instanceof Error) console.error(err);

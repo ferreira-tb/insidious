@@ -77,7 +77,12 @@ class Plunder extends TWFarm {
                 if (Number.isNaN(wallLevel)) throw new InsidiousError('O nível da muralha é inválido.');
 
                 // Envia aríetes caso a aldeia possua muralha e "demolir muralha" esteja ativo.
-                if (this.#options.destroy_wall === true && wallLevel !== 0) await this.#destroyWall(village, wallLevel as WallLevel);
+                // Se o ataque for enviado com sucesso, pula para a próxima aldeia.
+                // Em hipótese alguma "destroy_wall" pode estar após "ignore_wall".
+                if (this.#options.destroy_wall === true && wallLevel !== 0) {
+                    const skipToNextVillage = await this.#destroyWall(village, wallLevel as WallLevel);
+                    if (skipToNextVillage === true) continue;
+                };
 
                 // A aldeia é ignorada caso possua muralha e "ignorar muralha" esteja ativo.
                 if (this.#options.ignore_wall === true && wallLevel !== 0) continue;
@@ -538,8 +543,11 @@ class Plunder extends TWFarm {
         });
     };
 
+    // A promise retornada por #destroyWall() resolve com um boolean.
+    // Se o resultado for true, o ataque foi enviado e #sendAttack() deve pular para a próxima aldeia.
+    // Se for false, #sendAttack() deve continuar a execução atual.
     static #destroyWall(village: HTMLElement, wallLevel: WallLevel) {
-        return new Promise<void>(async (resolve, reject) => {
+        return new Promise<boolean>(async (resolve, reject) => {
             // Quantidade de bárbaros.
             const axeField = document.querySelector('td[insidious-available-units="axe"]');
             if (!axeField || !axeField.textContent) throw new InsidiousError('Não foi possível determinar a quantidade de bárbaros disponíveis.');
@@ -553,30 +561,130 @@ class Plunder extends TWFarm {
             if (Number.isNaN(spyAmount)) throw new InsidiousError('A quantidade de exploradores obtida é inválida.');
 
             // Verifica se há tropas disponíveis para destruir a muralha.
-            const canDestroy = (neededRams: number, neededAxes: number) => {
+            const canDestroy = (neededRams: number, neededAxes: number): boolean => {
                 if (neededRams > (this.#ram as number) || neededAxes > axeAmount || spyAmount < 1) {
                     return false;
                 };
-
                 return true;
             };
 
-            const neededUnits = TWAssets.unitsToDestroyWall[wallLevel];
-            if (typeof this.#ram === 'number' && !canDestroy(...(neededUnits as [number, number]))) {
-                resolve();
+            // Tropas necessárias para cada nível possível da muralha.
+            const neededUnits = TWAssets.unitsToDestroyWall[wallLevel] as [number, number];
+
+            // Caso a quantidade de aríetes já esteja salva, verifica se há tropas suficientes.
+            // Em caso negativo, resolve a promise.
+            if (typeof this.#ram === 'number' && !canDestroy(...neededUnits)) {
+                resolve(false);
                 return;
             };
 
             try {
+                // Abre a janela de comando e obtém a quantidade de aríetes.
                 this.#ram = await this.#openPlace(village);
-                if (typeof this.#ram !== 'number' || Number.isNaN(this.#ram)) {
+
+                const closeButton = document.querySelector('#popup_box_popup_command a.popup_box_close') as HTMLElement | null;
+                if (!closeButton) throw new InsidiousError('Não foi possível encontrar o botão para fechar a janela de comando.');
+
+                // Caso o valor obtido seja inválido, reseta this.#ram e emite um erro.
+                if (Number.isNaN(this.#ram)) {
                     this.#ram = null;
+                    closeButton.click();
                     throw new InsidiousError('A quantidade de aríetes obtida é inválida.');
+
+                } else if (canDestroy(...neededUnits)) {
+                    const commandForm = document.querySelector('form#command-data-form');
+                    if (!commandForm) throw new InsidiousError('A janela de comando não está presente.');
+
+                    const ramInputField = commandForm.querySelector('#unit_input_ram.unitsInput') as HTMLInputElement | null;
+                    if (!ramInputField) throw new InsidiousError('DOM: #unit_input_ram.unitsInput');
+
+                    const axeInputField = commandForm.querySelector('#unit_input_axe.unitsInput') as HTMLInputElement | null;
+                    if (!axeInputField) throw new InsidiousError('DOM: #unit_input_axe.unitsInput');
+
+                    const spyInputField = commandForm.querySelector('#unit_input_spy.unitsInput') as HTMLInputElement | null;
+                    if (!spyInputField) throw new InsidiousError('DOM: #unit_input_spy.unitsInput');
+
+                    // Preenche os campos com a quantidade de tropas necessária.
+                    const [neededRams, neededAxes] = neededUnits.map(amount => String(amount));
+                    ramInputField.value = neededRams;
+                    axeInputField.value = neededAxes;
+                    spyInputField.value = '1';
+
+                    // Observa até aparecer a janela de confirmação de ataque.
+                    const observerTimeout = setTimeout(handleTimeout, 5000);
+                    const observeCommandForm = new MutationObserver(async (mutationList) => {
+                        for (const mutation of mutationList) {
+                            if (mutation.type === 'childList') {
+                                for (const node of Array.from(mutation.addedNodes)) {
+                                    if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('id') === 'command-data-form') {
+                                        clearTimeout(observerTimeout);
+                                        observeCommandForm.disconnect();
+
+                                        const submitAttack = (node as Element).querySelector('#troop_confirm_submit') as HTMLInputElement | null;
+                                        if (!submitAttack) throw new InsidiousError('DOM: #troop_confirm_submit');
+
+                                        // Obtém informações a respeito das tropas que estão sendo enviadas.
+                                        const confirmRamField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-ram');
+                                        if (!confirmRamField || !confirmRamField.textContent) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-ram');
+                                        const confirmRamAmount = confirmRamField.textContent.replace(/\D/g, '');
+
+                                        const confirmAxeField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-axe');
+                                        if (!confirmAxeField || !confirmAxeField.textContent) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-axe');
+                                        const confirmAxeAmount = confirmAxeField.textContent.replace(/\D/g, '');
+
+                                        const confirmSpyField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-spy');
+                                        if (!confirmSpyField || !confirmSpyField.textContent) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-spy');
+                                        const confirmSpyAmount = confirmSpyField.textContent.replace(/\D/g, '');
+
+                                        // E então verifica se a quantidade de tropas está correta.
+                                        if (confirmRamAmount !== neededRams) {
+                                            throw new InsidiousError(`A quantidade de aríetes(${confirmRamAmount}) não condiz com o necessário(${neededRams}).`);
+                                        } else if (confirmAxeAmount !== neededAxes) {
+                                            throw new InsidiousError(`A quantidade de bárbaros(${confirmAxeAmount}) não condiz com o necessário(${neededAxes}).`);
+                                        } else if (confirmSpyAmount !== '1') {
+                                            throw new InsidiousError(`A quantidade de exploradores(${confirmSpyAmount}) é diferente de 1.`);
+
+                                        // Se estiver tudo certo, envia o ataque.
+                                        } else {
+                                            submitAttack.click();
+
+                                            // Antes de concluir, aguarda um breve momento.
+                                            await new Promise((stopWaiting) => setTimeout(stopWaiting, 500));
+                                            resolve(true);
+                                            break;
+                                        };
+                                    };
+                                };
+                            };
+                        };
+                    })
+
+                    // Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro.
+                    function handleTimeout() {
+                        observeCommandForm.disconnect();
+                        throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder.');
+                    };
+
+                    observeCommandForm.observe(document.body, { subtree: true, childList: true });
+                    
+                    const formAttackButton = commandForm.querySelector('#target_attack') as HTMLInputElement | null;
+                    if (!formAttackButton) throw new InsidiousError('DOM: #target_attack');
+
+                    // É preciso esperar um breve intervalo antes de emitir o clique.
+                    // Do contrário, o servidor não tem tempo suficiente para processar o comando.
+                    await new Promise((stopWaiting) => setTimeout(stopWaiting, 300));
+                    formAttackButton.click();
+
+                } else {
+                    closeButton.click();
+                    resolve(false);
                 };
 
-
-
             } catch (err) {
+                const closeButton = document.querySelector('#popup_box_popup_command a.popup_box_close') as HTMLElement | null;
+                if (!closeButton) throw new InsidiousError('Não foi possível encontrar o botão para fechar a janela de comando.');
+
+                closeButton.click();
                 reject(err);
             };
         });
@@ -591,16 +699,20 @@ class Plunder extends TWFarm {
             const placeButton = village.querySelector(`td a[insidious-place-btn="place_${villageID}"]`) as HTMLElement | null;
             if (!placeButton) throw new InsidiousError('Não foi possível encontrar o botão da praça de reunião.');
 
+            // Observa até detectar a abertura da janela de comando.
             const observerTimeout = setTimeout(handleTimeout, 5000);
             const observeRams = new MutationObserver((mutationList) => {
                 for (const mutation of mutationList) {
                     if (mutation.type === 'childList') {
                         for (const node of Array.from(mutation.addedNodes)) {
-                            if (node instanceof HTMLElement && node.getAttribute('id') === 'units_entry_all_ram') {
+                            if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('id') === 'command-data-form') {
                                 clearTimeout(observerTimeout);
                                 observeRams.disconnect();
 
-                                let ramAmount: string | null = node.textContent;
+                                const ramField = (node as Element).querySelector('#units_entry_all_ram');
+                                if (!ramField || !ramField.textContent) throw new InsidiousError('O campo com a quantidade de aríetes não está presente.');
+
+                                let ramAmount: string | null = ramField.textContent;
                                 if (!ramAmount) throw new InsidiousError('Não foi possível determinar a quantidade de aríetes disponíveis.');
                                 ramAmount = ramAmount.replace(/\D/g, '');
 
@@ -618,7 +730,7 @@ class Plunder extends TWFarm {
                 throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder.');
             };
 
-            observeRams.observe(document, { subtree: true, childList: true });
+            observeRams.observe(document.body, { subtree: true, childList: true });
             placeButton.click();
         });
     };
