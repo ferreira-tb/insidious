@@ -3,11 +3,11 @@ class MapTag extends TWMap {
         // Desconecta qualquer observer de tag que esteja ativo no mapa.
         this.eventTarget.dispatchEvent(new Event('stoptagobserver'));
 
-        const tagStatus = await browser.storage.local.get('customTagStatus');
-        if (tagStatus.customTagStatus === 'disabled') return;
+        const tagStatus = await browser.storage.local.get(`customTagStatus_${Insidious.world}`);
+        if (tagStatus[`customTagStatus_${Insidious.world}`] === 'disabled') return;
 
         // Salva a última tag utilizada, para que seja ativada automaticamente na próxima vez.
-        browser.storage.local.set({ lastCustomTag: tagType })
+        browser.storage.local.set({ [`lastCustomTag_${Insidious.world}`]: tagType })
             .catch((err: unknown) => {
                 if (err instanceof Error) console.error(err);
             });
@@ -41,7 +41,7 @@ class MapTag extends TWMap {
                 };
 
                 try {
-                    const village = 'village' + id;
+                    const village = `v${id}_${Insidious.world}`;
                     const result: VillageQuery = await browser.storage.local.get(village);
                     if (!result[village]) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
 
@@ -111,12 +111,15 @@ class MapTag extends TWMap {
 
                     } else if (tagType.startsWith('time_')) {
                         const unitName = tagType.replace('time_', '') as UnitList;
-                        if (!Insidious.unitInfo.unit || !Insidious.worldInfo.config) {
-                            browser.storage.local.remove('worldConfigFetch');
+                        if (!Insidious.unitInfo[`unit_${Insidious.world}`] || !Insidious.worldInfo[`config_${Insidious.world}`]) {
+                            browser.storage.local.remove(`worldConfigFetch_${Insidious.world}`);
                             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                         };
 
-                        const millisecondsPerField = 60000 * (Insidious.unitInfo.unit[unitName].speed * Insidious.worldInfo.config.unit_speed);
+                        const unitSpeed = Insidious.unitInfo[`unit_${Insidious.world}`][unitName].speed;
+                        const worldUnitSpeed = Insidious.worldInfo[`config_${Insidious.world}`].unit_speed;
+
+                        const millisecondsPerField = 60000 * (unitSpeed * worldUnitSpeed);
                         const fieldAmount = Utils.calcDistance(...getRelativeCoords());
                         const travelTime = millisecondsPerField * fieldAmount;
                         

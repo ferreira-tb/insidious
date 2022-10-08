@@ -1,4 +1,12 @@
 class Utils {
+    static #currentWorld(): string | null {
+        if (!location.origin.includes('tribalwars')) return null;
+
+        const thisWorld = location.origin.replace(/\D/g, '');
+        if (thisWorld.length === 0) throw new InsidiousError('Não foi possível determinar o mundo atual.');
+        return thisWorld;
+    };
+
     static #currentScreen(): string | null {
         for (const item of this.#urlFields()) {
             if (item.includes('screen=')) return item.replace('screen=', '');
@@ -8,14 +16,17 @@ class Utils {
 
     static #currentVillage(): string | null {
         for (const item of this.#urlFields()) {
-            if (item.includes('village=')) return item.replace('village=', '');
+            /* Caso haja navegação entre aldeias usando os botões de "aldeia anterior" ou "próxima aldeia",
+            ao invés de exibir o id da aldeia atual, o jogo exibe o id da aldeia na qual o jogador estava antes de usar o botão.
+            A esse ID, é anexado "p" ou "n", a depender da direção da navegação. */
+            if (item.includes('village=')) return item.replace(/\D/g, '');
         };
         return null;
     };
 
     static #currentPlayer() {
         return new Promise((resolve, reject) => {
-            const village = 'village' + this.#currentVillage();
+            const village =  `v${this.#currentVillage()}_${Insidious.world}`;
             browser.storage.local.get(village)
                 .then((result: any) => resolve(result[village]?.player))
                 .catch((err: unknown) => reject(err));
@@ -71,6 +82,7 @@ class Utils {
     };
 
     // DADOS
+    static get currentWorld() {return this.#currentWorld};
     static get currentScreen() {return this.#currentScreen};
     static get currentVillage() {return this.#currentVillage};
     static get currentPlayer() {return this.#currentPlayer};

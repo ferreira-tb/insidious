@@ -3,14 +3,14 @@ class MapFilter extends TWMap {
         // Desconecta qualquer observer de filtro que esteja ativo no mapa.
         this.eventTarget.dispatchEvent(new Event('stopfilterobserver'));
 
-        const filterStatus = await browser.storage.local.get('mapFiltersStatus');
-        if (filterStatus.mapFiltersStatus === 'disabled') return;
+        const filterStatus = await browser.storage.local.get(`mapFiltersStatus_${Insidious.world}`);
+        if (filterStatus[`mapFiltersStatus_${Insidious.world}`] === 'disabled') return;
 
         // Oculta as aldeias de convite.
         this.#hideUndefinedVillages();
 
         // Salva o último filtro utilizado.
-        browser.storage.local.set({ lastMapFilter: filterType })
+        browser.storage.local.set({ [`lastMapFilter_${Insidious.world}`]: filterType })
             .catch((err: unknown) => {
                 if (err instanceof Error) console.error(err);
             });
@@ -42,7 +42,8 @@ class MapFilter extends TWMap {
         // Guarda informações que serão usadas pelas promises.
         let filterContext: FilterContext;
         if (filterType === 'bbunknown') {
-            const attackHistory: Set<string> | undefined = (await browser.storage.local.get('alreadyPlunderedVillages')).alreadyPlunderedVillages;
+            const plundered: string = `alreadyPlunderedVillages_${Insidious.world}`;
+            const attackHistory: Set<string> | undefined = (await browser.storage.local.get(plundered))[plundered];
             // Se não há aldeias registradas no banco de dados, não há o que filtrar.
             if (attackHistory === undefined) return;
             filterContext = attackHistory;
@@ -63,7 +64,7 @@ class MapFilter extends TWMap {
                 };
 
                 try {
-                    const village = 'village' + id;
+                    const village = `v${id}_${Insidious.world}`;
                     const result: VillageQuery = await browser.storage.local.get(village);
 
                     const villageElement = document.querySelector(`#map_village_${id}`);

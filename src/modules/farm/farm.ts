@@ -57,7 +57,7 @@ class TWFarm {
             if (field.parentElement?.parentElement === aRow) {
                 field.setAttribute('insidious-model-a', fieldType);
                 Object.defineProperty(parentRow.a, fieldType, {
-                    value: parseInt(fieldValue, 10),
+                    value: Number.parseInt(fieldValue, 10),
                     enumerable: true
                 });
 
@@ -65,14 +65,14 @@ class TWFarm {
             } else {
                 field.setAttribute('insidious-model-b', fieldType);
                 Object.defineProperty(parentRow.b, fieldType, {
-                    value: parseInt(fieldValue, 10),
+                    value: Number.parseInt(fieldValue, 10),
                     enumerable: true
                 });
             };
         };
 
         // Salva os modelos no banco de dados.
-        browser.storage.local.set({ amodel: parentRow.a, bmodel: parentRow.b })
+        browser.storage.local.set({ [`amodel_${Insidious.world}`]: parentRow.a, [`bmodel_${Insidious.world}`]: parentRow.b })
             .catch((err: unknown) => {
                 if (err instanceof Error) console.error(err);
             });
@@ -85,16 +85,16 @@ class TWFarm {
 
             try {
                 // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
-                const result: { isPlunderActive: boolean } = await browser.storage.local.get('isPlunderActive');
+                const result: SBObject = await browser.storage.local.get(`isPlunderActive_${Insidious.world}`);
                 // Se estiver ativo no momento do clique, desativa o plunder e troca o texto do botão.
-                if (result.isPlunderActive === true) {
-                    await browser.storage.local.set({ isPlunderActive: false });
+                if (result[`isPlunderActive_${Insidious.world}`] === true) {
+                    await browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: false });
                     startPlunderBtn.textContent = 'Saquear';
 
                 // Em caso contrário, ativa o plunder.
-                } else if (result.isPlunderActive === false) {
-                    await browser.storage.local.set({ isPlunderActive: true });
-                    await browser.storage.local.remove('totalPlundered');
+                } else if (result[`isPlunderActive_${Insidious.world}`] === false) {
+                    await browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: true });
+                    await browser.storage.local.remove(`totalPlundered_${Insidious.world}`);
                     startPlunderBtn.textContent = 'Parar';
                     Plunder.start();
                 };
@@ -138,29 +138,29 @@ class TWFarm {
 
         // Configura o botão de saque de acordo com o status do plunder.
         // Além disso, se o plunder já estiver marcado como ativo, chama #plunder() automaticamente.
-        browser.storage.local.get('isPlunderActive')
+        browser.storage.local.get(`isPlunderActive_${Insidious.world}`)
             .then((result: any) => {
                 buttonArea.appendChild(startPlunderBtn);
                 buttonArea.appendChild(showOptionsBtn);
 
-                if (result.isPlunderActive === true) {
+                if (result[`isPlunderActive_${Insidious.world}`] === true) {
                     startPlunderBtn.textContent = 'Parar';
                     Plunder.start();
 
                 // Caso não esteja ativo, apaga o histórico de recursos saqueados.
-                } else if (result.isPlunderActive === false) {
+                } else if (result[`isPlunderActive_${Insidious.world}`] === false) {
                     startPlunderBtn.textContent = 'Saquear';
-                    browser.storage.local.remove('totalPlundered');
+                    browser.storage.local.remove(`totalPlundered_${Insidious.world}`);
 
-                } else if (result.isPlunderActive === undefined) {
+                } else if (result[`isPlunderActive_${Insidious.world}`] === undefined) {
                     startPlunderBtn.textContent = 'Saquear';
-                    browser.storage.local.set({ isPlunderActive: false });
+                    browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: false });
                 };
 
             }).catch((err: unknown) => {
                 if (err instanceof Error) {
                     // Caso haja algum erro, desativa o plunder, por segurança.
-                    browser.storage.local.set({ isPlunderActive: false });
+                    browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: false });
                     console.error(err);
                 };
             });
@@ -176,7 +176,7 @@ class TWFarm {
         };
         
         try {
-            await browser.storage.local.set({ plunderOptions: Plunder.options });
+            await browser.storage.local.set({ [`plunderOptions_${Insidious.world}`]: Plunder.options });
 
         } catch (err) {
             if (err instanceof Error) console.error(err);
@@ -194,13 +194,13 @@ class TWFarm {
             spearElem.parentElement.setAttribute('insidious-available-unit-table', 'true');
     
             // É necessário verificar se o mundo possui arqueiros.
-            if (!Insidious.worldInfo.config.game) {
-                await browser.storage.local.remove('worldConfigFetch');
+            if (!Insidious.worldInfo[`config_${Insidious.world}`].game) {
+                await browser.storage.local.remove(`worldConfigFetch_${Insidious.world}`);
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
     
             const isThereArchers = () => {
-                switch (Insidious.worldInfo.config.game.archer) {
+                switch (Insidious.worldInfo[`config_${Insidious.world}`].game.archer) {
                     case 0: return TWAssets.list.farm_units;
                     case 1: return TWAssets.list.farm_units_archer;
                     default: return TWAssets.list.farm_units;
@@ -217,20 +217,21 @@ class TWFarm {
             const currentVillageID: string | null = Utils.currentVillage();
             if (currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
 
-            const currentVillageData = await browser.storage.local.get(`village${currentVillageID}`);
-            if (currentVillageData['village' + currentVillageID] === undefined) {
+            const currentVillageData = await browser.storage.local.get(`v${currentVillageID}_${Insidious.world}`);
+            if (currentVillageData[`v${currentVillageID}_${Insidious.world}`] === undefined) {
                 throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${currentVillageID}).`);
             };
 
-            const { x: currentX, y: currentY }: SNObject = currentVillageData['village' + currentVillageID] ?? { };
+            const { x: currentX, y: currentY }: SNObject = currentVillageData[`v${currentVillageID}_${Insidious.world}`] ?? { };
             if (currentX === undefined || currentY === undefined) {
                 throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${currentVillageID}).`);
             };
 
             // Lista das aldeias que já foram atacadas alguma vez.
             // É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
+            const plundered: string = `alreadyPlunderedVillages_${Insidious.world}`;
             let alreadyPlunderedVillages: Set<string> = new Set();
-            const attackHistory: Set<string> | undefined = (await browser.storage.local.get('alreadyPlunderedVillages')).alreadyPlunderedVillages;
+            const attackHistory: Set<string> | undefined = (await browser.storage.local.get(plundered))[plundered];
             if (attackHistory !== undefined) alreadyPlunderedVillages = attackHistory;
     
             // Ajuda a controlar o MutationObserver.
@@ -356,8 +357,8 @@ class TWFarm {
                             };
         
                             // Distância e coordenadas (adquirido de forma independente, não dependendo da posição na tabela).
-                            const targetVillageData = await browser.storage.local.get(`village${villageID}`);
-                            const { x: targetX, y: targetY }: SNObject = targetVillageData['village' + villageID] ?? { };
+                            const targetVillageData = await browser.storage.local.get(`v${villageID}_${Insidious.world}`);
+                            const { x: targetX, y: targetY }: SNObject = targetVillageData[`v${villageID}_${Insidious.world}`] ?? { };
 
                             if (targetX !== undefined && targetY !== undefined) {
                                 const getRelativeCoords = (): number[] => {
@@ -398,7 +399,7 @@ class TWFarm {
                         };
                     };
 
-                    browser.storage.local.set({ alreadyPlunderedVillages: alreadyPlunderedVillages })
+                    browser.storage.local.set({ [plundered]: alreadyPlunderedVillages })
                         .catch((err: unknown) => {
                             if (err instanceof Error) console.error(err);
                         });

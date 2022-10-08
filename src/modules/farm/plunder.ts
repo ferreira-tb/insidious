@@ -1,6 +1,6 @@
 class Plunder extends TWFarm {
     static #models: UnitModels;
-    static #carryCapacity: SNObject;
+    static #carryCapacity: CarryCapacity;
     static #options: PlunderOptions;
     static #ram: number | null = null;
 
@@ -14,18 +14,19 @@ class Plunder extends TWFarm {
             await this.#showPlunderedAmount();
 
             // Informações sobre cada tipo de unidade do jogo.
-            if (!Insidious.unitInfo.unit) {
-                await browser.storage.local.remove('worldConfigFetch');
+            if (!Insidious.unitInfo[`unit_${Insidious.world}`]) {
+                await browser.storage.local.remove(`worldConfigFetch_${Insidious.world}`);
                 throw new InsidiousError('Não foi possível obter as informações sobre as unidades do jogo.');
             };
 
             // Opções do plunder.
-            this.#options = (await browser.storage.local.get('plunderOptions')).plunderOptions ?? {};
+            const plunderOptions = `plunderOptions_${Insidious.world}`;
+            this.#options = (await browser.storage.local.get(plunderOptions))[plunderOptions] ?? {};
 
             // Modelos de saque do usuário.
-            this.#models = await browser.storage.local.get(['amodel', 'bmodel']);
-            if (!this.#models.amodel) throw new InsidiousError('Os dados do modelo A não estão presentes no banco de dados.');
-            if (!this.#models.bmodel) throw new InsidiousError('Os dados do modelo B não estão presentes no banco de dados.');
+            this.#models = await browser.storage.local.get([`amodel_${Insidious.world}`, `bmodel_${Insidious.world}`]);
+            if (!this.#models[`amodel_${Insidious.world}`]) throw new InsidiousError('Os dados do modelo A não estão presentes no banco de dados.');
+            if (!this.#models[`bmodel_${Insidious.world}`]) throw new InsidiousError('Os dados do modelo B não estão presentes no banco de dados.');
 
             this.#carryCapacity = this.#getCarryCapacity();
 
@@ -144,14 +145,14 @@ class Plunder extends TWFarm {
                     const checkAvailability = this.#getAvailableTroops();
                     
                     // Modelo escolhido pela função verifyRatio.
-                    const bestModel: SNObject = this.#models[bestRatio + 'model'];
+                    const bestModel: SNObject = this.#models[`${bestRatio}model_${Insidious.world}`];
 
                     // Esse boolean determina se o ataque é enviado ou não.
                     let attackIsPossible: boolean = checkAvailability(bestModel);
 
                     // Caso não hajam tropas disponíveis, verifica se um ataque usando o outro modelo seria aceitável.
                     if (otherRatio !== null && !attackIsPossible) {
-                        const otherModel = this.#models[otherRatio + 'model'];
+                        const otherModel = this.#models[`${otherRatio}model_${Insidious.world}`];
                         // Em caso positivo, determina o outro modelo como bestRatio.
                         if (checkAvailability(otherModel)) {
                             bestRatio = otherRatio;
@@ -164,7 +165,7 @@ class Plunder extends TWFarm {
                         // Esse return não pode ser removido, caso contrário o código após o FOR será executado indevidamente.
                         return new Promise<void>((resolve, reject) => {
                             if (Utils.isThereCaptcha()) {
-                                browser.storage.local.set({ isPlunderActive: false });
+                                browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: false });
                                 this.#eventTarget.dispatchEvent(new Event('stopplundering'));
                                 this.#eventTarget.dispatchEvent(new Event('cancelautoreload'));
                                 reject(new FarmAbort());
@@ -193,9 +194,7 @@ class Plunder extends TWFarm {
                                             return parsed;
                                         });
 
-                                        let totalAmount = allResources.reduce((previous, current) => {
-                                            return previous + current;
-                                        }, 0);
+                                        let totalAmount = allResources.reduce((previous, current) => previous + current, 0);
                                         
                                         // Caso a soma resulte em zero, "totalAmount = Infinity" garante que não surja uma divisão por zero mais adiante.
                                         // Qualquer valor dividido por Infinity é igual a zero.
@@ -203,8 +202,8 @@ class Plunder extends TWFarm {
 
                                         return allResources.map((amount: number) => {
                                             // Se houver mais recursos do que a carga suporta, calcula quanto de cada recurso deve ser saqueado.
-                                            if (totalAmount > this.#carryCapacity[bestRatio as string]) {
-                                                return Math.floor((amount / totalAmount) * this.#carryCapacity[bestRatio as string]);
+                                            if (totalAmount > this.#carryCapacity[bestRatio as AB]) {
+                                                return Math.floor((amount / totalAmount) * this.#carryCapacity[bestRatio as AB]);
                                             } else {
                                                 return amount;
                                             };
@@ -292,13 +291,13 @@ class Plunder extends TWFarm {
         });
     };
 
-    static #getCarryCapacity(): SNObject {
+    static #getCarryCapacity(): CarryCapacity {
         // Calcula a capacidade total de carga com base nos dados salvos.
         const calcEachCarryCapacity = (unitModel: SNObject) => {
             let result: number = 0;
             for (const key in unitModel) {
                 // Ignora o explorador, já que ele não pode carregar recursos.
-                if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo.unit[key as UnitList].carry;
+                if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo[`unit_${Insidious.world}`][key as UnitList].carry;
             };
 
             if (!Number.isInteger(result)) {
@@ -307,8 +306,8 @@ class Plunder extends TWFarm {
             return result;
         };
 
-        const capacityA: number = calcEachCarryCapacity(this.#models.amodel);
-        const capacityB: number = calcEachCarryCapacity(this.#models.bmodel);
+        const capacityA: number = calcEachCarryCapacity(this.#models[`amodel_${Insidious.world}`]);
+        const capacityB: number = calcEachCarryCapacity(this.#models[`bmodel_${Insidious.world}`]);
 
         // Caso o valor seja zero, surge uma divisão por zero no cálculo da razão.
         // Qualquer valor dividido por Infinity se torna zero, o que o torna a melhor opção lá.
@@ -336,22 +335,26 @@ class Plunder extends TWFarm {
             knight: getUnitElem('knight')
         };
 
-        if (!Insidious.worldInfo.config.game) {
-            browser.storage.local.remove('worldConfigFetch');
+        if (!Insidious.worldInfo[`config_${Insidious.world}`].game) {
+            browser.storage.local.remove(`worldConfigFetch_${Insidious.world}`);
             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
         };
 
         // Caso o mundo tenha arqueiros, adiciona-os à lista.
-        if (Insidious.worldInfo.config.game.archer === 1) {
+        if (Insidious.worldInfo[`config_${Insidious.world}`].game.archer === 1) {
             Object.defineProperties(availableTroops, {
                 archer: {
                     value: getUnitElem('archer'),
-                    enumerable: true
+                    enumerable: true,
+                    writable: false,
+                    configurable: false
                 },
 
                 marcher: {
                     value: getUnitElem('marcher'),
-                    enumerable: true
+                    enumerable: true,
+                    writable: false,
+                    configurable: false
                 }
             });
         };
@@ -373,8 +376,8 @@ class Plunder extends TWFarm {
         // this.#getCarryCapacity atribui Infinity caso a capacidade seja igual a zero.
         // Isso é feito para evitar divisões por zero.
         let statusA: boolean = false, statusB: boolean = false;
-        if (checkAvailability(this.#models.amodel) && this.#carryCapacity.a !== Infinity) statusA = true;
-        if (checkAvailability(this.#models.bmodel) && this.#carryCapacity.b !== Infinity) statusB = true;
+        if (checkAvailability(this.#models[`amodel_${Insidious.world}`]) && this.#carryCapacity.a !== Infinity) statusA = true;
+        if (checkAvailability(this.#models[`bmodel_${Insidious.world}`]) && this.#carryCapacity.b !== Infinity) statusB = true;
         if (statusA === false && statusB === false) return;
 
         try {
@@ -438,8 +441,8 @@ class Plunder extends TWFarm {
             if (!actionArea) throw new InsidiousError('Não foi possível exibir a estimativa de saque, pois #insidious_farmActionArea não existe.');
             Manatsu.removeChildren(actionArea);
 
-            const plundered: TotalPlundered = await browser.storage.local.get('totalPlundered');
-            const { wood = 0, stone = 0, iron = 0 }: SNObject = plundered.totalPlundered ?? { };
+            const plundered: TotalPlundered = await browser.storage.local.get(`totalPlundered_${Insidious.world}`);
+            const { wood = 0, stone = 0, iron = 0 }: SNObject = plundered[`totalPlundered_${Insidious.world}`] ?? { };
 
             const spanContainer = new Manatsu('span', {
                 class: 'nowrap',
@@ -482,15 +485,15 @@ class Plunder extends TWFarm {
         const ironLabel = document.querySelector('#insidious_plundered_iron');
 
         try {
-            const plundered: TotalPlundered = await browser.storage.local.get('totalPlundered');
-            if (plundered.totalPlundered) {
+            const plundered: TotalPlundered = await browser.storage.local.get(`totalPlundered_${Insidious.world}`);
+            if (plundered[`totalPlundered_${Insidious.world}`]) {
                 const updatedValues = {
-                    wood: plundered.totalPlundered.wood + wood,
-                    stone: plundered.totalPlundered.stone + stone,
-                    iron: plundered.totalPlundered.iron + iron
+                    wood: plundered[`totalPlundered_${Insidious.world}`].wood + wood,
+                    stone: plundered[`totalPlundered_${Insidious.world}`].stone + stone,
+                    iron: plundered[`totalPlundered_${Insidious.world}`].iron + iron
                 };
 
-                await browser.storage.local.set({ totalPlundered: updatedValues });
+                await browser.storage.local.set({ [`totalPlundered_${Insidious.world}`]: updatedValues });
 
                 if (woodLabel && stoneLabel && ironLabel) {
                     woodLabel.textContent = String(updatedValues.wood);
@@ -499,7 +502,7 @@ class Plunder extends TWFarm {
                 };
 
             } else {
-                await browser.storage.local.set({ totalPlundered: {
+                await browser.storage.local.set({ [`totalPlundered_${Insidious.world}`]: {
                     wood: wood,
                     stone: stone,
                     iron: iron
@@ -527,6 +530,8 @@ class Plunder extends TWFarm {
                 autoReloadCtrl.abort();
                 setTimeout(() => window.location.reload(), 5000);
                 resolve();
+
+                // 60000 milisegundos equivalem a 1 minuto.
             }, Utils.generateIntegerBetween((60000 * 20), (60000 * 30)));
 
             document.querySelector('#insidious_startPlunderBtn')?.addEventListener('click', () => {

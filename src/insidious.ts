@@ -1,6 +1,7 @@
 class Insidious {
-    static #worldInfo: { config: WorldInfo };
-    static #unitInfo: { unit: UnitInfo };
+    static #worldInfo: { [index: string]: WorldInfo };
+    static #unitInfo: { [index: string]: UnitInfo };
+    static readonly world: string | null = Utils.currentWorld();
     static readonly currentScreen: string | null = Utils.currentScreen();
     static readonly currentVillageID: string | null = Utils.currentVillage();
     
@@ -8,14 +9,16 @@ class Insidious {
     static async #start() {
         try {
             if (location.pathname === '\/game.php') {
+                if (this.world === null) throw new InsidiousError('Não foi possível identificar o mundo atual.');
+
                 // Faz download dos dados necessários para executar a extensão.
                 await this.#fetch();
 
                 // Armazena as configurações do mundo para que as outras classes tenham acesso.
-                this.#worldInfo = await browser.storage.local.get('config');
-                this.#unitInfo = await browser.storage.local.get('unit');
-                if (!this.#worldInfo.config || !this.#unitInfo.unit) {
-                    await browser.storage.local.remove('worldConfigFetch');
+                this.#worldInfo = await browser.storage.local.get(`config_${this.world}`);
+                this.#unitInfo = await browser.storage.local.get(`unit_${this.world}`);
+                if (!this.#worldInfo[`config_${this.world}`] || !this.#unitInfo[`unit_${this.world}`]) {
+                    await browser.storage.local.remove(`worldConfigFetch_${this.world}`);
                 };
       
                 // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
@@ -39,13 +42,13 @@ class Insidious {
         try {
             // Verifica qual foi a hora do último fetch.
             const now: number = new Date().getTime();
-            const lastConfigFetch: { worldConfigFetch: number } = await browser.storage.local.get('worldConfigFetch');
-            const lastDataFetch: { worldDataFetch: number } = await browser.storage.local.get('worldDataFetch');
+            const lastConfigFetch: SNObject = await browser.storage.local.get(`worldConfigFetch_${this.world}`);
+            const lastDataFetch: SNObject = await browser.storage.local.get(`worldDataFetch_${this.world}`);
 
             // Informa a data do último fetch na barra inferior, onde se encontra a hora do servidor.
-            if (lastDataFetch.worldDataFetch) {
+            if (lastDataFetch[`worldDataFetch_${this.world}`]) {
                 const lastFetchInfo = new Manatsu('span', { id: 'insidious_lastFetchInfo' }).create();
-                lastFetchInfo.textContent = `Insidious: ${new Date(lastDataFetch.worldDataFetch).toLocaleDateString('pt-br', {
+                lastFetchInfo.textContent = `Insidious: ${new Date(lastDataFetch[`worldDataFetch_${this.world}`]).toLocaleDateString('pt-br', {
                     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                 })} @ `;
 
@@ -55,16 +58,16 @@ class Insidious {
             };
 
             // Caso o plunder esteja ativo, impede que a função continue.
-            const plunderStatus: { isPlunderActive: boolean } = await browser.storage.local.get('isPlunderActive');
-            if (plunderStatus.isPlunderActive === true) return;
+            const plunderStatus: SBObject = await browser.storage.local.get(`isPlunderActive_${this.world}`);
+            if (plunderStatus[`isPlunderActive_${this.world}`] === true) return;
             
             // Salva as configurações do mundo, caso ainda não estejam.
-            if (!lastConfigFetch.worldConfigFetch) {
-                await browser.storage.local.set({ worldConfigFetch: now });
+            if (!lastConfigFetch[`worldConfigFetch_${this.world}`]) {
+                await browser.storage.local.set({ [`worldConfigFetch_${this.world}`]: now });
 
                 const configSource = [
-                    { name: 'config', url: TWAssets.world.get_config },
-                    { name: 'unit', url: TWAssets.world.get_unit_info }
+                    { name: `config_${this.world}`, url: TWAssets.world.get_config },
+                    { name: `unit_${this.world}`, url: TWAssets.world.get_unit_info }
                 ];
 
                 const worldConfigData = await Promise.all(configSource.map((source) => {
@@ -96,14 +99,14 @@ class Insidious {
                 })).catch((err) => {
                     if (err instanceof Error) {
                         console.error(err);
-                        browser.storage.local.remove('worldConfigFetch');
+                        browser.storage.local.remove(`worldConfigFetch_${this.world}`);
                     };
                 });
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastDataFetch.worldDataFetch || now - lastDataFetch.worldDataFetch > (3600000 * 24)) {
-                await browser.storage.local.set({ worldDataFetch: now });
+            if (!lastDataFetch[`worldDataFetch_${this.world}`] || now - lastDataFetch[`worldDataFetch_${this.world}`] > (3600000 * 24)) {
+                await browser.storage.local.set({ [`worldDataFetch_${this.world}`]: now });
 
                 Utils.modal('Aguarde');
                 const modalWindow = document.querySelector('#insidious_modal');
@@ -147,7 +150,7 @@ class Insidious {
                         };
                     
                         try {
-                            await browser.storage.local.set({ ['village' + thisID]: villageInfo })
+                            await browser.storage.local.set({ [`v${thisID}_${this.world}`]: villageInfo });
                             progressInfo.textContent = `${villageName} (${otherData[1]}|${otherData[2]})`;
                             resolve();
 
@@ -203,7 +206,7 @@ class Insidious {
                 return Number.parseFloat(valueField.textContent);
             };
 
-            if (options.name === 'config') {
+            if (options.name === `config_${this.world}`) {
                 const worldInfoSchema: WorldInfo = {
                     speed: getValue('speed'),
                     unit_speed: getValue('unit_speed'),
@@ -216,7 +219,7 @@ class Insidious {
                     resolve(worldInfoSchema);
                 };
                 
-            } else if (options.name === 'unit') {
+            } else if (options.name === `unit_${this.world}`) {
                 const unitList: UnitList[] = [
                     'spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob'
                 ];

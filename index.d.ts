@@ -3,8 +3,9 @@ declare namespace browser {
     const action: any;
 }
 
-type SSObject = { [index: string]: string }
-type SNObject = { [index: string]: number }
+type SSObject = { [index: string]: string };
+type SNObject = { [index: string]: number };
+type SBObject = { [index: string]: boolean };
 
 type ResourceList = 'wood'
     | 'stone'
@@ -53,6 +54,8 @@ type UnitInfo = {
 type AB = 'a' | 'b';
 type ABNull = 'a' | 'b' | null;
 
+type CarryCapacity = { [index in AB]: number };
+
 interface AvailableTroops {
     spear: number,
     sword: number,
@@ -64,8 +67,8 @@ interface AvailableTroops {
 }
 
 type TotalPlundered = {
-    totalPlundered: { [index in ResourceList]: number };
-}
+    [index: string]: { [index in ResourceList]: number };
+};
 
 type UnitModels = {
     [model: string]: SNObject

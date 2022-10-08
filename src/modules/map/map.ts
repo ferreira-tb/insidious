@@ -23,7 +23,7 @@ class TWMap {
             // Tags.
             const tagArea = new Manatsu({ id: 'insidious_mapTagArea' }, buttonArea).create();
             new Manatsu('span', { text: 'Tags' }, tagArea).create();
-            const tagsCheckbox: HTMLInputElement = new Manatsu('input', {
+            const tagsCheckbox = new Manatsu('input', {
                 type: 'checkbox',
                 id: 'insidious_customTags_checkbox'
             }, tagArea).create() as HTMLInputElement;
@@ -31,7 +31,7 @@ class TWMap {
             // Filtros.
             const filterArea = new Manatsu({ id: 'insidious_mapFilterArea' }, buttonArea).create();
             new Manatsu('span', { text: 'Filtros' }, filterArea).create();
-            const filtersCheckbox: HTMLInputElement = new Manatsu('input', {
+            const filtersCheckbox = new Manatsu('input', {
                 type: 'checkbox',
                 id: 'insidious_mapFilters_checkbox'
             }, filterArea).create() as HTMLInputElement;
@@ -75,10 +75,10 @@ class TWMap {
             // Emite um erro caso não consiga identificar a aldeia atual.
             if (Insidious.currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
 
-            const currentVillage = await browser.storage.local.get('village' + Insidious.currentVillageID);
-            const { x: currentX, y: currentY }: SNObject = currentVillage['village' + Insidious.currentVillageID] ?? { };
+            const currentVillage = await browser.storage.local.get(`v${Insidious.currentVillageID}_${Insidious.world}`);
+            const { x: currentX, y: currentY }: SNObject = currentVillage[`v${Insidious.currentVillageID}_${Insidious.world}`] ?? { };
             if (currentX === undefined || currentY === undefined) {
-                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual ${Insidious.currentVillageID}.`);
+                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual(${Insidious.currentVillageID}).`);
             } else {
                 Object.defineProperties(this, {
                     'currentX': {
@@ -114,8 +114,8 @@ class TWMap {
 
             // CONFIGURAÇÕES
             const menuAreaOptionList = [
-                ['customTagStatus', 'lastCustomTag'], // TAGS
-                ['mapFiltersStatus', 'lastMapFilter']  // FILTROS
+                [`customTagStatus_${Insidious.world}`, `lastCustomTag_${Insidious.world}`], // TAGS
+                [`mapFiltersStatus_${Insidious.world}`, `lastMapFilter_${Insidious.world}`]  // FILTROS
             ];
 
             // Ativa a última tag e o último filtro utilizados (caso estejam habilitados).
@@ -124,9 +124,9 @@ class TWMap {
                     const itemStatus: SSObject = await browser.storage.local.get(item[0]);
                     if (itemStatus[item[0]] === 'disabled') {
                         switch (item[0]) {
-                            case 'customTagStatus': Manatsu.disableChildren(tagArea, 'button');
+                            case `customTagStatus_${Insidious.world}`: Manatsu.disableChildren(tagArea, 'button');
                                 break;
-                            case 'mapFiltersStatus': Manatsu.disableChildren(filterArea, 'button');
+                            case `mapFiltersStatus_${Insidious.world}`: Manatsu.disableChildren(filterArea, 'button');
                                 break;
                         };
 
@@ -159,18 +159,18 @@ class TWMap {
                         };
 
                         switch (item[1]) {
-                            case 'lastCustomTag':
+                            case `lastCustomTag_${Insidious.world}`:
                                 const tagsCheckbox = document.querySelector('#insidious_customTags_checkbox');
                                 if (!tagsCheckbox) throw new InsidiousError('A checkbox da área de tags não está presente.');
                                 (tagsCheckbox as HTMLInputElement).checked = true;
-                                MapTag.create(lastItem['lastCustomTag'] as TagType);
+                                MapTag.create(lastItem[`lastCustomTag_${Insidious.world}`] as TagType);
                                 break;
 
-                            case 'lastMapFilter':
+                            case `lastMapFilter_${Insidious.world}`:
                                 const filtersCheckbox = document.querySelector('#insidious_mapFilters_checkbox');
                                 if (!filtersCheckbox) throw new InsidiousError('A checkbox da área de filtros não está presente.');
                                 (filtersCheckbox as HTMLInputElement).checked = true;
-                                MapFilter.create(lastItem['lastMapFilter'] as FilterType);
+                                MapFilter.create(lastItem[`lastMapFilter_${Insidious.world}`] as FilterType);
                                 break;
                         };
 
@@ -203,14 +203,14 @@ class TWMap {
         if (!tagArea) throw new InsidiousError('DOM: #insidious_mapTagArea');
 
         if (tagsCheckbox.checked) {
-            await browser.storage.local.set({ customTagStatus: 'enabled' });
+            await browser.storage.local.set({ [`customTagStatus_${Insidious.world}`]: 'enabled' });
             Manatsu.enableChildren(tagArea, 'button');
 
-            const lastTag: { lastCustomTag: TagType } = await browser.storage.local.get('lastCustomTag');
-            if (lastTag?.lastCustomTag) MapTag.create(lastTag.lastCustomTag);
+            const lastTag: { [index: string]: TagType } = await browser.storage.local.get(`lastCustomTag_${Insidious.world}`);
+            if (lastTag?.[`lastCustomTag_${Insidious.world}`]) MapTag.create(lastTag[`lastCustomTag_${Insidious.world}`]);
             
         } else {
-            await browser.storage.local.set({ customTagStatus: 'disabled' });
+            await browser.storage.local.set({ [`customTagStatus_${Insidious.world}`]: 'disabled' });
             Manatsu.disableChildren(tagArea, 'button');
 
             // Interrompe observers que possam estar ativos.
@@ -227,8 +227,8 @@ class TWMap {
             const actionArea = document.querySelector('#insidious_mapActionArea');
             if (!actionArea) throw new InsidiousError('DOM: #insidious_mapActionArea');
 
-            if (!Insidious.worldInfo.config.game) {
-                await browser.storage.local.remove('worldConfigFetch');
+            if (!Insidious.worldInfo[`config_${Insidious.world}`].game) {
+                await browser.storage.local.remove(`worldConfigFetch_${Insidious.world}`);
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
 
@@ -239,7 +239,7 @@ class TWMap {
             }, { signal: imgIconCtrl.signal });
 
             const isThereArchers = () => {
-                switch (Insidious.worldInfo.config.game.archer) {
+                switch (Insidious.worldInfo[`config_${Insidious.world}`].game.archer) {
                     case 0: return TWAssets.list.all_units;
                     case 1: return TWAssets.list.all_units_archer;
                     default: return TWAssets.list.all_units;
@@ -256,7 +256,7 @@ class TWMap {
                 imgIcon.addEventListener('click', () => {
                     imgIconCtrl.abort();
                     this.#clearActionArea();
-                    MapTag.create(('time_' + unit) as TagType);
+                    MapTag.create(`time_${unit}`);
                 }, { signal: imgIconCtrl.signal });
             });
 
@@ -273,14 +273,14 @@ class TWMap {
         if (!filterArea) throw new InsidiousError('DOM: #insidious_mapFilterArea');
 
         if (filtersCheckbox.checked) {
-            await browser.storage.local.set({ mapFiltersStatus: 'enabled' });
+            await browser.storage.local.set({ [`mapFiltersStatus_${Insidious.world}`]: 'enabled' });
             Manatsu.enableChildren(filterArea, 'button');
 
-            const lastFilter: { lastMapFilter: FilterType } = await browser.storage.local.get('lastMapFilter');
-            if (lastFilter.lastMapFilter) MapFilter.create(lastFilter.lastMapFilter);
+            const lastFilter: { [index: string]: FilterType } = await browser.storage.local.get(`lastMapFilter_${Insidious.world}`);
+            if (lastFilter[`lastMapFilter_${Insidious.world}`]) MapFilter.create(lastFilter[`lastMapFilter_${Insidious.world}`]);
             
         } else {
-            await browser.storage.local.set({ mapFiltersStatus: 'disabled' });
+            await browser.storage.local.set({ [`mapFiltersStatus_${Insidious.world}`]: 'disabled' });
             Manatsu.disableChildren(filterArea, 'button');
 
             // Interrompe observers que possam estar ativos.
@@ -355,7 +355,7 @@ class TWMap {
         Promise.allSettled(Array.from(this.getVillagesID()).map((id: string) => {
             return new Promise<void>(async (resolve, reject) => {
                 try {
-                    const village = 'village' + id;
+                    const village = `v${id}_${Insidious.world}`;
                     const result = await browser.storage.local.get(village);
                     if (!result[village]) throw new InsidiousError(`Aldeia não encontrada no registro: ${village}`);
 
