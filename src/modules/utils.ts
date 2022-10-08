@@ -7,19 +7,30 @@ class Utils {
         return thisWorld;
     };
 
-    static #currentScreen(): string | null {
-        for (const item of this.#urlFields()) {
-            if (item.includes('screen=')) return item.replace('screen=', '');
+    static readonly currentScreen = this.#currentField('screen');
+    static readonly currentGroup = this.#currentField('group');
+
+    static #currentField(fieldName: string) {
+        return function() {
+            const urlFields: string[] = (location.search.replace('\?', '')).split('\&');
+            for (const field of urlFields) {
+                if (field.includes(`${fieldName}=`)) return field.replace(`${fieldName}=`, '');
+            };
+            return null;
         };
-        return null;
     };
 
     static #currentVillage(): string | null {
-        for (const item of this.#urlFields()) {
-            /* Caso haja navegação entre aldeias usando os botões de "aldeia anterior" ou "próxima aldeia",
-            ao invés de exibir o id da aldeia atual, o jogo exibe o id da aldeia na qual o jogador estava antes de usar o botão.
-            A esse ID, é anexado "p" ou "n", a depender da direção da navegação. */
-            if (item.includes('village=')) return item.replace(/\D/g, '');
+        // Não é seguro obter o id da aldeia diretamente da barra de endereços.
+        const villageLinkElement = document.querySelector('tr#menu_row2 td#menu_row2_village a[href*="village" i]');
+        if (!villageLinkElement) throw new InsidiousError('DOM: tr#menu_row2 td#menu_row2_village a[href*="village" i]');
+
+        const villageLink = villageLinkElement.getAttribute('href');
+        if (!villageLink) throw new InsidiousError('Não foi possível obter o link para a aldeia atual.');
+
+        const linkFields: string[] = (villageLink.replaceAll('\?', '\&')).split('\&');
+        for (const field of linkFields) {
+            if (field.includes('village=')) return field.replace(/\D/g, '');
         };
         return null;
     };
@@ -31,10 +42,6 @@ class Utils {
                 .then((result: any) => resolve(result[village]?.player))
                 .catch((err: unknown) => reject(err));
         });
-    };
-
-    static #urlFields(): string[] {
-        return (location.search.replace('\?', '')).split('\&');
     };
 
     // Corrige os nomes codificados ("Aldeia+de+b%C3%A1rbaros" se torna "Aldeia de bárbaros").
@@ -66,6 +73,14 @@ class Utils {
         return false;
     };
 
+    static #getResponseTime(): number {
+        const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+        const responseTime = navigationTiming.responseEnd - navigationTiming.fetchStart;
+
+        if (!Number.isInteger(responseTime)) return 500;
+        return responseTime;
+    };
+
     static #modal(modalTitle: string) {
         const blurBG = new Manatsu({ id: 'insidious_blurBG' }, document.body).create();
         const modalWindow = new Manatsu({ id: 'insidious_modal' }, document.body).create();
@@ -83,7 +98,6 @@ class Utils {
 
     // DADOS
     static get currentWorld() {return this.#currentWorld};
-    static get currentScreen() {return this.#currentScreen};
     static get currentVillage() {return this.#currentVillage};
     static get currentPlayer() {return this.#currentPlayer};
 
@@ -95,4 +109,5 @@ class Utils {
     static get calcDistance() {return this.#calcDistance};
     static get generateIntegerBetween() {return this.#generateIntegerBetween};
     static get isThereCaptcha() {return this.#isThereCaptcha};
+    static get getResponseTime() {return this.#getResponseTime};
 };

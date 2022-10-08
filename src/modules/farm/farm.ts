@@ -74,7 +74,7 @@ class TWFarm {
         // Salva os modelos no banco de dados.
         browser.storage.local.set({ [`amodel_${Insidious.world}`]: parentRow.a, [`bmodel_${Insidious.world}`]: parentRow.b })
             .catch((err: unknown) => {
-                if (err instanceof Error) console.error(err);
+                if (err instanceof Error) InsidiousError.handle(err);
             });
 
         ////// EVENTOS
@@ -100,7 +100,7 @@ class TWFarm {
                 };
 
             } catch (err) {
-                if (err instanceof Error) console.error(err);
+                if (err instanceof Error) InsidiousError.handle(err);
 
             } finally {
                 startPlunderBtn.addEventListener('click', plunderBtnEvents);
@@ -115,6 +115,15 @@ class TWFarm {
             showOptionsBtn.setAttribute('disabled', '');
 
             const optionsCtrl = new AbortController();
+
+            // Ataca de múltiplas aldeias.
+            const groupAttack = optionsArea.querySelector('#insidious_group_attack_checkbox') as HTMLInputElement;
+            if (Plunder.options.group_attack === true) groupAttack.checked = true;
+            groupAttack.addEventListener('change', async (e) => {
+                optionsCtrl.abort();
+                await this.#saveOptions(e, 'group_attack');
+                setTimeout(() => window.location.reload(), Utils.getResponseTime());
+            }, { signal: optionsCtrl.signal });
 
             // Ignora aldeias com muralha.
             const ignoreWall = optionsArea.querySelector('#insidious_ignore_wall_checkbox') as HTMLInputElement;
@@ -161,7 +170,7 @@ class TWFarm {
                 if (err instanceof Error) {
                     // Caso haja algum erro, desativa o plunder, por segurança.
                     browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: false });
-                    console.error(err);
+                    InsidiousError.handle(err);
                 };
             });
     };
@@ -179,7 +188,7 @@ class TWFarm {
             await browser.storage.local.set({ [`plunderOptions_${Insidious.world}`]: Plunder.options });
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -222,7 +231,7 @@ class TWFarm {
                 throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${currentVillageID}).`);
             };
 
-            const { x: currentX, y: currentY }: SNObject = currentVillageData[`v${currentVillageID}_${Insidious.world}`] ?? { };
+            const { x: currentX, y: currentY } = currentVillageData[`v${currentVillageID}_${Insidious.world}`] as VillageInfo  ?? { };
             if (currentX === undefined || currentY === undefined) {
                 throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${currentVillageID}).`);
             };
@@ -231,7 +240,7 @@ class TWFarm {
             // É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
             const plundered: string = `alreadyPlunderedVillages_${Insidious.world}`;
             let alreadyPlunderedVillages: Set<string> = new Set();
-            const attackHistory: Set<string> | undefined = (await browser.storage.local.get(plundered))[plundered];
+            const attackHistory = (await browser.storage.local.get(plundered))[plundered] as Set<string> | undefined;
             if (attackHistory !== undefined) alreadyPlunderedVillages = attackHistory;
     
             // Ajuda a controlar o MutationObserver.
@@ -358,7 +367,7 @@ class TWFarm {
         
                             // Distância e coordenadas (adquirido de forma independente, não dependendo da posição na tabela).
                             const targetVillageData = await browser.storage.local.get(`v${villageID}_${Insidious.world}`);
-                            const { x: targetX, y: targetY }: SNObject = targetVillageData[`v${villageID}_${Insidious.world}`] ?? { };
+                            const { x: targetX, y: targetY } = targetVillageData[`v${villageID}_${Insidious.world}`] as VillageInfo ?? { };
 
                             if (targetX !== undefined && targetY !== undefined) {
                                 const getRelativeCoords = (): number[] => {
@@ -401,11 +410,11 @@ class TWFarm {
 
                     browser.storage.local.set({ [plundered]: alreadyPlunderedVillages })
                         .catch((err: unknown) => {
-                            if (err instanceof Error) console.error(err);
+                            if (err instanceof Error) InsidiousError.handle(err);
                         });
 
                 } catch (err) {
-                    if (err instanceof Error) console.error(err);
+                    if (err instanceof Error) InsidiousError.handle(err);
                 };
     
                 ////// CONTROLE DE EVENTOS
@@ -427,7 +436,7 @@ class TWFarm {
             await addInfo();
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -435,7 +444,14 @@ class TWFarm {
         const optionsArea = document.querySelector('#insidious_farmOptionsArea');
         if (!optionsArea) throw new InsidiousError('A área de opções não existe.');
 
-        const optionsAreaItems = [];
+        const optionsAreaItems: Manatsu[] = [];
+
+        // Ataca de múltiplas aldeias usando um grupo como referência.
+        // O nome do grupo obrigatoriamente precisa ser Insidious.
+        optionsAreaItems.push(...Manatsu.createCheckbox({
+            id: 'insidious_group_attack_checkbox',
+            label: 'Usar grupo'
+        }, false, optionsArea) as Manatsu[]);
 
         // Não ataca aldeias que tenham muralha.
         optionsAreaItems.push(...Manatsu.createCheckbox({
@@ -485,7 +501,7 @@ class TWFarm {
                 anyDay = new Date(anyDay).setMonth(dayAndMonth[1] - 1, dayAndMonth[0]);
 
                 // Caso essa condição for verdadeira, há diferença de ano entre a data atual e a data do ataque.
-                if (anyDay > new Date().getTime()) throw new InsidiousError('Issue #2: https://github.com/ferreira-tb/insidious/issues/2');
+                if (anyDay > new Date().getTime()) throw new InsidiousError('Issue #2: https://github.com/ferreira-tb/insidious/issues/2#issue-1383251210');
                 
                 return anyDay;
             };
@@ -494,5 +510,5 @@ class TWFarm {
         return null;
     };
 
-    static get open() { return this.#open };
+    static get open() {return this.#open};
 };

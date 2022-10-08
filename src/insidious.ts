@@ -31,10 +31,13 @@ class Insidious {
                             break;
                     };
                 };
+
+                // Executa operações que estejam pendentes.
+                await Defer.promises();
             };
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);      
+            if (err instanceof Error) InsidiousError.handle(err);      
         };
     };
 
@@ -98,7 +101,7 @@ class Insidious {
                         browser.storage.local.set({ [config.name]: config.result })
                 })).catch((err) => {
                     if (err instanceof Error) {
-                        console.error(err);
+                        InsidiousError.handle(err);
                         browser.storage.local.remove(`worldConfigFetch_${this.world}`);
                     };
                 });
@@ -110,7 +113,7 @@ class Insidious {
 
                 Utils.modal('Aguarde');
                 const modalWindow = document.querySelector('#insidious_modal');
-                if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal (#insidious_modal).');
+                if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
                 modalWindow.setAttribute('style', 'cursor: wait;');
 
                 // Elementos do modal.
@@ -176,7 +179,7 @@ class Insidious {
                         villageProgressInfo.textContent = `${results.length} aldeias processadas.`;
                     };
 
-                    const logButtonArea = new Manatsu(document.querySelector('#insidious_modal')).create();
+                    const logButtonArea = new Manatsu(modalWindow).create();
                     new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Fechar' }, logButtonArea).create()
                         .addEventListener('click', () => {
                             document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
@@ -185,7 +188,7 @@ class Insidious {
             };
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -249,15 +252,6 @@ class Insidious {
     static get worldInfo() {return this.#worldInfo};
     static get unitInfo() {return this.#unitInfo};
     static get start() {return this.#start};
-};
-
-class InsidiousError extends Error {
-    constructor(message: string) {
-        super();
-
-        this.name = 'InsidiousError';
-        this.message = message;
-    };
 };
 
 Insidious.start();

@@ -3,7 +3,7 @@
         "outDir": "dist",
         "lib": ["DOM", "es2022"],
         "target": "es2022",
-        "noEmitOnError": false,
+        "noEmitOnError": true,
 
         // Modo estrito
         "alwaysStrict": true,

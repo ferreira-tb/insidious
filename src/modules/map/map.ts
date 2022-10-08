@@ -76,7 +76,7 @@ class TWMap {
             if (Insidious.currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
 
             const currentVillage = await browser.storage.local.get(`v${Insidious.currentVillageID}_${Insidious.world}`);
-            const { x: currentX, y: currentY }: SNObject = currentVillage[`v${Insidious.currentVillageID}_${Insidious.world}`] ?? { };
+            const { x: currentX, y: currentY } = currentVillage[`v${Insidious.currentVillageID}_${Insidious.world}`] as VillageInfo ?? { };
             if (currentX === undefined || currentY === undefined) {
                 throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual(${Insidious.currentVillageID}).`);
             } else {
@@ -143,33 +143,41 @@ class TWMap {
     
                         // O jogo comumente demora a carregar o #map_container, o que impede o trabalho da função.
                         if (!document.querySelector('#map_container')) {
-                            const containerStatus = await new Promise<boolean>((resolve) => {
+                            const containerStatus = await new Promise<boolean>((containerIsThere) => {
                                 setTimeout(() => {
                                     // Caso #map_container ainda não exista, rejeita a promise.
                                     // Isso porquê o problema pode já não ser relacionado ao carregamento da página.
                                     if (!document.querySelector('#map_container')) {
-                                        resolve(false);
+                                        containerIsThere(false);
                                     } else {
-                                        resolve(true);
+                                        containerIsThere(true);
                                     };                                  
-                                }, 500);
+                                }, Utils.getResponseTime());
                             });
     
                             if (containerStatus === false) throw new InsidiousError('DOM: #map_container');
                         };
 
-                        switch (item[1]) {
-                            case `lastCustomTag_${Insidious.world}`:
+                        switch (item[0]) {
+                            case `customTagStatus_${Insidious.world}`:
                                 const tagsCheckbox = document.querySelector('#insidious_customTags_checkbox');
                                 if (!tagsCheckbox) throw new InsidiousError('A checkbox da área de tags não está presente.');
                                 (tagsCheckbox as HTMLInputElement).checked = true;
+                                break;
+
+                            case `mapFiltersStatus_${Insidious.world}`: Manatsu.disableChildren(filterArea, 'button');
+                                const filtersCheckbox = document.querySelector('#insidious_mapFilters_checkbox');
+                                if (!filtersCheckbox) throw new InsidiousError('A checkbox da área de filtros não está presente.');
+                                (filtersCheckbox as HTMLInputElement).checked = true;
+                                break;
+                        };
+
+                        switch (item[1]) {
+                            case `lastCustomTag_${Insidious.world}`:
                                 MapTag.create(lastItem[`lastCustomTag_${Insidious.world}`] as TagType);
                                 break;
 
                             case `lastMapFilter_${Insidious.world}`:
-                                const filtersCheckbox = document.querySelector('#insidious_mapFilters_checkbox');
-                                if (!filtersCheckbox) throw new InsidiousError('A checkbox da área de filtros não está presente.');
-                                (filtersCheckbox as HTMLInputElement).checked = true;
                                 MapFilter.create(lastItem[`lastMapFilter_${Insidious.world}`] as FilterType);
                                 break;
                         };
@@ -179,11 +187,11 @@ class TWMap {
                 });
 
             })).catch((err: unknown) => {
-                if (err instanceof Error) console.error(err);
+                if (err instanceof Error) InsidiousError.handle(err);
             });
             
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -261,7 +269,7 @@ class TWMap {
             });
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -321,7 +329,7 @@ class TWMap {
                     };
 
                 } catch (err) {
-                    if (err instanceof Error) console.error(err);
+                    if (err instanceof Error) InsidiousError.handle(err);
                 };
             };
         }, { signal: getBBCoordsCtrl.signal });
@@ -346,7 +354,7 @@ class TWMap {
                     };
 
                 } catch (err) {
-                    if (err instanceof Error) console.error(err);
+                    if (err instanceof Error) InsidiousError.handle(err);
                 };
             };
         }, { signal: getBBCoordsCtrl.signal });
@@ -356,14 +364,14 @@ class TWMap {
             return new Promise<void>(async (resolve, reject) => {
                 try {
                     const village = `v${id}_${Insidious.world}`;
-                    const result = await browser.storage.local.get(village);
-                    if (!result[village]) throw new InsidiousError(`Aldeia não encontrada no registro: ${village}`);
+                    const villageInfo = (await browser.storage.local.get(village))[village] as VillageInfo | undefined;
+                    if (!villageInfo) throw new InsidiousError(`Aldeia não encontrada no registro: ${village}`);
 
-                    if (result[village].player === 0) {
+                    if (villageInfo.player === 0) {
                         const coords = document.createElement('span');
                         coords.setAttribute('class', 'insidious_mapActionArea_coords');
                         coords.setAttribute('id', 'insidious_mapActionArea_' + 'village' + id);
-                        coords.textContent = `${result[village].x}\|${result[village].y}`;
+                        coords.textContent = `${villageInfo.x}\|${villageInfo.y}`;
                         actionArea.appendChild(coords);
                     };
 

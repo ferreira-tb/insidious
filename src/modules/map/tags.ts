@@ -9,7 +9,7 @@ class MapTag extends TWMap {
         // Salva a última tag utilizada, para que seja ativada automaticamente na próxima vez.
         browser.storage.local.set({ [`lastCustomTag_${Insidious.world}`]: tagType })
             .catch((err: unknown) => {
-                if (err instanceof Error) console.error(err);
+                if (err instanceof Error) InsidiousError.handle(err);
             });
 
         // Vasculha os elementos do mapa e retorna aqueles que são aldeias.

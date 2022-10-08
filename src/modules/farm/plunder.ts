@@ -21,7 +21,10 @@ class Plunder extends TWFarm {
 
             // Opções do plunder.
             const plunderOptions = `plunderOptions_${Insidious.world}`;
-            this.#options = (await browser.storage.local.get(plunderOptions))[plunderOptions] ?? {};
+            this.#options = (await browser.storage.local.get(plunderOptions))[plunderOptions] as PlunderOptions ?? {};
+
+            // Prepara os ataques usando o grupo Insidious.
+            if (this.#options.group_attack === true) await GroupAttack.start();
 
             // Modelos de saque do usuário.
             this.#models = await browser.storage.local.get([`amodel_${Insidious.world}`, `bmodel_${Insidious.world}`]);
@@ -37,13 +40,13 @@ class Plunder extends TWFarm {
             // Como isPlunderActive === true, o plunder voltará a atacar automaticamente.
             this.#setPlunderTimeout().catch((err: unknown) => {
                 if (err instanceof FarmAbort) {
-                    if (err.reason) console.error(err.reason);
+                    if (err.reason) InsidiousError.handle(err.reason);
                     return;
                 };
             });
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -236,11 +239,11 @@ class Plunder extends TWFarm {
 
                         }).then(() => this.#sendAttack()).catch((err) => {
                             if (err instanceof FarmAbort) {
-                                if (err.reason) console.error(err.reason);
+                                if (err.reason) InsidiousError.handle(err.reason);
                                 return;
 
                             } else if (err instanceof Error) {
-                                console.error(err);
+                                InsidiousError.handle(err);
                             };
                         });
                     };
@@ -252,7 +255,7 @@ class Plunder extends TWFarm {
             setTimeout(() => this.#navigateToNextPlunderPage(), Utils.generateIntegerBetween(2000, 3000));
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -431,7 +434,7 @@ class Plunder extends TWFarm {
             };
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -474,7 +477,7 @@ class Plunder extends TWFarm {
             }).create();
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -516,7 +519,7 @@ class Plunder extends TWFarm {
             };
 
         } catch (err) {
-            if (err instanceof Error) console.error(err);
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
@@ -654,7 +657,7 @@ class Plunder extends TWFarm {
                                             submitAttack.click();
 
                                             // Antes de concluir, aguarda um breve momento.
-                                            await new Promise((stopWaiting) => setTimeout(stopWaiting, 500));
+                                            await new Promise((stopWaiting) => setTimeout(stopWaiting, Utils.getResponseTime()));
                                             resolve(true);
                                             break;
                                         };
@@ -677,7 +680,7 @@ class Plunder extends TWFarm {
 
                     // É preciso esperar um breve intervalo antes de emitir o clique.
                     // Do contrário, o servidor não tem tempo suficiente para processar o comando.
-                    await new Promise((stopWaiting) => setTimeout(stopWaiting, 300));
+                    await new Promise((stopWaiting) => setTimeout(stopWaiting, Utils.getResponseTime()));
                     formAttackButton.click();
 
                 } else {
@@ -745,9 +748,11 @@ class Plunder extends TWFarm {
 };
 
 class FarmAbort {
-    reason;
+    #reason: InsidiousError | null;
     
     constructor(reason?: string) {
-        this.reason = reason;
+        this.#reason = typeof reason === 'string' ? new InsidiousError(reason) : null;
     };
+
+    get reason() {return this.#reason};
 };

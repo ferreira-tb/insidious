@@ -12,7 +12,7 @@ class MapFilter extends TWMap {
         // Salva o último filtro utilizado.
         browser.storage.local.set({ [`lastMapFilter_${Insidious.world}`]: filterType })
             .catch((err: unknown) => {
-                if (err instanceof Error) console.error(err);
+                if (err instanceof Error) InsidiousError.handle(err);
             });
 
 
@@ -43,7 +43,7 @@ class MapFilter extends TWMap {
         let filterContext: FilterContext;
         if (filterType === 'bbunknown') {
             const plundered: string = `alreadyPlunderedVillages_${Insidious.world}`;
-            const attackHistory: Set<string> | undefined = (await browser.storage.local.get(plundered))[plundered];
+            const attackHistory = (await browser.storage.local.get(plundered))[plundered] as Set<string> | undefined;
             // Se não há aldeias registradas no banco de dados, não há o que filtrar.
             if (attackHistory === undefined) return;
             filterContext = attackHistory;
