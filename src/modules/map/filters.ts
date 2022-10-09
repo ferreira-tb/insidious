@@ -85,7 +85,7 @@ class MapFilter extends TWMap {
                         leftTopStyle = leftTopStyle.map((item) => item.trim());
 
                         const canvasList = villageParent.querySelectorAll('canvas');
-                        for (const canvas of (canvasList as unknown) as HTMLCanvasElement[]) {
+                        for (const canvas of Array.from(canvasList)) {
                             const canvasStyle = canvas.getAttribute('style');
                             if (canvasStyle === null) continue;
 

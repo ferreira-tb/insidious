@@ -242,7 +242,7 @@ class Manatsu {
             });
 
         } else {
-            for (const child of (parentElement.children as unknown) as Element[]) {
+            for (const child of Array.from(parentElement.children)) {
                 if (child.hasAttribute('disabled')) child.removeAttribute('disabled');
             };
         };
@@ -257,7 +257,7 @@ class Manatsu {
             children.forEach((child: Element) => child.setAttribute('disabled', ''));
 
         } else {
-            for (const child of (parentElement.children as unknown) as Element[]) {
+            for (const child of Array.from(parentElement.children)) {
                 child.setAttribute('disabled', '');
             };
         };

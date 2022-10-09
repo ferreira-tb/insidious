@@ -29,6 +29,8 @@ class Insidious {
                     switch (this.currentScreen) {
                         case 'am_farm': await TWFarm.open();
                             break;
+                        case 'overview_villages': await TWOverview.open();
+                            break;
                     };
                 };
 

@@ -45,7 +45,7 @@ class TWFarm {
         // Em mundos com arqueiros esse número é maior.
         if (farmModelsInputFields.length < 14) throw new InsidiousError('Não foi possível encontrar os campos de texto dos modelos.');
 
-        for (const field of (farmModelsInputFields as unknown) as HTMLElement[]) {
+        for (const field of Array.from(farmModelsInputFields)) {
             const fieldName = field.getAttribute('name');
             if (!fieldName) throw new InsidiousError('O atributo \"name\" não foi encontrado nos campos de texto dos modelos.');
 
@@ -254,7 +254,7 @@ class TWFarm {
                 try {
                     // https://developer.mozilla.org/en-US/docs/Web/CSS/Attribute_selectors
                     const plunderListRows = document.querySelectorAll('#plunder_list tbody tr[id^="village_"]');
-                    for (const row of (plunderListRows as unknown) as HTMLElement[]) {
+                    for (const row of Array.from(plunderListRows)) {
                         if (!row.hasAttribute('insidious-village')) {
                             // A coerção à string é válida pois já foi verificada a existência do ID ao usar querySelectorAll();
                             let villageID: string = row.getAttribute('id') as string;
@@ -275,7 +275,7 @@ class TWFarm {
                             // Data do último ataque.
                             const findDateField = (): HTMLElement | null => {
                                 const fields = row.querySelectorAll('td');
-                                for (const field of (fields as unknown) as HTMLElement[]) {
+                                for (const field of Array.from(fields)) {
                                     if (!field.textContent) continue;
                                     const date = this.#decipherPlunderListDate(field.textContent);
                                     if (!date) continue;
@@ -294,7 +294,7 @@ class TWFarm {
                             // Quantidade de recursos.
                             const findResourcesField = (): HTMLElement | null => {
                                 const fields = row.querySelectorAll('td');
-                                for (const field of (fields as unknown) as HTMLElement[]) {
+                                for (const field of Array.from(fields)) {
                                     const woodField = field.querySelector('.nowrap span[class*="wood"] + span');
                                     const stoneField = field.querySelector('.nowrap span[class*="stone"] + span');
                                     const ironField = field.querySelector('.nowrap span[class*="iron"] + span');

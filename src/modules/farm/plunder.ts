@@ -53,8 +53,8 @@ class Plunder extends TWFarm {
     static async #sendAttack(): Promise<void> {
         try {
             // Representa cada linha na tabela.
-            const villageRows = document.querySelectorAll('tr[insidious-tr-farm="true"]');
-            for (const village of (villageRows as unknown) as HTMLElement[]) {
+            const villageRows = Array.from(document.querySelectorAll('tr[insidious-tr-farm="true"]')) as HTMLElement[];
+            for (const village of villageRows) {
                 // Ignora a linha caso ela esteja oculta.
                 // Elas automaticamente ficam ocultas assim que são atacadas.
                 if (village.getAttribute('style')?.includes('display: none')) continue;

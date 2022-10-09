@@ -2,7 +2,8 @@ class GroupAttack {
     static readonly groupCreationScreen = 'screen=overview_villages&mode=groups&type=dynamic';
 
     static async #start() {
-        const groupID = await this.#verify();
+        const groupKey = `farmGroupID_${Insidious.world}`;
+        const groupID = (await browser.storage.local.get(groupKey))[groupKey] as string | undefined;
         
         if (groupID) {
             const currentGroup = Utils.currentGroup();
@@ -13,6 +14,9 @@ class GroupAttack {
             };
             
         } else {
+            // Retorna caso o grupo já exista.
+            if (await this.#verify()) return;
+
             // Caso o grupo não exista, emite uma mensagem solicitando sua criação.
             Utils.modal('Insidious');
             const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
@@ -56,7 +60,7 @@ class GroupAttack {
     };
 
     // Verifica se o grupo Insidious já existe.
-    static async #verify(): Promise<string | null> {
+    static async #verify(): Promise<boolean> {
         if (!document.querySelector('div.popup_helper #group_popup')) {
             // Caso a janela de grupos não esteja aberta (mesmo que oculta), abre e a oculta logo em seguida.
             await new Promise<void>((resolve) => {
@@ -101,16 +105,18 @@ class GroupAttack {
         const groupIDSelect = groupPopup.querySelector('select#group_id') as HTMLSelectElement | null;
         if (!groupIDSelect) throw new InsidiousError('DOM: select#group_id');
 
-        const optionsList = (groupIDSelect.querySelectorAll('option') as unknown) as HTMLOptionElement[];
+        const optionsList = Array.from(groupIDSelect.querySelectorAll('option'));
         for (const option of optionsList) {
             if (option.textContent?.toLowerCase().trim() === 'insidious') {
                 const groupID = option.value.replace(/\D/g, '');
                 if (groupID.length === 0) throw new InsidiousError('O grupo Insidious existe, mas não foi possível obter seu id.');
-                return groupID;
+
+                await browser.storage.local.set({ [`farmGroupID_${Insidious.world}`]: groupID });
+                return true;
             };
         };
 
-        return null;
+        return false;
     };
 
     static async #navigateToGroupCreationScreen() {
