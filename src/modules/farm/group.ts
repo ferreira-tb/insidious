@@ -7,10 +7,26 @@ class GroupAttack {
         
         if (groupID) {
             const currentGroup = Utils.currentGroup();
+
+            // Não haverá emissão de erro caso groupJump não exista.
+            // Nem sempre sua ausência é sinônimo de comportamento indesejado.
+            // Como consequência, essa parte do código é extremamente vulnerável a mudanças no DOM do jogo.
+            const groupJump = document.querySelector('span.groupJump a.jump_link img') as HTMLImageElement | null;
+
             if (currentGroup === null) {
                 location.href = location.href + `&group=${groupID}`;
+
             } else if (currentGroup !== groupID) {
                 location.href = location.href.replace(`&group=${currentGroup}`, `&group=${groupID}`);
+
+            } else if (groupJump && Plunder.optionsParameters.last_group_jump !== Insidious.currentVillageID) {
+                // A aldeia atual permanece a mesma após a navegação para o grupo correto.
+                // Caso essa aldeia não pertença ao grupo, a navegação entre as aldeias do grupo se torna impossível.
+                // Isso porquê o botão de navegação se torna um elemento diferente.
+                // Para solucionar isso, é feito um redirecionamento para a primeira aldeia do grupo Insidious.
+                Plunder.optionsParameters.last_group_jump = Insidious.currentVillageID ?? '';
+                await browser.storage.local.set({ [`plunderOptionsParameters_${Insidious.world}`]: Plunder.optionsParameters });
+                groupJump.click();
             };
             
         } else {

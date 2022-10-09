@@ -2,6 +2,7 @@ class Plunder extends TWFarm {
     static #models: UnitModels;
     static #carryCapacity: CarryCapacity;
     static #options: PlunderOptions;
+    static #optionsParameters: PlunderOptionsParameters;
     static #ram: number | null = null;
 
     // Ajuda a controlar o estado das promises.
@@ -22,6 +23,10 @@ class Plunder extends TWFarm {
             // Opções do plunder.
             const plunderOptions = `plunderOptions_${Insidious.world}`;
             this.#options = (await browser.storage.local.get(plunderOptions))[plunderOptions] as PlunderOptions ?? {};
+
+            // Parâmetros das opções.
+            const optionsParameters = `plunderOptionsParameters_${Insidious.world}`;
+            this.#optionsParameters = (await browser.storage.local.get(optionsParameters))[optionsParameters] as PlunderOptionsParameters ?? {};
 
             // Prepara os ataques usando o grupo Insidious.
             if (this.#options.group_attack === true) await GroupAttack.start();
@@ -226,6 +231,13 @@ class Plunder extends TWFarm {
                             }, Utils.generateIntegerBetween(250, 350));
 
                             this.#eventTarget.addEventListener('stopplundering', () => {
+                                browser.storage.local.remove(`plunderOptionsParameters_${Insidious.world}`)
+                                    .catch((err: unknown) => {
+                                        if (err instanceof Error) {
+                                            InsidiousError.handle(err);
+                                        };
+                                    });
+
                                 clearTimeout(timerID);
                                 attackCtrl.abort();
                                 reject(new FarmAbort());
@@ -237,7 +249,7 @@ class Plunder extends TWFarm {
                                 reject(new FarmAbort());
                             }, { signal: attackCtrl.signal });
 
-                        }).then(() => this.#sendAttack()).catch((err) => {
+                        }).then(() => this.#sendAttack()).catch((err: unknown) => {
                             if (err instanceof FarmAbort) {
                                 if (err.reason) InsidiousError.handle(err.reason);
                                 return;
@@ -252,6 +264,7 @@ class Plunder extends TWFarm {
 
             // Caso, em toda tabela, não haja aldeia adequada para envio do ataque, verifica se há mais páginas.
             // Em caso positivo, navega para a próxima após um breve delay.
+            // Se não houverem outras páginas ou tropas disponíveis, navega para a próxima aldeia caso this.#options.group_attack === true.
             setTimeout(() => this.#navigateToNextPlunderPage(), Utils.generateIntegerBetween(2000, 3000));
 
         } catch (err) {
@@ -381,7 +394,16 @@ class Plunder extends TWFarm {
         let statusA: boolean = false, statusB: boolean = false;
         if (checkAvailability(this.#models[`amodel_${Insidious.world}`]) && this.#carryCapacity.a !== Infinity) statusA = true;
         if (checkAvailability(this.#models[`bmodel_${Insidious.world}`]) && this.#carryCapacity.b !== Infinity) statusB = true;
-        if (statusA === false && statusB === false) return;
+        if (statusA === false && statusB === false) {
+            // Caso a aldeia se torne a última num grupo dinâmico, a seta de navegação continua ativa.
+            // Em decorrência disso, o plunder fica navegando para a mesma aldeia repetidas vezes.
+            // Para impedir isso, é necessário verificar qual foi a última aldeia que realizou um ataque.
+            // O valor de last_attacking_village só é atualizado durante a execução de navigateToNextVillage().
+            // Como isso ocorre somente após a verificação, não há risco envolvido.
+            if (this.#optionsParameters.last_attacking_village === Insidious.currentVillageID) return;
+            if (this.#options.group_attack === true) this.#navigateToNextVillage();
+            return;
+        };
 
         try {
             // Linha da tabela com os números das páginas.
@@ -394,7 +416,11 @@ class Plunder extends TWFarm {
                 const getPageNumber = (element: Element) => Number.parseInt((element.textContent as string).replace(/\D/g, ''), 10);
                 let plunderPages: number[] = Array.from(plunderListNav.querySelectorAll('a.paged-nav-item'), getPageNumber);
                 plunderPages = plunderPages.filter((item) => !Number.isNaN(item));
-                if (!currentPageElement?.textContent || plunderPages.length === 0) return;
+
+                if (!currentPageElement?.textContent || plunderPages.length === 0) {
+                    if (this.#options.group_attack === true) this.#navigateToNextVillage();
+                    return;
+                };
 
                 // Identifica a página atual.
                 const currentPage = Number.parseInt(currentPageElement.textContent.replace(/\D/g, ''), 10);
@@ -431,6 +457,29 @@ class Plunder extends TWFarm {
                 function newLocation(pageIndex: number) {
                     return plunderPageURL!.replace(`Farm_page=${arbitraryPage}`, `Farm_page=${String(pageIndex)}`);
                 };
+            };
+
+        } catch (err) {
+            if (err instanceof Error) InsidiousError.handle(err);
+        };
+    };
+
+    // Navega para a próxima aldeia caso this.#options.group_attack === true.
+    static async #navigateToNextVillage() {
+        try {
+            const groupKey = `farmGroupID_${Insidious.world}`;
+            const groupID = (await browser.storage.local.get(groupKey))[groupKey] as string | undefined;
+            if (Utils.currentGroup() !== groupID) return;
+
+            const rightArrow = document.querySelector('a#village_switch_right span.groupRight') as HTMLSpanElement | null;
+            if (rightArrow) {
+                // Antes de mudar de aldeia, salva a atual como última aldeia atacante.
+                if (Insidious.currentVillageID) {
+                    this.#optionsParameters.last_attacking_village = Insidious.currentVillageID;
+                    await browser.storage.local.set({ [`plunderOptionsParameters_${Insidious.world}`]: this.#optionsParameters });
+                };
+
+                rightArrow.click();
             };
 
         } catch (err) {
@@ -744,6 +793,7 @@ class Plunder extends TWFarm {
     };
 
     static get options() {return this.#options};
+    static get optionsParameters() {return this.#optionsParameters};
     static get start() {return this.#start};
 };
 

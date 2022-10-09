@@ -22,6 +22,7 @@ declare namespace browser.storage {
     // Valores específicos do Insidious.
     | VillageInfo
     | PlunderOptions
+    | PlunderOptionsParameters
     | WorldInfo;
 
     interface StorageArray extends Array<StorageValue> {}
@@ -132,6 +133,7 @@ interface WorldInfo {
     }
 }
 
+/** Velocidade e capacidade de carga individual de cada unidade do jogo. */
 type UnitInfo = {
     [index in UnitList]: { speed: number; carry: number; };
 };
@@ -140,6 +142,7 @@ type UnitInfo = {
 type AB = 'a' | 'b';
 type ABNull = 'a' | 'b' | null;
 
+/** Capacidade de carga dos modelos A e B. */
 type CarryCapacity = { [index in AB]: number };
 
 interface AvailableTroops {
@@ -160,10 +163,19 @@ type UnitModels = {
     [model: string]: SNObject
 };
 
+/** Status das diferentes opções do plunder. */
 type PlunderOptions = {
     ignore_wall: boolean,
     destroy_wall: boolean,
     group_attack: boolean
+};
+
+/** Parâmetros que auxiliam o funcionamento das opções do plunder. 
+ *  São todos resetados sempre que o evento "stopplundering" é emitido.
+ */
+type PlunderOptionsParameters = {
+    last_attacking_village: string,
+    last_group_jump: string
 };
 
 // map.ts
