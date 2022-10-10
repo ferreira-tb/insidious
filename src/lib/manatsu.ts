@@ -244,7 +244,7 @@ class Manatsu {
      * @param create - Determina se os objetos serão transformados ou não em elementos.
      * @param parentElement - Um elemento-pai para associar aos objetos.
      */
-    static #createCheckbox(options: CheckboxOptions, create: boolean = false, parentElement?: Element): HTMLElement[] | Manatsu[] {
+    static #createCheckbox(options: CheckboxOptions, create: boolean = false, parentElement?: Element): CreateCheckboxReturnValue {
         if (!options.id || typeof options.id !== 'string') throw new ManatsuError('O id fornecido é inválido.');
         if (!options.label || typeof options.label !== 'string') throw new ManatsuError('A descrição fornecida é inválida.');
         if (typeof create !== 'boolean') throw new ManatsuError('O argumento \"create\" precisa ser do tipo boolean.');

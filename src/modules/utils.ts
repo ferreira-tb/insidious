@@ -1,4 +1,5 @@
 class Utils {
+    /** Retorna o mundo atual. */
     static #currentWorld(): string | null {
         if (!location.origin.includes('tribalwars')) return null;
 
@@ -26,6 +27,7 @@ class Utils {
         };
     };
 
+    /** Retorna o ID da aldeia atual. */
     static #currentVillage(): string | null {
         // Não é seguro obter o id da aldeia diretamente da barra de endereços.
         const villageLinkElement = document.querySelector('tr#menu_row2 td#menu_row2_village a[href*="village" i]');
@@ -41,6 +43,7 @@ class Utils {
         return null;
     };
 
+    /** Retorna o ID do jogador. */
     static #currentPlayer() {
         return new Promise((resolve, reject) => {
             const village =  `v${this.#currentVillage()}_${Insidious.world}`;
@@ -50,22 +53,27 @@ class Utils {
         });
     };
 
-    // Corrige os nomes codificados ("Aldeia+de+b%C3%A1rbaros" se torna "Aldeia de bárbaros").
+    /** 
+     * Corrige os nomes codificados.
+     * 
+     * "Aldeia+de+b%C3%A1rbaros" se torna "Aldeia de bárbaros").
+     */
     static #urlDecode(url: string): string {
         return decodeURIComponent(url.replace(/\+/g, ' '));
     };
 
-    // Calcula distância em campos entre duas coordenadas.
+    /** Calcula distância em campos entre duas coordenadas. */
     static #calcDistance(...args: number[]) {
         const [originX, originY, destinationX, destinationY] = args;
         return Math.sqrt(((destinationX - originX) ** 2) + ((destinationY - originY) ** 2));
     };
 
-    // Gera um número inteiro entre dois outros inteiros.
+    /** Gera um número inteiro entre dois outros inteiros. */
     static #generateIntegerBetween(min: number, max: number) {
         return Math.floor(Math.random() * (max - min) + min);
     };
 
+    /** Verifica se há algum captcha ativo. */
     static #isThereCaptcha() {
         const botCheck = document.querySelector('#bot_check');
         const hcaptcha = document.querySelector('.captcha');
@@ -79,6 +87,7 @@ class Utils {
         return false;
     };
 
+    /** Retorna o tempo de resposta do servidor */
     static #getResponseTime(): number {
         const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
         const responseTime = navigationTiming.responseEnd - navigationTiming.fetchStart;
@@ -87,9 +96,24 @@ class Utils {
         return responseTime;
     };
 
-    static #modal(modalTitle: string) {
+    /** Cria um breve atraso tendo como base o tempo de resposta do servidor. */
+    static #wait(extra?: number) {
+        if (extra && Number.isInteger(extra)) {
+            return new Promise((stopWaiting) => setTimeout(stopWaiting, this.#getResponseTime() + extra));
+        } else {
+            return new Promise((stopWaiting) => setTimeout(stopWaiting, this.#getResponseTime()));
+        };
+    };
+
+    /**
+     * Cria uma janela modal.
+     * @param modalTitle - Título do modal.
+     * @param caller - Referência à classe que invocou o modal.
+     */
+    static #modal(modalTitle: string, caller?: string) {
         const blurBG = new Manatsu({ id: 'insidious_blurBG' }, document.body).create();
         const modalWindow = new Manatsu({ id: 'insidious_modal' }, document.body).create();
+        if (caller && typeof caller === 'string') modalWindow.setAttribute('insidious-modal-caller', caller);
 
         const modalCtrl = new AbortController();
         blurBG.addEventListener('closemodal', () => {
@@ -112,6 +136,7 @@ class Utils {
     static get modal() {return this.#modal};
 
     // OUTROS
+    static get wait() {return this.#wait};
     static get urlDecode() {return this.#urlDecode};
     static get calcDistance() {return this.#calcDistance};
     static get generateIntegerBetween() {return this.#generateIntegerBetween};

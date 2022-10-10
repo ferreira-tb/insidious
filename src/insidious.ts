@@ -37,8 +37,15 @@ class Insidious {
                 // Executa operações que estejam pendentes.
                 await Defer.promises();
 
-                // Inicia o Shield.
-                TWShield.start();
+                // Verifica o status do Shield e o inicia se estiver ativado.
+                const shieldKey = `isShieldActive_${Insidious.world}`;
+                const shieldStatus = (await browser.storage.local.get(shieldKey))[shieldKey] as boolean | undefined;
+                if (shieldStatus === undefined) {
+                    await browser.storage.local.set({ [shieldKey]: true });
+                    TWShield.start();
+                } else if (shieldStatus === true) {
+                    TWShield.start();
+                };
             };
 
         } catch (err) {

@@ -7,3 +7,5 @@ type CheckboxOptions = {
     id: string,
     label: string
 };
+
+type CreateCheckboxReturnValue = [HTMLElement, HTMLElement] | [Manatsu, Manatsu];

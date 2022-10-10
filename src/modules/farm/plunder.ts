@@ -711,8 +711,7 @@ class Plunder extends TWFarm {
                                         } else {
                                             submitAttack.click();
 
-                                            // Antes de concluir, aguarda um breve momento.
-                                            await new Promise((stopWaiting) => setTimeout(stopWaiting, Utils.getResponseTime()));
+                                            await Utils.wait();
                                             resolve(true);
                                             break;
                                         };
@@ -735,7 +734,7 @@ class Plunder extends TWFarm {
 
                     // É preciso esperar um breve intervalo antes de emitir o clique.
                     // Do contrário, o servidor não tem tempo suficiente para processar o comando.
-                    await new Promise((stopWaiting) => setTimeout(stopWaiting, Utils.getResponseTime()));
+                    await Utils.wait();
                     formAttackButton.click();
 
                 } else {
@@ -819,16 +818,16 @@ class Plunder extends TWFarm {
                 Manatsu.addTextContent(warningMessageElements, warningMessages);
 
                 const messageModalCtrl = new AbortController();
-                const modalButtonArea = new Manatsu(modalWindow).create();
+                const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
 
                 new Manatsu('button', { class: 'insidious_modalButton', text: 'Sim' }, modalButtonArea).create()
                     .addEventListener('click', async () => {
                         messageModalCtrl.abort();
-                        Manatsu.removeChildren(modalWindow, ['.insidious_farmWarningMessage', 'button']);
+                        Manatsu.removeChildren(modalWindow, ['.insidious_farmWarningMessage', '.insidious_modalButtonArea']);
                         new Manatsu({ text: 'A página será recarregada em alguns instantes. Por favor, aguarde.'}, modalWindow).create();
                         includeVillagesUnderAttack.click();
 
-                        await new Promise((stopWaiting) => setTimeout(stopWaiting, Utils.getResponseTime()));
+                        await Utils.wait();
                         window.location.reload();
                     }, { signal: messageModalCtrl.signal });
 

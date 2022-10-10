@@ -41,8 +41,8 @@ class TWAssets {
         farm_units_archer: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'knight']
     };
 
-    // Aríetes e bárbaros, respectivamente.
-    static #unitsToDestroyWall = {
+    /** Aríetes e bárbaros, respectivamente. */
+    static #unitsToDestroyWall: { [index: number]: [number, number]} = {
         1: [3, 50],
         2: [5, 50],
         3: [8, 50],

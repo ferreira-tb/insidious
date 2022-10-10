@@ -183,7 +183,7 @@ class TWFarm {
 
     static async #saveOptions(event: Event, item: keyof PlunderOptions) {
         if (event.target instanceof HTMLInputElement) {
-            if (event.target.checked) {
+            if (event.target.checked === true) {
                 Plunder.options[item] = true;
             } else {
                 Plunder.options[item] = false;
