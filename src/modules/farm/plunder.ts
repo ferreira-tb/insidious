@@ -1,7 +1,7 @@
 class Plunder extends TWFarm {
     static #models: UnitModels;
     static #carryCapacity: CarryCapacity;
-    static #options: PlunderOptions;
+    public static options: PlunderOptions;
     static #optionsParameters: PlunderOptionsParameters;
     static #ram: number | null = null;
 
@@ -22,14 +22,14 @@ class Plunder extends TWFarm {
 
             // Opções do plunder.
             const plunderOptions = `plunderOptions_${Insidious.world}`;
-            this.#options = (await browser.storage.local.get(plunderOptions))[plunderOptions] as PlunderOptions ?? {};
+            this.options = (await browser.storage.local.get(plunderOptions))[plunderOptions] as PlunderOptions ?? {};
 
             // Parâmetros das opções.
             const optionsParameters = `plunderOptionsParameters_${Insidious.world}`;
             this.#optionsParameters = (await browser.storage.local.get(optionsParameters))[optionsParameters] as PlunderOptionsParameters ?? {};
 
             // Prepara os ataques usando o grupo Insidious.
-            if (this.#options.group_attack === true) await GroupAttack.start();
+            if (this.options.group_attack === true) await GroupAttack.start();
 
             // Modelos de saque do usuário.
             this.#models = await browser.storage.local.get([`amodel_${Insidious.world}`, `bmodel_${Insidious.world}`]);
@@ -57,6 +57,14 @@ class Plunder extends TWFarm {
 
     static async #sendAttack(): Promise<void> {
         try {
+            // Se a opção de exibir aldeias sob ataque estiver ativa, exibe um aviso.
+            // O usuário poderá ou desativá-la ou encerrar o Plunder.
+            const areThereVillagesUnderAttack = await this.#areThereVillagesUnderAttack();
+            if (areThereVillagesUnderAttack) {
+                this.#forceStopPlunder();
+                return;
+            };
+            
             // Representa cada linha na tabela.
             const villageRows = Array.from(document.querySelectorAll('tr[insidious-tr-farm="true"]')) as HTMLElement[];
             for (const village of villageRows) {
@@ -88,13 +96,13 @@ class Plunder extends TWFarm {
                 // Envia aríetes caso a aldeia possua muralha e "demolir muralha" esteja ativo.
                 // Se o ataque for enviado com sucesso, pula para a próxima aldeia.
                 // Em hipótese alguma "destroy_wall" pode estar após "ignore_wall".
-                if (this.#options.destroy_wall === true && wallLevel !== 0) {
+                if (this.options.destroy_wall === true && wallLevel !== 0) {
                     const skipToNextVillage = await this.#destroyWall(village, wallLevel as WallLevel);
                     if (skipToNextVillage === true) continue;
                 };
 
                 // A aldeia é ignorada caso possua muralha e "ignorar muralha" esteja ativo.
-                if (this.#options.ignore_wall === true && wallLevel !== 0) continue;
+                if (this.options.ignore_wall === true && wallLevel !== 0) continue;
 
                 // Representa a quantidade total de recursos disponível na aldeia alvo.
                 const resourceAmount = Number.parseInt(resourceData, 10);
@@ -173,9 +181,7 @@ class Plunder extends TWFarm {
                         // Esse return não pode ser removido, caso contrário o código após o FOR será executado indevidamente.
                         return new Promise<void>((resolve, reject) => {
                             if (Utils.isThereCaptcha()) {
-                                browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: false });
-                                this.#eventTarget.dispatchEvent(new Event('stopplundering'));
-                                this.#eventTarget.dispatchEvent(new Event('cancelautoreload'));
+                                this.#forceStopPlunder();
                                 reject(new FarmAbort());
                                 return;   
                             };
@@ -401,7 +407,7 @@ class Plunder extends TWFarm {
             // O valor de last_attacking_village só é atualizado durante a execução de navigateToNextVillage().
             // Como isso ocorre somente após a verificação, não há risco envolvido.
             if (this.#optionsParameters.last_attacking_village === Insidious.currentVillageID) return;
-            if (this.#options.group_attack === true) this.#navigateToNextVillage();
+            if (this.options.group_attack === true) this.#navigateToNextVillage();
             return;
         };
 
@@ -418,7 +424,7 @@ class Plunder extends TWFarm {
                 plunderPages = plunderPages.filter((item) => !Number.isNaN(item));
 
                 if (!currentPageElement?.textContent || plunderPages.length === 0) {
-                    if (this.#options.group_attack === true) this.#navigateToNextVillage();
+                    if (this.options.group_attack === true) this.#navigateToNextVillage();
                     return;
                 };
 
@@ -445,13 +451,13 @@ class Plunder extends TWFarm {
                 // Ou seja, no link, a página 2 é representada por "Farm_page=1", e a página 5 por "Farm_page=4".
                 // Então é necessário diminuir em um o valor quando se quer ir para uma página em espécifico.
                 if (currentPage === plunderPages.at(-1)) {
-                    location.href = newLocation(plunderPages[0] - 1);
+                    location.assign(newLocation(plunderPages[0] - 1));
 
                 // Para navegar para a próxima página, é preciso usar currentPage ao atribuir o link.
                 // Isso porquê currentPage é a numeração na lista (começa no indíce 1) e o link começa no índice zero.
                 // Logo, se a página atual é a 3, seu link é "Farm_page=2", com o link da próxima sendo "Farm_page=3".
                 } else {
-                    location.href = newLocation(currentPage);
+                    location.assign(newLocation(currentPage));
                 };
 
                 function newLocation(pageIndex: number) {
@@ -490,7 +496,7 @@ class Plunder extends TWFarm {
     static async #showPlunderedAmount() {
         try {
             const actionArea = document.querySelector('#insidious_farmActionArea');
-            if (!actionArea) throw new InsidiousError('Não foi possível exibir a estimativa de saque, pois #insidious_farmActionArea não existe.');
+            if (!actionArea) throw new InsidiousError('DOM: #insidious_farmActionArea');
             Manatsu.removeChildren(actionArea);
 
             const plundered: TotalPlundered = await browser.storage.local.get(`totalPlundered_${Insidious.world}`);
@@ -792,7 +798,66 @@ class Plunder extends TWFarm {
         });
     };
 
-    static get options() {return this.#options};
+    static #areThereVillagesUnderAttack() {
+        const includeVillagesUnderAttack = document.querySelector('input#attacked_checkbox') as HTMLInputElement | null;
+        if (!includeVillagesUnderAttack) throw new InsidiousError('DOM: input#attacked_checkbox');
+
+        return new Promise<boolean>((resolve) => {
+            if (includeVillagesUnderAttack.checked === true) {
+                Utils.modal('Insidious');
+                const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
+                if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
+
+                const warningMessages = [
+                    'Não é possível atacar com o Insidious enquanto a opção \"incluir relatórios de aldeias ' +
+                    'que você está atacando\" estiver ativada.',
+                    'Deseja desativá-la?',
+                    'Em caso negativo, o Insidious será encerrado.'
+                ];
+
+                const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'insidious_farmWarningMessage' }, true);
+                Manatsu.addTextContent(warningMessageElements, warningMessages);
+
+                const messageModalCtrl = new AbortController();
+                const modalButtonArea = new Manatsu(modalWindow).create();
+
+                new Manatsu('button', { class: 'insidious_modalButton', text: 'Sim' }, modalButtonArea).create()
+                    .addEventListener('click', async () => {
+                        messageModalCtrl.abort();
+                        Manatsu.removeChildren(modalWindow, ['.insidious_farmWarningMessage', 'button']);
+                        new Manatsu({ text: 'A página será recarregada em alguns instantes. Por favor, aguarde.'}, modalWindow).create();
+                        includeVillagesUnderAttack.click();
+
+                        await new Promise((stopWaiting) => setTimeout(stopWaiting, Utils.getResponseTime()));
+                        window.location.reload();
+                    }, { signal: messageModalCtrl.signal });
+
+                new Manatsu('button', { class: 'insidious_modalButton', text: 'Não' }, modalButtonArea).create()
+                    .addEventListener('click', () => {
+                        messageModalCtrl.abort();
+                        document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
+                        resolve(true);
+                }, { signal: messageModalCtrl.signal });
+
+            } else {
+                resolve(false);
+            };
+        });
+    };
+
+    static async #forceStopPlunder() {
+        await browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: false });
+
+        const startPlunderBtn = document.querySelector('#insidious_startPlunderBtn');
+        if (startPlunderBtn) startPlunderBtn.textContent = 'Saquear';
+
+        this.#eventTarget.dispatchEvent(new Event('stopplundering'));
+        this.#eventTarget.dispatchEvent(new Event('cancelautoreload'));
+
+        const actionArea = document.querySelector('#insidious_farmActionArea');
+        if (actionArea) Manatsu.removeChildren(actionArea);
+    };
+
     static get optionsParameters() {return this.#optionsParameters};
     static get start() {return this.#start};
 };

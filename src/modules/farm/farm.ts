@@ -110,7 +110,13 @@ class TWFarm {
         startPlunderBtn.addEventListener('click', plunderBtnEvents);
 
         // Exibe as opções do plunder.
-        const optionsBtnEvents = () => {
+        const optionsBtnEvents = async () => {
+            if (!Plunder.options) {
+                // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options estará indefinido.
+                const plunderOptions = `plunderOptions_${Insidious.world}`;
+                Plunder.options = (await browser.storage.local.get(plunderOptions))[plunderOptions] as PlunderOptions ?? {};
+            };
+
             Manatsu.createAll(optionsAreaItems);
             showOptionsBtn.setAttribute('disabled', '');
 
@@ -146,9 +152,9 @@ class TWFarm {
         showOptionsBtn.addEventListener('click', optionsBtnEvents);
 
         // Configura o botão de saque de acordo com o status do plunder.
-        // Além disso, se o plunder já estiver marcado como ativo, chama #plunder() automaticamente.
+        // Além disso, se o plunder já estiver marcado como ativo, chama Plunder.start() automaticamente.
         browser.storage.local.get(`isPlunderActive_${Insidious.world}`)
-            .then((result: any) => {
+            .then((result: SBObject) => {
                 buttonArea.appendChild(startPlunderBtn);
                 buttonArea.appendChild(showOptionsBtn);
 

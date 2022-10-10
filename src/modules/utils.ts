@@ -7,8 +7,14 @@ class Utils {
         return thisWorld;
     };
 
-    static readonly currentScreen = this.#currentField('screen');
     static readonly currentGroup = this.#currentField('group');
+    static readonly currentScreen = this.#currentField('screen');
+    static readonly currentMode = this.#currentField('mode');
+    static readonly currentSubType = this.#currentField('subtype');
+
+    static #currentScreenModeSubType() {
+        return [this.currentScreen(), this.currentMode(), this.currentSubType()];
+    };
 
     static #currentField(fieldName: string) {
         return function() {
@@ -77,7 +83,7 @@ class Utils {
         const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
         const responseTime = navigationTiming.responseEnd - navigationTiming.fetchStart;
 
-        if (!Number.isInteger(responseTime)) return 500;
+        if (!Number.isInteger(responseTime) || responseTime <= 0) return 500;
         return responseTime;
     };
 
@@ -100,6 +106,7 @@ class Utils {
     static get currentWorld() {return this.#currentWorld};
     static get currentVillage() {return this.#currentVillage};
     static get currentPlayer() {return this.#currentPlayer};
+    static get currentScreenModeSubType() {return this.#currentScreenModeSubType};
 
     // MODAL
     static get modal() {return this.#modal};

@@ -94,6 +94,9 @@ type SSObject = { [index: string]: string };
 type SNObject = { [index: string]: number };
 type SBObject = { [index: string]: boolean };
 
+/** Ativado ou desativado. */
+type Toggle = 'enabled' | 'disabled';
+
 type ResourceList = 'wood'
     | 'stone'
     | 'iron';
@@ -180,5 +183,10 @@ type PlunderOptionsParameters = {
 
 // map.ts
 type FilterContext = Set<string> | undefined;
+
+/** Tags de mapa. */
 type TagType = 'distance' | 'points' | 'bbpoints' | `time_${UnitList}`;
+/** Filtros de mapa. */
 type FilterType = 'bbunknown';
+/** Tags e filtros de mapa. */
+type AllMapTypes = TagType | FilterType;

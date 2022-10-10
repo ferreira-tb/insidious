@@ -14,10 +14,10 @@ class GroupAttack {
             const groupJump = document.querySelector('span.groupJump a.jump_link img') as HTMLImageElement | null;
 
             if (currentGroup === null) {
-                location.href = location.href + `&group=${groupID}`;
+                location.assign(location.href + `&group=${groupID}`);
 
             } else if (currentGroup !== groupID) {
-                location.href = location.href.replace(`&group=${currentGroup}`, `&group=${groupID}`);
+                location.assign(location.href.replace(`&group=${currentGroup}`, `&group=${groupID}`));
 
             } else if (groupJump && Plunder.optionsParameters.last_group_jump !== Insidious.currentVillageID) {
                 // A aldeia atual permanece a mesma após a navegação para o grupo correto.
@@ -141,7 +141,7 @@ class GroupAttack {
 
         try {
             await browser.storage.local.set({ [`farmGroupCreation_${Insidious.world}`]: 'pending' });
-            location.href = targetLocation;
+            location.assign(targetLocation);
 
         } catch (err) {
             if (err instanceof Error) InsidiousError.handle(err);

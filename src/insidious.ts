@@ -36,10 +36,13 @@ class Insidious {
 
                 // Executa operações que estejam pendentes.
                 await Defer.promises();
+
+                // Inicia o Shield.
+                TWShield.start();
             };
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);      
+            if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
