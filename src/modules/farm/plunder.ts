@@ -5,8 +5,19 @@ class Plunder extends TWFarm {
     static #optionsParameters: PlunderOptionsParameters;
     static #ram: number | null = null;
 
-    // Ajuda a controlar o estado das promises.
+    /** Ajuda a controlar o estado das promises. */
     static readonly #eventTarget = new EventTarget();
+
+    /** Chave para obter o status atual do Plunder (isPlunderActive). */
+    static readonly key = `isPlunderActive_${Insidious.world}`;
+    /** Chave para obter as opções do Plunder (plunderOptions). */
+    static readonly optionsKey = `plunderOptions_${Insidious.world}`;
+    /** Chave para obter os parâmetros das opções do Plunder (plunderOptionsParameters). */
+    static readonly parametersKey = `plunderOptionsParameters_${Insidious.world}`;
+    /** Chave para obter a quantia total saqueada até o momento (totalPlundered). */
+    static readonly totalKey = `totalPlundered_${Insidious.world}`;
+    /** Chave para obter a lista de aldeias já atacadas pelo Plunder (alreadyPlunderedVillages). */
+    static readonly plunderedKey = `alreadyPlunderedVillages_${Insidious.world}`;
 
     static async #start() {
         try {
@@ -15,26 +26,24 @@ class Plunder extends TWFarm {
             await this.#showPlunderedAmount();
 
             // Informações sobre cada tipo de unidade do jogo.
-            if (!Insidious.unitInfo[`unit_${Insidious.world}`]) {
-                await browser.storage.local.remove(`worldConfigFetch_${Insidious.world}`);
+            if (!Insidious.unitInfo) {
+                await browser.storage.local.remove(Insidious.worldConfigKey);
                 throw new InsidiousError('Não foi possível obter as informações sobre as unidades do jogo.');
             };
 
             // Opções do plunder.
-            const plunderOptions = `plunderOptions_${Insidious.world}`;
-            this.options = (await browser.storage.local.get(plunderOptions))[plunderOptions] as PlunderOptions ?? {};
+            this.options = (await browser.storage.local.get(this.optionsKey))[this.optionsKey] as PlunderOptions ?? {};
 
             // Parâmetros das opções.
-            const optionsParameters = `plunderOptionsParameters_${Insidious.world}`;
-            this.#optionsParameters = (await browser.storage.local.get(optionsParameters))[optionsParameters] as PlunderOptionsParameters ?? {};
+            this.#optionsParameters = (await browser.storage.local.get(this.parametersKey))[this.parametersKey] as PlunderOptionsParameters ?? {};
 
             // Prepara os ataques usando o grupo Insidious.
             if (this.options.group_attack === true) await GroupAttack.start();
 
             // Modelos de saque do usuário.
-            this.#models = await browser.storage.local.get([`amodel_${Insidious.world}`, `bmodel_${Insidious.world}`]);
-            if (!this.#models[`amodel_${Insidious.world}`]) throw new InsidiousError('Os dados do modelo A não estão presentes no banco de dados.');
-            if (!this.#models[`bmodel_${Insidious.world}`]) throw new InsidiousError('Os dados do modelo B não estão presentes no banco de dados.');
+            this.#models = await browser.storage.local.get([this.aKey, this.bKey]);
+            if (!this.#models[this.aKey]) throw new InsidiousError('Os dados do modelo A não estão presentes no banco de dados.');
+            if (!this.#models[this.bKey]) throw new InsidiousError('Os dados do modelo B não estão presentes no banco de dados.');
 
             this.#carryCapacity = this.#getCarryCapacity();
 
@@ -237,7 +246,7 @@ class Plunder extends TWFarm {
                             }, Utils.generateIntegerBetween(250, 350));
 
                             this.#eventTarget.addEventListener('stopplundering', () => {
-                                browser.storage.local.remove(`plunderOptionsParameters_${Insidious.world}`)
+                                browser.storage.local.remove(this.parametersKey)
                                     .catch((err: unknown) => {
                                         if (err instanceof Error) {
                                             InsidiousError.handle(err);
@@ -319,7 +328,7 @@ class Plunder extends TWFarm {
             let result: number = 0;
             for (const key in unitModel) {
                 // Ignora o explorador, já que ele não pode carregar recursos.
-                if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo[`unit_${Insidious.world}`][key as UnitList].carry;
+                if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo[key as UnitList].carry;
             };
 
             if (!Number.isInteger(result)) {
@@ -328,8 +337,8 @@ class Plunder extends TWFarm {
             return result;
         };
 
-        const capacityA: number = calcEachCarryCapacity(this.#models[`amodel_${Insidious.world}`]);
-        const capacityB: number = calcEachCarryCapacity(this.#models[`bmodel_${Insidious.world}`]);
+        const capacityA: number = calcEachCarryCapacity(this.#models[this.aKey]);
+        const capacityB: number = calcEachCarryCapacity(this.#models[this.bKey]);
 
         // Caso o valor seja zero, surge uma divisão por zero no cálculo da razão.
         // Qualquer valor dividido por Infinity se torna zero, o que o torna a melhor opção lá.
@@ -357,13 +366,13 @@ class Plunder extends TWFarm {
             knight: getUnitElem('knight')
         };
 
-        if (!Insidious.worldInfo[`config_${Insidious.world}`].game) {
-            browser.storage.local.remove(`worldConfigFetch_${Insidious.world}`);
+        if (!Insidious.worldInfo.game) {
+            browser.storage.local.remove(Insidious.worldConfigKey);
             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
         };
 
         // Caso o mundo tenha arqueiros, adiciona-os à lista.
-        if (Insidious.worldInfo[`config_${Insidious.world}`].game.archer === 1) {
+        if (Insidious.worldInfo.game.archer === 1) {
             Object.defineProperties(availableTroops, {
                 archer: {
                     value: getUnitElem('archer'),
@@ -398,15 +407,15 @@ class Plunder extends TWFarm {
         // this.#getCarryCapacity atribui Infinity caso a capacidade seja igual a zero.
         // Isso é feito para evitar divisões por zero.
         let statusA: boolean = false, statusB: boolean = false;
-        if (checkAvailability(this.#models[`amodel_${Insidious.world}`]) && this.#carryCapacity.a !== Infinity) statusA = true;
-        if (checkAvailability(this.#models[`bmodel_${Insidious.world}`]) && this.#carryCapacity.b !== Infinity) statusB = true;
+        if (checkAvailability(this.#models[this.aKey]) && this.#carryCapacity.a !== Infinity) statusA = true;
+        if (checkAvailability(this.#models[this.bKey]) && this.#carryCapacity.b !== Infinity) statusB = true;
         if (statusA === false && statusB === false) {
             // Caso a aldeia se torne a última num grupo dinâmico, a seta de navegação continua ativa.
             // Em decorrência disso, o plunder fica navegando para a mesma aldeia repetidas vezes.
             // Para impedir isso, é necessário verificar qual foi a última aldeia que realizou um ataque.
             // O valor de last_attacking_village só é atualizado durante a execução de navigateToNextVillage().
             // Como isso ocorre somente após a verificação, não há risco envolvido.
-            if (this.#optionsParameters.last_attacking_village === Insidious.currentVillageID) return;
+            if (this.#optionsParameters.last_attacking_village === Insidious.village) return;
             if (this.options.group_attack === true) this.#navigateToNextVillage();
             return;
         };
@@ -473,16 +482,15 @@ class Plunder extends TWFarm {
     // Navega para a próxima aldeia caso this.#options.group_attack === true.
     static async #navigateToNextVillage() {
         try {
-            const groupKey = `farmGroupID_${Insidious.world}`;
-            const groupID = (await browser.storage.local.get(groupKey))[groupKey] as string | undefined;
+            const groupID = (await browser.storage.local.get(GroupAttack.key))[GroupAttack.key] as string | undefined;
             if (Utils.currentGroup() !== groupID) return;
 
             const rightArrow = document.querySelector('a#village_switch_right span.groupRight') as HTMLSpanElement | null;
             if (rightArrow) {
                 // Antes de mudar de aldeia, salva a atual como última aldeia atacante.
-                if (Insidious.currentVillageID) {
-                    this.#optionsParameters.last_attacking_village = Insidious.currentVillageID;
-                    await browser.storage.local.set({ [`plunderOptionsParameters_${Insidious.world}`]: this.#optionsParameters });
+                if (Insidious.village) {
+                    this.#optionsParameters.last_attacking_village = Insidious.village;
+                    await browser.storage.local.set({ [this.parametersKey]: this.#optionsParameters });
                 };
 
                 rightArrow.click();
@@ -499,8 +507,8 @@ class Plunder extends TWFarm {
             if (!actionArea) throw new InsidiousError('DOM: #insidious_farmActionArea');
             Manatsu.removeChildren(actionArea);
 
-            const plundered: TotalPlundered = await browser.storage.local.get(`totalPlundered_${Insidious.world}`);
-            const { wood = 0, stone = 0, iron = 0 }: SNObject = plundered[`totalPlundered_${Insidious.world}`] ?? { };
+            const plundered: TotalPlundered = await browser.storage.local.get(this.totalKey);
+            const { wood = 0, stone = 0, iron = 0 }: SNObject = plundered[this.totalKey] ?? { };
 
             const spanContainer = new Manatsu('span', {
                 class: 'nowrap',
@@ -543,15 +551,15 @@ class Plunder extends TWFarm {
         const ironLabel = document.querySelector('#insidious_plundered_iron');
 
         try {
-            const plundered: TotalPlundered = await browser.storage.local.get(`totalPlundered_${Insidious.world}`);
-            if (plundered[`totalPlundered_${Insidious.world}`]) {
+            const plundered: TotalPlundered = await browser.storage.local.get(this.totalKey);
+            if (plundered[this.totalKey]) {
                 const updatedValues = {
-                    wood: plundered[`totalPlundered_${Insidious.world}`].wood + wood,
-                    stone: plundered[`totalPlundered_${Insidious.world}`].stone + stone,
-                    iron: plundered[`totalPlundered_${Insidious.world}`].iron + iron
+                    wood: plundered[this.totalKey].wood + wood,
+                    stone: plundered[this.totalKey].stone + stone,
+                    iron: plundered[this.totalKey].iron + iron
                 };
 
-                await browser.storage.local.set({ [`totalPlundered_${Insidious.world}`]: updatedValues });
+                await browser.storage.local.set({ [this.totalKey]: updatedValues });
 
                 if (woodLabel && stoneLabel && ironLabel) {
                     woodLabel.textContent = String(updatedValues.wood);
@@ -560,7 +568,7 @@ class Plunder extends TWFarm {
                 };
 
             } else {
-                await browser.storage.local.set({ [`totalPlundered_${Insidious.world}`]: {
+                await browser.storage.local.set({ [this.totalKey]: {
                     wood: wood,
                     stone: stone,
                     iron: iron
@@ -845,7 +853,7 @@ class Plunder extends TWFarm {
     };
 
     static async #forceStopPlunder() {
-        await browser.storage.local.set({ [`isPlunderActive_${Insidious.world}`]: false });
+        await browser.storage.local.set({ [this.key]: false });
 
         const startPlunderBtn = document.querySelector('#insidious_startPlunderBtn');
         if (startPlunderBtn) startPlunderBtn.textContent = 'Saquear';

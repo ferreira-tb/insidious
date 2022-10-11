@@ -81,5 +81,3 @@ class TWAssets {
 
     static get freeze() {return this.#freeze};
 };
-
-TWAssets.freeze();

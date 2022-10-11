@@ -23,7 +23,8 @@ declare namespace browser.storage {
     | VillageInfo
     | PlunderOptions
     | PlunderOptionsParameters
-    | WorldInfo;
+    | WorldInfo
+    | UnitInfo;
 
     interface StorageArray extends Array<StorageValue> {}
     interface StorageMap extends Map<StorageValue, StorageValue> {}
@@ -94,9 +95,6 @@ type SSObject = { [index: string]: string };
 type SNObject = { [index: string]: number };
 type SBObject = { [index: string]: boolean };
 
-/** Ativado ou desativado. */
-type Toggle = 'enabled' | 'disabled';
-
 type ResourceList = 'wood'
     | 'stone'
     | 'iron';
@@ -114,6 +112,7 @@ type UnitList = 'spear'
     | 'knight'
     | 'snob';
 
+/** Informações sobre as aldeias do mundo. */
 interface VillageInfo {
     name: string,
     x: number,
@@ -125,16 +124,30 @@ interface VillageInfo {
 
 type VillageQuery = { [village: string]: VillageInfo }
 
+/** Histórico de navegação entre páginas do jogo. */
+type NavigationHistory = {
+    /** URL da página em que o usuário estava antes da navegação ser feita. */
+    previous: string,
+    /** URL para qual o usuário foi redirecionado pelo Insidious. */
+    target: string,
+    /** Hora na qual a navegação foi feita. */
+    date: number,
+    /** Indica se o Insidious deve ou não redirecionar o usuário de volta para a página na qual estava. */
+    go_back: boolean
+};
+
+// Níveis
 type WallLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
 
 // insidious.ts
-interface WorldInfo {
+/** Configurações do mundo atual. */
+type WorldInfo = {
     speed: number,
     unit_speed: number,
     game: {
         archer: number
     }
-}
+};
 
 /** Velocidade e capacidade de carga individual de cada unidade do jogo. */
 type UnitInfo = {
@@ -168,8 +181,11 @@ type UnitModels = {
 
 /** Status das diferentes opções do plunder. */
 type PlunderOptions = {
+    /** Determina se o Plunder deve atacar aldeias com muralha. */
     ignore_wall: boolean,
+    /** Determina se o Plunder deve demolir a muralha das aldeias. */
     destroy_wall: boolean,
+    /** Determina se o Plunder deve utilizar o grupo Insidious ao atacar. */
     group_attack: boolean
 };
 
@@ -177,7 +193,9 @@ type PlunderOptions = {
  *  São todos resetados sempre que o evento "stopplundering" é emitido.
  */
 type PlunderOptionsParameters = {
+    /** Última aldeia com a qual o Plunder atacou. */
     last_attacking_village: string,
+    /** Aldeia na qual o Plunder estava quando utilizou a opção "Group Jump" pela última vez. */
     last_group_jump: string
 };
 
@@ -190,3 +208,21 @@ type TagType = 'distance' | 'points' | 'bbpoints' | `time_${UnitList}`;
 type FilterType = 'bbunknown';
 /** Tags e filtros de mapa. */
 type AllMapTypes = TagType | FilterType;
+
+// shield.ts
+/** Possíveis operações executadas pelo Shield. 
+ * @param redirect - O usuário será redirecionado.
+ * @param group - O grupo atual será alterado para "todos".
+ * @param rename - Renomeia os ataques a caminho.
+ * @param go_back - O Shield redirecionará o usuário de volta para a página onde estava.
+*/
+type ShieldOperations = 'redirect' | 'group' | 'rename' | 'go_back';
+
+type ShieldStatus = {
+    /** Etapa sendo executada no momento. */
+    step: ShieldOperations | null,
+    /** Próxima etapa a ser executada. */
+    next: ShieldOperations | null
+    /** Hora da última atualização. */
+    time: number
+};

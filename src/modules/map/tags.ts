@@ -1,13 +1,17 @@
 class MapTag extends TWMap {
+    /** Chave para obter o status atual das tags de mapa (customTagStatus). */
+    static readonly key = `customTagStatus_${Insidious.world}`;
+    /** Chave para obter a última tag utilizada no mapa (lastCustomTag). */
+    static readonly lastKey = `lastCustomTag_${Insidious.world}`;
+
     static async #create(tagType: TagType) {
         // Desconecta qualquer observer de tag que esteja ativo no mapa.
         this.eventTarget.dispatchEvent(new Event('stoptagobserver'));
 
-        const tagStatus = await browser.storage.local.get(`customTagStatus_${Insidious.world}`);
-        if (tagStatus[`customTagStatus_${Insidious.world}`] === 'disabled') return;
+        if ((await browser.storage.local.get(this.key))[this.key] === false) return;
 
         // Salva a última tag utilizada, para que seja ativada automaticamente na próxima vez.
-        browser.storage.local.set({ [`lastCustomTag_${Insidious.world}`]: tagType })
+        browser.storage.local.set({ [this.lastKey]: tagType })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -35,7 +39,7 @@ class MapTag extends TWMap {
         // Adiciona as novas tags.
         Promise.allSettled(Array.from(mapVillages).map((id: string) => {
             return new Promise<void>(async (resolve, reject) => {
-                if (id === Insidious.currentVillageID) {
+                if (id === Insidious.village) {
                     reject();
                     return;
                 };
@@ -92,7 +96,7 @@ class MapTag extends TWMap {
                     const getRelativeCoords = (): number[] => {
                         const coords: number[] = [this.currentX, this.currentY, targetX, targetY];
                         if (coords.some(coord => !Number.isInteger(coord))) {
-                            throw new InsidiousError(`As coordenadas obtidas são inválidas (${Insidious.currentVillageID} e/ou ${id}).`);
+                            throw new InsidiousError(`As coordenadas obtidas são inválidas (${Insidious.village} e/ou ${id}).`);
                         };
                         return coords;
                     };
@@ -111,13 +115,13 @@ class MapTag extends TWMap {
 
                     } else if (tagType.startsWith('time_')) {
                         const unitName = tagType.replace('time_', '') as UnitList;
-                        if (!Insidious.unitInfo[`unit_${Insidious.world}`] || !Insidious.worldInfo[`config_${Insidious.world}`]) {
-                            browser.storage.local.remove(`worldConfigFetch_${Insidious.world}`);
+                        if (!Insidious.unitInfo || !Insidious.worldInfo) {
+                            browser.storage.local.remove(Insidious.worldConfigKey);
                             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                         };
 
-                        const unitSpeed = Insidious.unitInfo[`unit_${Insidious.world}`][unitName].speed;
-                        const worldUnitSpeed = Insidious.worldInfo[`config_${Insidious.world}`].unit_speed;
+                        const unitSpeed = Insidious.unitInfo[unitName].speed;
+                        const worldUnitSpeed = Insidious.worldInfo.unit_speed;
 
                         const millisecondsPerField = 60000 * (unitSpeed * worldUnitSpeed);
                         const fieldAmount = Utils.calcDistance(...getRelativeCoords());

@@ -8,24 +8,23 @@ class Utils {
         return thisWorld;
     };
 
-    static readonly currentGroup = this.#currentField('group');
-    static readonly currentScreen = this.#currentField('screen');
-    static readonly currentMode = this.#currentField('mode');
-    static readonly currentSubType = this.#currentField('subtype');
-
-    static #currentScreenModeSubType() {
-        return [this.currentScreen(), this.currentMode(), this.currentSubType()];
-    };
-
     static #currentField(fieldName: string) {
-        return function() {
-            const urlFields: string[] = (location.search.replace('\?', '')).split('\&');
+        return function(url?: string) {
+            if (url !== undefined && typeof url !== 'string') throw new InsidiousError('A URL fornecida é inválida.');
+
+            const urlToGetFieldsFrom = url ?? location.search;
+            const urlFields: string[] = (urlToGetFieldsFrom.replace('\?', '')).split('\&');
             for (const field of urlFields) {
                 if (field.includes(`${fieldName}=`)) return field.replace(`${fieldName}=`, '');
             };
             return null;
         };
     };
+
+    static readonly currentGroup = this.#currentField('group');
+    static readonly currentScreen = this.#currentField('screen');
+    static readonly currentMode = this.#currentField('mode');
+    static readonly currentSubType = this.#currentField('subtype');
 
     /** Retorna o ID da aldeia atual. */
     static #currentVillage(): string | null {
@@ -130,7 +129,6 @@ class Utils {
     static get currentWorld() {return this.#currentWorld};
     static get currentVillage() {return this.#currentVillage};
     static get currentPlayer() {return this.#currentPlayer};
-    static get currentScreenModeSubType() {return this.#currentScreenModeSubType};
 
     // MODAL
     static get modal() {return this.#modal};

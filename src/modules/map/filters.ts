@@ -1,20 +1,23 @@
 class MapFilter extends TWMap {
+    /** Chave para obter o status atual dos filtros de mapa (mapFiltersStatus). */
+    static readonly key = `mapFiltersStatus_${Insidious.world}`;
+    /** Chave para obter o último filtro utilizado no mapa (lastMapFilter). */
+    static readonly lastKey = `lastMapFilter_${Insidious.world}`;
+
     static async #create(filterType: FilterType) {
         // Desconecta qualquer observer de filtro que esteja ativo no mapa.
         this.eventTarget.dispatchEvent(new Event('stopfilterobserver'));
 
-        const filterStatus = await browser.storage.local.get(`mapFiltersStatus_${Insidious.world}`);
-        if (filterStatus[`mapFiltersStatus_${Insidious.world}`] === 'disabled') return;
+        if ((await browser.storage.local.get(this.key))[this.key] === false) return;
 
         // Oculta as aldeias de convite.
         this.#hideUndefinedVillages();
 
         // Salva o último filtro utilizado.
-        browser.storage.local.set({ [`lastMapFilter_${Insidious.world}`]: filterType })
+        browser.storage.local.set({ [this.lastKey]: filterType })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
-
 
         // Vasculha os elementos do mapa e retorna aqueles que são aldeias.  
         const mapVillages: Set<string> = this.getVillagesID();
@@ -42,8 +45,7 @@ class MapFilter extends TWMap {
         // Guarda informações que serão usadas pelas promises.
         let filterContext: FilterContext;
         if (filterType === 'bbunknown') {
-            const plundered: string = `alreadyPlunderedVillages_${Insidious.world}`;
-            const attackHistory = (await browser.storage.local.get(plundered))[plundered] as Set<string> | undefined;
+            const attackHistory = (await browser.storage.local.get(Plunder.plunderedKey))[Plunder.plunderedKey] as Set<string> | undefined;
             // Se não há aldeias registradas no banco de dados, não há o que filtrar.
             if (attackHistory === undefined) return;
             filterContext = attackHistory;
@@ -58,7 +60,7 @@ class MapFilter extends TWMap {
         // Adiciona os filtros.
         Promise.allSettled(Array.from(mapVillages).map((id: string) => {
             return new Promise<void>(async (resolve, reject) => {
-                if (id === Insidious.currentVillageID) {
+                if (id === Insidious.village) {
                     reject();
                     return;
                 };
