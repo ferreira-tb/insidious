@@ -18,7 +18,7 @@ class TWAssets {
         kill_def_tribe: location.origin + '/map/kill_def_tribe.txt'
     };
 
-    static readonly image = {
+    static readonly image: AssetsImage = {
         // Unidades.
         spear_18: 'https://dsbr.innogamescdn.com/asset/45436e33/graphic/unit/unit_spear.png',
         sword_18: 'https://dsbr.innogamescdn.com/asset/45436e33/graphic/unit/unit_sword.png',
@@ -34,7 +34,7 @@ class TWAssets {
         snob_18: 'https://dsbr.innogamescdn.com/asset/45436e33/graphic/unit/unit_snob.png'
     };
 
-    static readonly list = {
+    static readonly list: AssetsList = {
         all_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'ram', 'catapult', 'knight', 'snob'],
         all_units_archer: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob'],
         farm_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'knight'],
@@ -42,7 +42,7 @@ class TWAssets {
     };
 
     /** Aríetes e bárbaros, respectivamente. */
-    static readonly unitsToDestroyWall: { [index: number]: [number, number]} = {
+    static readonly unitsToDestroyWall: { [index in WallLevel]: [number, number]} = {
         1: [3, 50],
         2: [5, 50],
         3: [8, 50],

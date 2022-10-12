@@ -98,23 +98,8 @@ declare namespace browser.runtime {
 
     function connectNative(application: string): Port;
     
-    function sendMessage<T = any, U = any>(message: T): Promise<U>;
-
-    function sendMessage<T = any, U = any>(
-        message: T,
-        options: { includeTlsChannelId?: boolean; toProxyScript?: boolean }
-    ): Promise<U>;
-
-    function sendMessage<T = any, U = any>(
-        extensionId: string,
-        message: T
-    ): Promise<U>;
-
-    function sendMessage<T = any, U = any>(
-        extensionId: string,
-        message: T,
-        options?: { includeTlsChannelId?: boolean; toProxyScript?: boolean }
-    ): Promise<U>;
+    // Alterado para atender apenas ao Insidious.
+    function sendMessage(message: AllMessageTypes): Promise<void>;
 
     type onMessagePromise = (
         message: object,
@@ -396,3 +381,57 @@ declare namespace browser.windows {
     
     const onFocusChanged: Listener<number>;
 }
+
+declare namespace browser.scripting {
+    type ContentScriptFilter = { ids: string[] };
+
+    type InjectionTarget = {
+        allFrames?: boolean;
+        frameIds?: number[];
+        tabId: number;
+    };
+
+    type RegisteredContentScript = {
+        allFrames?: boolean;
+        css?: string[];
+        excludeMatches?: string[];
+        id: string;
+        js?: string[];
+        matches?: string[];
+        persistAcrossSessions?: boolean;
+    };
+
+    function getRegisteredContentScripts(filter?: ContentScriptFilter): Promise<RegisteredContentScript[]>;
+
+    function registerContentScripts(scripts: RegisteredContentScript[]): Promise<RegisteredContentScript[]>;
+
+    function unregisterContentScripts(scripts?: ContentScriptFilter): Promise<void>;
+
+    function updateContentScripts(scripts: RegisteredContentScript[]): Promise<RegisteredContentScript[]>;
+}
+
+declare namespace browser.notifications {
+    type TemplateType = "basic";
+  
+    type NotificationOptions = {
+        type: TemplateType;
+        message: string;
+        title: string;
+        iconUrl?: string;
+    };
+  
+    function create(
+        id: string | null,
+        options: NotificationOptions
+    ): Promise<string>;
+
+    function create(options: NotificationOptions): Promise<string>;
+  
+    function clear(id: string): Promise<boolean>;
+  
+    function getAll(): Promise<{ [key: string]: NotificationOptions }>;
+  
+    const onClosed: Listener<string>;
+  
+    const onClicked: Listener<string>;
+  }

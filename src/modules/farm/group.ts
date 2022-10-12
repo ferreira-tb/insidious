@@ -66,7 +66,7 @@ class GroupAttack {
 
                 Plunder.options.group_attack = false;
                 Store.set({ [Plunder.optionsKey]: Plunder.options })
-                    .then(() => setTimeout(() => window.location.reload(), Utils.getResponseTime()))
+                    .then(() => setTimeout(() => window.location.reload(), Utils.responseTime))
                     .catch((err: unknown) => {
                         if (err instanceof Error) InsidiousError.handle(err);
                     });

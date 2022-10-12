@@ -9,4 +9,3 @@
         Insidious.start();
     };
 })();
-

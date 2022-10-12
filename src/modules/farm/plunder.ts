@@ -30,6 +30,8 @@ class Plunder extends TWFarm {
     static readonly globalKey = `globalPlundered_${Insidious.world}`;
     /** CHAVE: lista de aldeias já atacadas pelo Plunder (alreadyPlunderedVillages). */
     static readonly plunderedKey = `alreadyPlunderedVillages_${Insidious.world}`;
+    /** CHAVE: quantidade total de muralhas destruídas pelo Plunder. */
+    static readonly wallKey = `plunderDestroyedWalls_${Insidious.world}`;
 
     static async start() {
         try {
@@ -163,41 +165,9 @@ class Plunder extends TWFarm {
                             const timerID = setTimeout(async () => {
                                 try {
                                     // Envia o ataque e espera até que o servidor dê uma resposta.
-                                    await this.handleAttack(village, bestRatio as AB);
-
-                                    // Calcula a quantidade recursos esperada no saque (sempre pressupondo carga total).
-                                    const calcExpected = () => {
-                                        const woodAmount: string | null = village.getAttribute('insidious-wood');
-                                        const stoneAmount: string | null = village.getAttribute('insidious-stone');
-                                        const ironAmount: string | null = village.getAttribute('insidious-iron');
-
-                                        if (!woodAmount || !stoneAmount || !ironAmount) {
-                                            throw new InsidiousError('O atributo que informa a quantidade de recursos está ausente.');
-                                        };
-
-                                        const allResources: number[] = [woodAmount, stoneAmount, ironAmount].map((resource: string) => {
-                                            const parsed = Number.parseInt(resource, 10);
-                                            if (Number.isNaN(parsed)) throw new InsidiousError(`O valor dos recursos não é válido (${parsed}).`);
-                                            return parsed;
-                                        });
-
-                                        let totalAmount = allResources.reduce((previous, current) => previous + current, 0);
-                                        
-                                        // Caso a soma resulte em zero, "totalAmount = Infinity" garante que não surja uma divisão por zero mais adiante.
-                                        // Qualquer valor dividido por Infinity é igual a zero.
-                                        if (totalAmount === 0) totalAmount = Infinity;
-
-                                        return allResources.map((amount: number) => {
-                                            // Se houver mais recursos do que a carga suporta, calcula quanto de cada recurso deve ser saqueado.
-                                            if (totalAmount > this.carry[bestRatio as AB]) {
-                                                return Math.floor((amount / totalAmount) * this.carry[bestRatio as AB]);
-                                            } else {
-                                                return amount;
-                                            };
-                                        });
-                                    };
-
-                                    await this.updatePlunderedAmount(...calcExpected());
+                                    await this.handleAttack(village, bestRatio);
+                                    const expectedResources = new ExpectedResources(village, this.carry[bestRatio]);
+                                    await this.updatePlunderedAmount(expectedResources);
                                     attackCtrl.abort();
                                     resolve();
 
@@ -243,7 +213,7 @@ class Plunder extends TWFarm {
 
             // Caso, em toda tabela, não haja aldeia adequada para envio do ataque, verifica se há mais páginas.
             // Em caso positivo, navega para a próxima após um breve delay.
-            // Se não houverem outras páginas ou tropas disponíveis, navega para a próxima aldeia caso this.#options.group_attack === true.
+            // Se não houverem outras páginas ou tropas disponíveis, navega para a próxima aldeia caso this.options.group_attack === true.
             setTimeout(() => this.navigateToNextPlunderPage(), Utils.generateIntegerBetween(2000, 3000));
 
         } catch (err) {
@@ -251,8 +221,10 @@ class Plunder extends TWFarm {
         };
     };
 
-    // O plunder cumpre sua tarefa bem mais rápido que o servidor consegue responder.
-    // No entanto, como ele depende do número de tropas ditado pelo jogo, é necessário esperar o valor ser atualizado.
+    /**
+     * O plunder cumpre sua tarefa bem mais rápido que o servidor consegue responder.
+     * No entanto, como ele depende do número de tropas ditado pelo jogo, é necessário esperar o valor ser atualizado.
+     */ 
     private static handleAttack(village: Element, bestRatio: AB) {
         return new Promise<void>((resolve) => {
             const observerTimeout = setTimeout(handleTimeout, 5000);
@@ -286,9 +258,12 @@ class Plunder extends TWFarm {
         });
     };
 
+    /**
+     * Determina qual modelo usar com base na capacidade de cada um e nos recursos disponíveis.
+     * Caso modelo nenhum seja adequado, o ataque não é enviado.
+     * @param resourceAmount - Recursos disponíveis na aldeia alvo.
+     */
     private static verifyRatio(resourceAmount: number) {
-        // Determina qual modelo usar com base na capacidade de cada um e nos recursos disponíveis.
-        // Caso um modelo não seja adequado, será marcado como null.    
         let bestRatio: ABNull = null, otherRatio: ABNull = null;
 
         const bigger: AB = this.carry.a >= this.carry.b ? 'a' : 'b';
@@ -370,45 +345,23 @@ class Plunder extends TWFarm {
 
     /** Retorna uma função que permite verificar a quantidade de tropas disponíveis. */
     private static getAvailableTroops() {
-        const getUnitElem = (unit: FarmUnitsWithArchers): number => {
-            const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
-            if (!unitElem || unitElem.textContent === null) throw new InsidiousError(`DOM: #farm_units #units_home tbody tr td#${unit}`);
-            return Number.parseInt(unitElem.textContent, 10);
-        };
-
-        /** Lista das tropas disponíveis. */
-        const availableTroops: AvailableFarmUnits = {
-            spear: getUnitElem('spear'),
-            sword: getUnitElem('sword'),
-            axe: getUnitElem('axe'),
-            spy: getUnitElem('spy'),
-            light: getUnitElem('light'),
-            heavy: getUnitElem('heavy'),
-            knight: getUnitElem('knight')
-        };
-
         if (!Insidious.worldInfo.game) {
-            Store.remove(Insidious.worldConfigKey);
+            Store.remove(Insidious.worldConfigKey).catch((err: unknown) => {
+                if (err instanceof Error) InsidiousError.handle(err);
+            });
+
             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
         };
 
+        /** Lista das tropas disponíveis. */
+        let availableTroops: AvailableFarmUnits;
+
         // Caso o mundo tenha arqueiros, adiciona-os à lista.
         if (Insidious.worldInfo.game.archer === 1) {
-            Object.defineProperties(availableTroops, {
-                archer: {
-                    value: getUnitElem('archer'),
-                    enumerable: true,
-                    writable: false,
-                    configurable: false
-                },
+            availableTroops = new PlunderAvailableTroops(TWAssets.list.farm_units_archer) as AvailableFarmUnits;
 
-                marcher: {
-                    value: getUnitElem('marcher'),
-                    enumerable: true,
-                    writable: false,
-                    configurable: false
-                }
-            });
+        } else {
+            availableTroops = new PlunderAvailableTroops(TWAssets.list.farm_units) as AvailableFarmUnits;
         };
 
         return function(model: AvailableFarmUnits): boolean {
@@ -565,32 +518,19 @@ class Plunder extends TWFarm {
         };
     };
 
-    private static async updatePlunderedAmount(...args: number[]) {
-        const [wood, stone, iron] = args;
+    private static async updatePlunderedAmount(resources: ExpectedResources) {
         const woodLabel = document.querySelector('#insidious_plundered_wood');
         const stoneLabel = document.querySelector('#insidious_plundered_stone');
         const ironLabel = document.querySelector('#insidious_plundered_iron');
 
         try {
             if (this.plundered) {
-                this.plundered = {
-                    wood: this.plundered.wood + wood,
-                    stone: this.plundered.stone + stone,
-                    iron: this.plundered.iron + iron,
-                    attack_amount: ++this.plundered.attack_amount
-                };
-
+                this.plundered = new PlunderedAmount(resources, false);
                 await Store.set({ [this.totalKey]: this.plundered });
                 
             } else {
                 // Caso ainda não exista, entende que o ataque atual é o primeiro.
-                this.plundered = {
-                    wood: wood,
-                    stone: stone,
-                    iron: iron,
-                    attack_amount: 1
-                };
-
+                this.plundered = new PlunderedAmount(resources, true);
                 await Store.set({ [this.totalKey]: this.plundered });
             };
 
@@ -717,15 +657,22 @@ class Plunder extends TWFarm {
 
                                         // Obtém informações a respeito das tropas que estão sendo enviadas.
                                         const confirmRamField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-ram');
-                                        if (!confirmRamField || !confirmRamField.textContent) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-ram');
-                                        const confirmRamAmount = confirmRamField.textContent.replace(/\D/g, '');
-
+                                        if (!confirmRamField || !confirmRamField.textContent) {
+                                            throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-ram')
+                                        };
+                                        
                                         const confirmAxeField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-axe');
-                                        if (!confirmAxeField || !confirmAxeField.textContent) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-axe');
-                                        const confirmAxeAmount = confirmAxeField.textContent.replace(/\D/g, '');
-
+                                        if (!confirmAxeField || !confirmAxeField.textContent) {
+                                            throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-axe')
+                                        };
+                                        
                                         const confirmSpyField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-spy');
-                                        if (!confirmSpyField || !confirmSpyField.textContent) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-spy');
+                                        if (!confirmSpyField || !confirmSpyField.textContent) {
+                                            throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-spy')
+                                        };
+
+                                        const confirmRamAmount = confirmRamField.textContent.replace(/\D/g, '');
+                                        const confirmAxeAmount = confirmAxeField.textContent.replace(/\D/g, '');
                                         const confirmSpyAmount = confirmSpyField.textContent.replace(/\D/g, '');
 
                                         // E então verifica se a quantidade de tropas está correta.
@@ -739,6 +686,12 @@ class Plunder extends TWFarm {
                                         // Se estiver tudo certo, envia o ataque.
                                         } else {
                                             submitAttack.click();
+                                            const destroyedWalls = await Store.get(Plunder.wallKey) as number | undefined;
+                                            if (!destroyedWalls) {
+                                                await Store.set({ [Plunder.wallKey]: wallLevel });
+                                            } else {
+                                                await Store.set({ [Plunder.wallKey]: destroyedWalls + wallLevel });
+                                            };
 
                                             await Utils.wait();
                                             resolve(true);
@@ -888,6 +841,8 @@ class Plunder extends TWFarm {
         const actionArea = document.querySelector('#insidious_farmActionArea');
         if (actionArea) Manatsu.removeChildren(actionArea);
     };
+
+    static get amount() {return this.plundered};
 };
 
 class FarmAbort {

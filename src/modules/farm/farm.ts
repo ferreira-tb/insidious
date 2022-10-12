@@ -134,7 +134,7 @@ class TWFarm {
             groupAttack.addEventListener('change', async (e) => {
                 optionsCtrl.abort();
                 await this.saveOptions(e, 'group_attack');
-                setTimeout(() => window.location.reload(), Utils.getResponseTime());
+                setTimeout(() => window.location.reload(), Utils.responseTime);
             }, { signal: optionsCtrl.signal });
 
             // Ignora aldeias com muralha.

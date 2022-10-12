@@ -152,7 +152,7 @@ class TWMap {
                                     } else {
                                         containerIsThere(true);
                                     };                                  
-                                }, Utils.getResponseTime());
+                                }, Utils.responseTime);
                             });
     
                             if (containerStatus === false) throw new InsidiousError('DOM: #map_container');

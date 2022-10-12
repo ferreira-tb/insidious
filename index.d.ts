@@ -25,12 +25,21 @@ type FarmUnitsWithArchers =
     | 'archer'
     | 'marcher'
 
-/** Todas as unidades do jogo. */
-type UnitList =
-    | FarmUnitsWithArchers
+/** Unidades que não podem saquear. */
+type OtherUnits =
     | 'ram'
     | 'catapult'
     | 'snob';
+
+/** Todas as unidades do jogo. */
+type UnitList =
+    | FarmUnits
+    | OtherUnits;
+
+/** Todas as unidades do jogo em mundos com arqueiros. */
+type UnitListWithArchers = 
+    | FarmUnitsWithArchers
+    | OtherUnits;
 
 /** URLs permitidas em browser.tabs.create() */
 type WebExtTabURLs = 'https://github.com/ferreira-tb/insidious';
@@ -59,11 +68,14 @@ type NavigationHistory = {
     go_back: boolean
 };
 
+/** Quantia de recursos */
+type ResourceAmount = { [index in ResourceList]: number };
+
 // Níveis
 type WallLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
 
 ////// ERROR
-type ErrorContext = 'main' | 'config' | 'action' | 'background';
+type ErrorContext = 'main' | 'action' | 'background'| 'config';
 
 ////// INSIDIOUS
 /** Configurações do mundo atual. */
@@ -78,6 +90,35 @@ type WorldInfo = {
 /** Velocidade e capacidade de carga individual de cada unidade do jogo. */
 type UnitInfo = {
     [index in UnitList]: { speed: number; carry: number; };
+};
+
+////// MENSAGEM
+type StandardMessage = {
+    type: string,
+    sender?: string
+};
+
+type ErrorMessage = {
+    type: 'error',
+    error: Error
+};
+
+type AllMessageTypes = StandardMessage | ErrorMessage;
+
+////// ASSETS
+type ImageIndex = `${UnitListWithArchers}_18`;
+
+type ImageURL = `https://dsbr.innogamescdn.com/asset/45436e33/graphic/unit/unit_${UnitListWithArchers}.png`;
+
+type AssetsImage = {
+    [index in ImageIndex]: ImageURL;
+};
+
+type AssetsList = {
+    all_units: UnitList[],
+    all_units_archer: UnitListWithArchers[],
+    farm_units: FarmUnits[],
+    farm_units_archer: FarmUnitsWithArchers[]
 };
 
 ////// PLUNDER
@@ -101,6 +142,7 @@ type AvailableFarmUnits = {
     marcher?: number
 };
 
+/** Quantia de recursos saqueados e ataques enviados pelo Plunder. */
 type TotalPlundered = { [index in ResourceList | 'attack_amount']: number };
 /** Pares [key, value] obtidos ao usar Object.entries(). */
 type TotalPlunderedEntries = [ResourceList | 'attack_amount', number][];

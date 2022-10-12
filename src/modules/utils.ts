@@ -1,4 +1,16 @@
 class Utils {
+    /** Tempo de resposta do servidor. */
+    static readonly responseTime: number = this.getResponseTime();
+    
+    /** Retorna o tempo de resposta do servidor */
+    private static getResponseTime(): number {
+        const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+        const responseTime = navigationTiming.responseEnd - navigationTiming.fetchStart;
+
+        if (!Number.isInteger(responseTime) || responseTime <= 0) return 500;
+        return responseTime;
+    };
+
     /** Retorna o mundo atual. */
     static currentWorld(): string | null {
         if (!location.hostname.includes('.tribalwars')) return null;
@@ -88,21 +100,12 @@ class Utils {
         return false;
     };
 
-    /** Retorna o tempo de resposta do servidor */
-    static getResponseTime(): number {
-        const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-        const responseTime = navigationTiming.responseEnd - navigationTiming.fetchStart;
-
-        if (!Number.isInteger(responseTime) || responseTime <= 0) return 500;
-        return responseTime;
-    };
-
     /** Cria um breve atraso tendo como base o tempo de resposta do servidor. */
     static wait(extra?: number) {
         if (extra && Number.isInteger(extra)) {
-            return new Promise((stopWaiting) => setTimeout(stopWaiting, this.getResponseTime() + extra));
+            return new Promise((stopWaiting) => setTimeout(stopWaiting, this.responseTime + extra));
         } else {
-            return new Promise((stopWaiting) => setTimeout(stopWaiting, this.getResponseTime()));
+            return new Promise((stopWaiting) => setTimeout(stopWaiting, this.responseTime));
         };
     };
 

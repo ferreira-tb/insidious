@@ -14,11 +14,22 @@ class InsidiousError extends Error {
      * @param err - Erro emitido.
      * @param global - Contexto global no qual o erro foi emitido.
      */
-    static handle(err: Error, global?: ErrorContext) {
-        if (typeof global === 'string') {
-            console.error(err);
+    static handle(err: Error, global: ErrorContext = 'main') {
+        if (global === 'main') {
+            browser.runtime.sendMessage({ type: 'error', error: err })
+                .catch((err: unknown) => {
+                    if (err instanceof Error) console.error(err);
+                });
+
         } else {
-            console.error(err);
+            browser.notifications.create({ 
+                type: 'basic',
+                title: 'Insidious',
+                message: err.message
+                
+            }).catch((err: unknown) => {
+                if (err instanceof Error) console.error(err);
+            });
         }; 
     };
 };

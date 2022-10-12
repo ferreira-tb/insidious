@@ -55,6 +55,7 @@ class InsidiousConfig {
             let globalPlundered = await Store.get(`globalPlundered_${world}`) as TotalPlundered | undefined;
             if (!globalPlundered) globalPlundered = { wood: 0, stone: 0, iron: 0, attack_amount: 0 };
 
+            /** Recursos saqueados. */
             const resourcesDiv = document.querySelector('#global-plunder-resources') as HTMLDivElement;
             Manatsu.removeChildren(resourcesDiv);
 
@@ -67,14 +68,26 @@ class InsidiousConfig {
                 } else {
                     totalAmount += value;
                     if (!resourcesDiv.firstElementChild) new Manatsu('span', resourcesDiv, { text: 'Recursos saqueados: ' }).create();
-                    new Manatsu('span', resourcesDiv, { class: `resource icon ${key}` }).create();
-                    new Manatsu('span', resourcesDiv, { text: amount, class: 'resource' }).create();
+                    new Manatsu('span', resourcesDiv, { class: `icon ${key}` }).create();
+                    new Manatsu('span', resourcesDiv, { text: amount, style: 'margin-right: 5px;' }).create();
                 };
             };
 
-            new Manatsu('span', resourcesDiv, { class: 'resource icon storage' }).create();
-            new Manatsu('span', resourcesDiv, { text: totalAmount.toLocaleString('pt-br'), class: 'resource-amount' }).create();
+            new Manatsu('span', resourcesDiv, { class: 'icon storage' }).create();
+            new Manatsu('span', resourcesDiv, { text: totalAmount.toLocaleString('pt-br') }).create();
 
+            const wallDiv = document.querySelector('#global-plunder-wall') as HTMLDivElement;
+            Manatsu.removeChildren(wallDiv);
+            wallDiv.textContent = 'Muralhas destruídas: ';
+
+            /** Muralhas destruídas. */
+            let destroyedWalls = await Store.get(`plunderDestroyedWalls_${world}`) as number | undefined;
+            if (!destroyedWalls) destroyedWalls = 0;
+
+            new Manatsu('span', wallDiv, { class: 'icon wall' }).create();
+            new Manatsu('span', wallDiv, { text: destroyedWalls.toLocaleString('pt-br') }).create();
+
+            /** Atualiza as informações sobre o mundo. */
             const updateWorldInfoButton = document.querySelector('#update-plunder-info') as HTMLButtonElement;
             updateWorldInfoButton.setAttribute('style', 'visibility: visible;');
 

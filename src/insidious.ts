@@ -6,7 +6,7 @@ class Insidious {
     /** ID da aldeia atual. */
     static readonly village: string | null = Utils.currentVillage();
     /** Janela atual. */
-    static readonly #screen: string | null = Utils.currentScreen();
+    private static readonly screen: string | null = Utils.currentScreen();
     
     /** CHAVE: intervalo (em horas) entre cada Insidius.fetch() (fetchInterval). */
     static readonly fetchKey = `fetchInterval`;
@@ -24,14 +24,14 @@ class Insidious {
     static readonly activeWorldsKey = `activeWorlds`;
     
     /** Intervalo (em horas) entre cada Insidious.fetch(). */
-    static #fetchInterval: number = 24;
+    private static fetchInterval: number = 24;
 
-    // Inicia a extensão.
+    /** Inicia a extensão. */
     static async start() {
         try {
             if (location.pathname === '\/game.php') {
                 if (this.world === null) throw new InsidiousError('Não foi possível identificar o mundo atual.');
-                if (this.#screen === 'overview') await this.setAsActiveWorld();
+                if (this.screen === 'overview') await this.setAsActiveWorld();
 
                 // Faz download dos dados necessários para executar a extensão.
                 await this.fetch();
@@ -43,11 +43,11 @@ class Insidious {
                 if (!this.worldInfo || !this.unitInfo) await Store.remove(this.worldConfigKey);
       
                 // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
-                if (!this.#screen) throw new InsidiousError('Não foi possível identificar a janela atual.');
-                if (this.#screen.startsWith('map')) {
+                if (!this.screen) throw new InsidiousError('Não foi possível identificar a janela atual.');
+                if (this.screen.startsWith('map')) {
                     await TWMap.open();
                 } else {
-                    switch (this.#screen) {
+                    switch (this.screen) {
                         case 'am_farm': await TWFarm.open();
                             break;
                         case 'overview_villages': await TWOverview.open();
@@ -76,11 +76,10 @@ class Insidious {
     private static async fetch() {
         try {
             /** Intervalo (em horas) entre cada operação fetch. */
-            const fetchInterval = await Store.get(this.fetchKey) as number | undefined;
-            if (!fetchInterval || !Number.isInteger(fetchInterval)) {
+            this.fetchInterval = await Store.get(this.fetchKey) as number;
+            if (!this.fetchInterval || !Number.isInteger(this.fetchInterval)) {
+                this.fetchInterval = 24;
                 await Store.set({ [this.fetchKey]: 24 });
-            } else {
-                this.#fetchInterval = fetchInterval;
             };
 
             // Verifica qual foi a hora do último fetch.
@@ -147,7 +146,7 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastDataFetch || now - lastDataFetch > (3600000 * this.#fetchInterval)) {
+            if (!lastDataFetch || now - lastDataFetch > (3600000 * this.fetchInterval)) {
                 await Store.set({ [this.worldDataKey]: now });
 
                 Utils.modal('Aguarde');
@@ -262,12 +261,8 @@ class Insidious {
                 };
                 
             } else if (options.name === `unit_${this.world}`) {
-                const unitList: UnitList[] = [
-                    'spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob'
-                ];
-
                 const unitInfoSchema = { };
-                for (const unit of unitList) {
+                for (const unit of TWAssets.list.all_units_archer) {
                     Object.defineProperty(unitInfoSchema, unit, {
                         value: {
                             speed: getValue(`${unit} speed`),
