@@ -8,7 +8,7 @@ class Defer {
     private static createInsidiousFarmGroup() {
         return new Promise<void>(async (resolve) => {
             if (location.href.includes(GroupAttack.groupCreationScreen)) {
-                const groupCreationStatus = await Store.get(GroupAttack.creationKey) as boolean | undefined;
+                const groupCreationStatus = await Store.get(Keys.farmGroupCreation) as boolean | undefined;
                 if (groupCreationStatus === true) await GroupAttack.createDynamicGroup();
             };
             

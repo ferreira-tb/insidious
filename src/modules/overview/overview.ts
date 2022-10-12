@@ -14,8 +14,7 @@ class TWOverview {
 
         const overviewContent = document.querySelector('div#paged_view_content');
         if (overviewContent) {
-            const groupKey = `farmGroupID_${Insidious.world}`;
-            const groupID = await Store.get(groupKey) as string | undefined;
+            const groupID = await Store.get(Keys.farmGroup) as string | undefined;
             if (!groupID) return;
 
             const groupList = Array.from(overviewContent.querySelectorAll('.group-menu-item'));
@@ -25,7 +24,7 @@ class TWOverview {
                 if (group.getAttribute('data-group-id') === groupID) return;
             };
             
-            await Store.remove(groupKey);
+            await Store.remove(Keys.farmGroup);
         };
     };
 };

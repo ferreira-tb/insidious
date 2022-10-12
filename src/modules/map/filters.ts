@@ -1,20 +1,15 @@
 class MapFilter extends TWMap {
-    /** Chave para obter o status atual dos filtros de mapa (mapFiltersStatus). */
-    static readonly key = `mapFiltersStatus_${Insidious.world}`;
-    /** Chave para obter o último filtro utilizado no mapa (lastMapFilter). */
-    static readonly lastKey = `lastMapFilter_${Insidious.world}`;
-
     static async create(filterType: FilterType) {
         // Desconecta qualquer observer de filtro que esteja ativo no mapa.
         this.eventTarget.dispatchEvent(new Event('stopfilterobserver'));
 
-        if (await Store.get(this.key) === false) return;
+        if (await Store.get(Keys.mapFilter) === false) return;
 
         // Oculta as aldeias de convite.
         this.hideUndefinedVillages();
 
         // Salva o último filtro utilizado.
-        Store.set({ [this.lastKey]: filterType })
+        Store.set({ [Keys.lastMapFilter]: filterType })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -45,7 +40,7 @@ class MapFilter extends TWMap {
         // Guarda informações que serão usadas pelas promises.
         let filterContext: FilterContext;
         if (filterType === 'bbunknown') {
-            const attackHistory = await Store.get(Plunder.plunderedKey) as Set<string> | undefined;
+            const attackHistory = await Store.get(Keys.alreadyPlundered) as Set<string> | undefined;
             // Se não há aldeias registradas no banco de dados, não há o que filtrar.
             if (attackHistory === undefined) return;
             filterContext = attackHistory;

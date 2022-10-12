@@ -1,13 +1,9 @@
 class GroupAttack {
     /** Parte da URL da janela de ataques a caminho. */
     static readonly groupCreationScreen = 'screen=overview_villages&mode=groups&type=dynamic';
-    /** CHAVE: ID do grupo Insidious usado pelo Plunder (farmGroupID). */
-    static readonly key = `farmGroupID_${Insidious.world}`;
-    /** CHAVE: retorna true se a criação do grupo Insidious usado pelo Plunder estiver pendente (farmGroupCreation). */
-    static readonly creationKey = `farmGroupCreation_${Insidious.world}`;
 
     static async start() {
-        const groupID = await Store.get(this.key) as string | undefined;
+        const groupID = await Store.get(Keys.farmGroup) as string | undefined;
         if (groupID) {
             const currentGroup = Utils.currentGroup();
 
@@ -30,7 +26,7 @@ class GroupAttack {
                 // Isso porquê o botão de navegação se torna um elemento diferente.
                 // Para solucionar isso, é feito um redirecionamento para a primeira aldeia do grupo Insidious.
                 Plunder.optionsParameters.last_group_jump = Insidious.village ?? '';
-                await Store.set({ [Plunder.parametersKey]: Plunder.optionsParameters });
+                await Store.set({ [Keys.plunderParameters]: Plunder.optionsParameters });
                 groupJump.click();
             };
             
@@ -65,7 +61,7 @@ class GroupAttack {
                 messageModalCtrl.abort();
 
                 Plunder.options.group_attack = false;
-                Store.set({ [Plunder.optionsKey]: Plunder.options })
+                Store.set({ [Keys.plunderOptions]: Plunder.options })
                     .then(() => setTimeout(() => window.location.reload(), Utils.responseTime))
                     .catch((err: unknown) => {
                         if (err instanceof Error) InsidiousError.handle(err);
@@ -132,7 +128,7 @@ class GroupAttack {
                 const groupID = option.value.replace(/\D/g, '');
                 if (groupID.length === 0) throw new InsidiousError('O grupo Insidious existe, mas não foi possível obter seu id.');
 
-                await Store.set({ [this.key]: groupID });
+                await Store.set({ [Keys.farmGroup]: groupID });
                 return true;
             };
         };
@@ -141,11 +137,11 @@ class GroupAttack {
     };
 
     private static async navigateToGroupCreationScreen() {
-        const currentVillageLocation = `${location.origin}\/game.php\?village=${Utils.currentVillage()}\&`;
+        const currentVillageLocation = `${location.origin}\/game.php\?village=${Insidious.village}\&`;
         const targetLocation = currentVillageLocation + this.groupCreationScreen;
 
         try {
-            await Store.set({ [this.creationKey]: true });
+            await Store.set({ [Keys.farmGroupCreation]: true });
             location.assign(targetLocation);
 
         } catch (err) {
@@ -154,7 +150,7 @@ class GroupAttack {
     };
 
     static async createDynamicGroup() {
-        await Store.remove(this.creationKey);
+        await Store.remove(Keys.farmGroupCreation);
 
         const groupNameInput = document.querySelector('form input#group_name') as HTMLInputElement | null;
         if (!groupNameInput) throw new InsidiousError('DOM: form input#group_name');

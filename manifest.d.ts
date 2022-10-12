@@ -97,6 +97,11 @@ declare namespace browser.runtime {
     ): Port;
 
     function connectNative(application: string): Port;
+    function getBackgroundPage(): Promise<Window>;
+    function getURL(path: string): string;
+    function setUninstallURL(url: string): Promise<void>;
+    function reload(): void;
+    function getPlatformInfo(): Promise<PlatformInfo>;
     
     // Alterado para atender apenas ao Insidious.
     function sendMessage(message: AllMessageTypes): Promise<void>;
@@ -391,6 +396,12 @@ declare namespace browser.scripting {
         tabId: number;
     };
 
+    type InjectionResult = {
+        frameId: number;
+        result?: any;
+        error?: { message: string };
+    };
+
     type RegisteredContentScript = {
         allFrames?: boolean;
         css?: string[];
@@ -401,6 +412,12 @@ declare namespace browser.scripting {
         persistAcrossSessions?: boolean;
     };
 
+    type ScriptDetails = {
+        files: string[];
+        injectImmediately?: boolean;
+        target: InjectionTarget;
+    };
+
     function getRegisteredContentScripts(filter?: ContentScriptFilter): Promise<RegisteredContentScript[]>;
 
     function registerContentScripts(scripts: RegisteredContentScript[]): Promise<RegisteredContentScript[]>;
@@ -408,6 +425,8 @@ declare namespace browser.scripting {
     function unregisterContentScripts(scripts?: ContentScriptFilter): Promise<void>;
 
     function updateContentScripts(scripts: RegisteredContentScript[]): Promise<RegisteredContentScript[]>;
+
+    function executeScript(details: ScriptDetails): Promise<InjectionResult[]>;
 }
 
 declare namespace browser.notifications {

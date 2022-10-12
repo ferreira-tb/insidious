@@ -34,8 +34,9 @@
     
     "files": [
         "index.d.ts",
-        "manifest.d.ts"
+        "manifest.d.ts",
+        "page.d.ts"
     ],
 
-    "include": ["src/**/*"]
+    "include": ["src/**/*", "page.d.ts"]
 }

@@ -115,7 +115,7 @@ class TWMap {
 
             // CONFIGURAÇÕES
             const menuAreaOptionList = [
-                [MapTag.key, MapTag.lastKey], [MapFilter.key, MapFilter.lastKey]
+                [Keys.mapTag, Keys.lastMapTag], [Keys.mapFilter, Keys.lastMapFilter]
             ];
 
             // Ativa a última tag e o último filtro utilizados (caso estejam habilitados).
@@ -124,9 +124,9 @@ class TWMap {
                     const itemStatus = await Store.get(item[0]) as boolean | undefined;
                     if (itemStatus === false) {
                         switch (item[0]) {
-                            case MapTag.key: Manatsu.disableChildren(tagArea, 'button');
+                            case Keys.mapTag: Manatsu.disableChildren(tagArea, 'button');
                                 break;
-                            case MapFilter.key: Manatsu.disableChildren(filterArea, 'button');
+                            case Keys.mapFilter: Manatsu.disableChildren(filterArea, 'button');
                                 break;
                         };
 
@@ -159,13 +159,13 @@ class TWMap {
                         };
 
                         switch (item[0]) {
-                            case MapTag.key:
+                            case Keys.mapTag:
                                 const tagsCheckbox = document.querySelector('#insidious_customTags_checkbox');
                                 if (!tagsCheckbox) throw new InsidiousError('A checkbox da área de tags não está presente.');
                                 (tagsCheckbox as HTMLInputElement).checked = true;
                                 break;
 
-                            case MapFilter.key:
+                            case Keys.mapFilter:
                                 const filtersCheckbox = document.querySelector('#insidious_mapFilters_checkbox');
                                 if (!filtersCheckbox) throw new InsidiousError('A checkbox da área de filtros não está presente.');
                                 (filtersCheckbox as HTMLInputElement).checked = true;
@@ -173,9 +173,9 @@ class TWMap {
                         };
 
                         switch (item[1]) {
-                            case MapTag.lastKey: MapTag.create(lastItem as TagType);
+                            case Keys.lastMapTag: MapTag.create(lastItem as TagType);
                                 break;
-                            case MapFilter.lastKey: MapFilter.create(lastItem as FilterType);
+                            case Keys.lastMapFilter: MapFilter.create(lastItem as FilterType);
                                 break;
                         };
 
@@ -208,14 +208,14 @@ class TWMap {
         if (!tagArea) throw new InsidiousError('DOM: #insidious_mapTagArea');
 
         if (tagsCheckbox.checked) {
-            await Store.set({ [MapTag.key]: true });
+            await Store.set({ [Keys.mapTag]: true });
             Manatsu.enableChildren(tagArea, 'button');
 
-            const lastTag = await Store.get(MapTag.lastKey) as TagType | undefined;
+            const lastTag = await Store.get(Keys.lastMapTag) as TagType | undefined;
             if (lastTag) MapTag.create(lastTag);
             
         } else {
-            await Store.set({ [MapTag.key]: false });
+            await Store.set({ [Keys.mapTag]: false });
             Manatsu.disableChildren(tagArea, 'button');
 
             // Interrompe observers que possam estar ativos.
@@ -233,7 +233,7 @@ class TWMap {
             if (!actionArea) throw new InsidiousError('DOM: #insidious_mapActionArea');
 
             if (!Insidious.worldInfo.game) {
-                await Store.remove(Insidious.worldConfigKey);
+                await Store.remove(Keys.worldConfig);
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
 
@@ -278,14 +278,14 @@ class TWMap {
         if (!filterArea) throw new InsidiousError('DOM: #insidious_mapFilterArea');
 
         if (filtersCheckbox.checked) {
-            await Store.set({ [MapFilter.key]: true });
+            await Store.set({ [Keys.mapFilter]: true });
             Manatsu.enableChildren(filterArea, 'button');
 
-            const lastFilter = await Store.get(MapFilter.lastKey) as FilterType | undefined;
+            const lastFilter = await Store.get(Keys.lastMapFilter) as FilterType | undefined;
             if (lastFilter) MapFilter.create(lastFilter);
             
         } else {
-            await Store.set({ [MapFilter.key]: false });
+            await Store.set({ [Keys.mapFilter]: false });
             Manatsu.disableChildren(filterArea, 'button');
 
             // Interrompe observers que possam estar ativos.

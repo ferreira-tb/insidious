@@ -11,17 +11,6 @@ class Utils {
         return responseTime;
     };
 
-    /** Retorna o mundo atual. */
-    static currentWorld(): string | null {
-        if (!location.hostname.includes('.tribalwars')) return null;
-
-        const index = location.hostname.indexOf('.tribalwars');
-        const thisWorld = location.hostname.substring(0, index);
-
-        if (thisWorld.length === 0) return null;
-        return thisWorld;
-    };
-
     private static currentField(fieldName: string) {
         return function(url?: string) {
             if (url !== undefined && typeof url !== 'string') throw new InsidiousError('A URL fornecida é inválida.');
@@ -36,30 +25,13 @@ class Utils {
     };
 
     static readonly currentGroup = this.currentField('group');
-    static readonly currentScreen = this.currentField('screen');
     static readonly currentMode = this.currentField('mode');
     static readonly currentSubType = this.currentField('subtype');
-
-    /** Retorna o ID da aldeia atual. */
-    static currentVillage(): string | null {
-        // Não é seguro obter o id da aldeia diretamente da barra de endereços.
-        const villageLinkElement = document.querySelector('tr#menu_row2 td#menu_row2_village a[href*="village" i]');
-        if (!villageLinkElement) throw new InsidiousError('DOM: tr#menu_row2 td#menu_row2_village a[href*="village" i]');
-
-        const villageLink = villageLinkElement.getAttribute('href');
-        if (!villageLink) throw new InsidiousError('Não foi possível obter o link para a aldeia atual.');
-
-        const linkFields: string[] = (villageLink.replaceAll('\?', '\&')).split('\&');
-        for (const field of linkFields) {
-            if (field.includes('village=')) return field.replace(/\D/g, '');
-        };
-        return null;
-    };
 
     /** Retorna o ID do jogador. */
     static currentPlayer() {
         return new Promise((resolve, reject) => {
-            const village =  `v${this.currentVillage()}_${Insidious.world}`;
+            const village =  `v${Insidious.village}_${Insidious.world}`;
             Store.get(village)
                 .then((result: VillageInfo) => resolve(result.player))
                 .catch((err: unknown) => reject(err));

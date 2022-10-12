@@ -1,17 +1,12 @@
 class MapTag extends TWMap {
-    /** Chave para obter o status atual das tags de mapa (customTagStatus). */
-    static readonly key = `customTagStatus_${Insidious.world}`;
-    /** Chave para obter a última tag utilizada no mapa (lastCustomTag). */
-    static readonly lastKey = `lastCustomTag_${Insidious.world}`;
-
     static async create(tagType: TagType) {
         // Desconecta qualquer observer de tag que esteja ativo no mapa.
         this.eventTarget.dispatchEvent(new Event('stoptagobserver'));
 
-        if (await Store.get(this.key) === false) return;
+        if (await Store.get(Keys.mapTag) === false) return;
 
         // Salva a última tag utilizada, para que seja ativada automaticamente na próxima vez.
-        Store.set({ [this.lastKey]: tagType })
+        Store.set({ [Keys.lastMapTag]: tagType })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -116,7 +111,7 @@ class MapTag extends TWMap {
                     } else if (tagType.startsWith('time_')) {
                         const unitName = tagType.replace('time_', '') as UnitList;
                         if (!Insidious.unitInfo || !Insidious.worldInfo) {
-                            Store.remove(Insidious.worldConfigKey);
+                            Store.remove(Keys.worldConfig);
                             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                         };
 

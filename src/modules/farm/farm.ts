@@ -1,9 +1,4 @@
 class TWFarm {
-    /** CHAVE: informações sobre o modelo de saque A (amodel). */
-    static readonly aKey = `amodel_${Insidious.world}`;
-    /** CHAVE: informações sobre o modelo de saque B (bmodel). */
-    static readonly bKey = `bmodel_${Insidious.world}`;
-
     static async open() {
         // Elementos originais.
         const plunderListFilters = document.querySelector('#plunder_list_filters');
@@ -77,7 +72,7 @@ class TWFarm {
         };
 
         // Salva os modelos no banco de dados.
-        Store.set({ [this.aKey]: parentRow.a, [this.bKey]: parentRow.b })
+        Store.set({ [Keys.plunderA]: parentRow.a, [Keys.plunderB]: parentRow.b })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -90,18 +85,18 @@ class TWFarm {
 
             try {
                 // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
-                const plunderStatus = await Store.get(Plunder.key) as boolean | undefined;
+                const plunderStatus = await Store.get(Keys.plunder) as boolean | undefined;
                 // Se estiver ativo no momento do clique, desativa o plunder e troca o texto do botão.
                 // Além disso, salva a quantia saqueada no histórico global.
                 if (plunderStatus === true) {
                     await TWFarm.setGlobalPlundered();
-                    await Store.set({ [Plunder.key]: false });
+                    await Store.set({ [Keys.plunder]: false });
                     startPlunderBtn.textContent = 'Saquear';
 
                 // Em caso contrário, ativa o plunder.
                 } else if (plunderStatus === false) {
-                    await Store.remove(Plunder.totalKey);
-                    await Store.set({ [Plunder.key]: true });
+                    await Store.remove(Keys.totalPlundered);
+                    await Store.set({ [Keys.plunder]: true });
                     startPlunderBtn.textContent = 'Parar';
                     Plunder.start();
                 };
@@ -120,7 +115,7 @@ class TWFarm {
         const optionsBtnEvents = async () => {
             if (!Plunder.options) {
                 // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options estará indefinido.
-                Plunder.options = await Store.get(Plunder.optionsKey) as PlunderOptions ?? {};
+                Plunder.options = await Store.get(Keys.plunderOptions) as PlunderOptions ?? {};
             };
 
             Manatsu.createAll(optionsAreaItems);
@@ -159,7 +154,7 @@ class TWFarm {
 
         // Configura o botão de saque de acordo com o status do plunder.
         // Além disso, se o plunder já estiver marcado como ativo, chama Plunder.start() automaticamente.
-        Store.get(Plunder.key)
+        Store.get(Keys.plunder)
             .then((result: boolean | undefined) => {
                 buttonArea.appendChild(startPlunderBtn);
                 buttonArea.appendChild(showOptionsBtn);
@@ -171,17 +166,17 @@ class TWFarm {
                 } else if (result === false) {
                     // Caso não esteja ativo, também apaga o histórico de recursos saqueados.
                     startPlunderBtn.textContent = 'Saquear';
-                    Store.remove(Plunder.totalKey);
+                    Store.remove(Keys.totalPlundered);
 
                 } else if (result === undefined) {
                     startPlunderBtn.textContent = 'Saquear';
-                    Store.set({ [Plunder.key]: false });
+                    Store.set({ [Keys.plunder]: false });
                 };
 
             }).catch((err: unknown) => {
                 if (err instanceof Error) {
                     // Caso haja algum erro, desativa o plunder, por segurança.
-                    Store.set({ [Plunder.key]: false });
+                    Store.set({ [Keys.plunder]: false });
                     InsidiousError.handle(err);
                 };
             });
@@ -197,7 +192,7 @@ class TWFarm {
         };
         
         try {
-            await Store.set({ [Plunder.optionsKey]: Plunder.options });
+            await Store.set({ [Keys.plunderOptions]: Plunder.options });
 
         } catch (err) {
             if (err instanceof Error) InsidiousError.handle(err);
@@ -216,7 +211,7 @@ class TWFarm {
     
             // É necessário verificar se o mundo possui arqueiros.
             if (!Insidious.worldInfo.game) {
-                await Store.remove(Insidious.worldConfigKey);
+                await Store.remove(Keys.worldConfig);
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
     
@@ -235,23 +230,22 @@ class TWFarm {
             });
 
             // Dados sobre a aldeia atual.
-            const currentVillageID: string | null = Utils.currentVillage();
-            if (currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
+            if (!Insidious.village) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
 
-            const currentVillageData = await Store.get(`v${currentVillageID}_${Insidious.world}`) as VillageInfo | undefined;
+            const currentVillageData = await Store.get(`v${Insidious.village}_${Insidious.world}`) as VillageInfo | undefined;
             if (currentVillageData === undefined) {
-                throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${currentVillageID}).`);
+                throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${Insidious.village}).`);
             };
 
             const { x: currentX, y: currentY } = currentVillageData;
             if (currentX === undefined || currentY === undefined) {
-                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${currentVillageID}).`);
+                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${Insidious.village}).`);
             };
 
             // Lista das aldeias que já foram atacadas alguma vez.
             // É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
             let alreadyPlunderedVillages: Set<string> = new Set();
-            const attackHistory = await Store.get(Plunder.plunderedKey) as Set<string> | undefined;
+            const attackHistory = await Store.get(Keys.alreadyPlundered) as Set<string> | undefined;
             if (attackHistory !== undefined) alreadyPlunderedVillages = attackHistory;
     
             // Ajuda a controlar o MutationObserver.
@@ -384,7 +378,7 @@ class TWFarm {
                                 const getRelativeCoords = (): number[] => {
                                     const coords: number[] = [currentX, currentY, targetX, targetY];
                                     if (coords.some(coord => !Number.isInteger(coord))) {
-                                        throw new InsidiousError(`As coordenadas obtidas são inválidas (${currentVillageID} e/ou ${villageID}).`);
+                                        throw new InsidiousError(`As coordenadas obtidas são inválidas (${Insidious.village} e/ou ${villageID}).`);
                                     };
                                     return coords;
                                 };
@@ -419,7 +413,7 @@ class TWFarm {
                         };
                     };
 
-                    Store.set({ [Plunder.plunderedKey]: alreadyPlunderedVillages })
+                    Store.set({ [Keys.alreadyPlundered]: alreadyPlunderedVillages })
                         .catch((err: unknown) => {
                             if (err instanceof Error) InsidiousError.handle(err);
                         });
@@ -523,9 +517,9 @@ class TWFarm {
 
     /** Atualiza a quantia total de recursos saqueados e ataques enviados pelo Plunder no mundo atual. */
     protected static async setGlobalPlundered() {
-        const totalPlundered = await Store.get(Plunder.totalKey) as TotalPlundered | undefined;
+        const totalPlundered = await Store.get(Keys.totalPlundered) as TotalPlundered | undefined;
         if (!totalPlundered) return;
-        let globalPlundered = await Store.get(Plunder.globalKey) as TotalPlundered | undefined;
+        let globalPlundered = await Store.get(Keys.globalPlundered) as TotalPlundered | undefined;
         if (!globalPlundered) globalPlundered = { wood: 0, stone: 0, iron: 0, attack_amount: 0 };
 
         for (const [key, value] of Object.entries(totalPlundered) as TotalPlunderedEntries) {
@@ -533,7 +527,7 @@ class TWFarm {
             globalPlundered[key] = globalPlundered[key] + totalPlundered[key];
         };
 
-        Store.set({ [Plunder.globalKey]: globalPlundered })
+        Store.set({ [Keys.globalPlundered]: globalPlundered })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
