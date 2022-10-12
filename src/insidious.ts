@@ -1,6 +1,6 @@
 class Insidious {
-    static #worldInfo: WorldInfo;
-    static #unitInfo: UnitInfo;
+    static worldInfo: WorldInfo;
+    static unitInfo: UnitInfo;
     /** Mundo atual. */
     static readonly world: string | null = Utils.currentWorld();
     /** ID da aldeia atual. */
@@ -8,29 +8,39 @@ class Insidious {
     /** Janela atual. */
     static readonly #screen: string | null = Utils.currentScreen();
     
-    /** Chave para obter a data do último fetch das configurações do mundo atual (worldConfigFetch). */
+    /** CHAVE: intervalo (em horas) entre cada Insidius.fetch() (fetchInterval). */
+    static readonly fetchKey = `fetchInterval`;
+    /** CHAVE: data do último fetch das configurações do mundo atual (worldConfigFetch). */
     static readonly worldConfigKey = `worldConfigFetch_${this.world}`;
-    /** Chave para obter a data do último fetch das informações sobre o estado atual do mundo (worldDataFetch). */
+    /** CHAVE: data do último fetch das informações sobre o estado atual do mundo (worldDataFetch). */
     static readonly worldDataKey = `worldDataFetch_${this.world}`;
-    /** Chave para obter as configurações do mundo atual (config). */
+    /** CHAVE: configurações do mundo atual (config). */
     static readonly configKey = `config_${this.world}`;
-    /** Chave para obter detalhes sobre as unidades do jogo (unit). */
+    /** CHAVE: detalhes sobre as unidades do jogo (unit). */
     static readonly unitKey = `unit_${this.world}`;
+    /** CHAVE: último mundo acessado pelo jogador (lastWorld). */
+    static readonly lastWorldKey = `lastWorld`;
+    /** CHAVE: mundos nos quais o jogador está ativo (activeWorlds). */
+    static readonly activeWorldsKey = `activeWorlds`;
+    
+    /** Intervalo (em horas) entre cada Insidious.fetch(). */
+    static #fetchInterval: number = 24;
 
     // Inicia a extensão.
-    static async #start() {
+    static async start() {
         try {
             if (location.pathname === '\/game.php') {
                 if (this.world === null) throw new InsidiousError('Não foi possível identificar o mundo atual.');
+                if (this.#screen === 'overview') await this.setAsActiveWorld();
 
                 // Faz download dos dados necessários para executar a extensão.
-                await this.#fetch();
+                await this.fetch();
 
                 // Armazena as configurações do mundo para que as outras classes tenham acesso.
                 // A coerção de tipo está sendo feita porquê logo após ela há uma verificação do valor das variáveis.
-                this.#worldInfo = (await browser.storage.local.get(this.configKey))[this.configKey] as WorldInfo;
-                this.#unitInfo = (await browser.storage.local.get(this.unitKey))[this.unitKey] as UnitInfo;
-                if (!this.#worldInfo || !this.#unitInfo) await browser.storage.local.remove(this.worldConfigKey);
+                this.worldInfo = await Store.get(this.configKey) as WorldInfo;
+                this.unitInfo = await Store.get(this.unitKey) as UnitInfo;
+                if (!this.worldInfo || !this.unitInfo) await Store.remove(this.worldConfigKey);
       
                 // Adiciona as ferramentas da extensão de acordo com a página na qual o usuário está.
                 if (!this.#screen) throw new InsidiousError('Não foi possível identificar a janela atual.');
@@ -49,11 +59,11 @@ class Insidious {
                 await Defer.promises();
 
                 // Verifica o status do Shield e o inicia se estiver ativado.
-                const shieldStatus = (await browser.storage.local.get(TWShield.key))[TWShield.key] as boolean | undefined;
-                if (shieldStatus === undefined) {
-                    await browser.storage.local.set({ [TWShield.key]: true });
+                const shieldStatus = await Store.get(TWShield.key) as boolean | undefined;
+                if (shieldStatus === true) {
                     TWShield.start();
-                } else if (shieldStatus === true) {
+                } else if (shieldStatus === undefined) {
+                    await Store.set({ [TWShield.key]: true });
                     TWShield.start();
                 };
             };
@@ -63,12 +73,20 @@ class Insidious {
         };
     };
 
-    static async #fetch() {
+    private static async fetch() {
         try {
+            /** Intervalo (em horas) entre cada operação fetch. */
+            const fetchInterval = await Store.get(this.fetchKey) as number | undefined;
+            if (!fetchInterval || !Number.isInteger(fetchInterval)) {
+                await Store.set({ [this.fetchKey]: 24 });
+            } else {
+                this.#fetchInterval = fetchInterval;
+            };
+
             // Verifica qual foi a hora do último fetch.
             const now: number = new Date().getTime();
-            const lastConfigFetch = (await browser.storage.local.get(this.worldConfigKey))[this.worldConfigKey] as number | undefined;
-            const lastDataFetch = (await browser.storage.local.get(this.worldDataKey))[this.worldDataKey] as number | undefined;
+            const lastConfigFetch = await Store.get(this.worldConfigKey) as number | undefined;
+            const lastDataFetch = await Store.get(this.worldDataKey) as number | undefined;
 
             // Informa a data do último fetch na barra inferior, onde se encontra a hora do servidor.
             if (lastDataFetch) {
@@ -83,11 +101,11 @@ class Insidious {
             };
 
             // Caso o plunder esteja ativo, impede que a função continue.
-            if ((await browser.storage.local.get(Plunder.key))[Plunder.key] === true) return;
+            if (await Store.get(Plunder.key) === true) return;
             
             // Salva as configurações do mundo, caso ainda não estejam.
             if (lastConfigFetch === undefined) {
-                await browser.storage.local.set({ [this.worldConfigKey]: now });
+                await Store.set({ [this.worldConfigKey]: now });
 
                 const configSource = [
                     { name: `config_${this.world}`, url: TWAssets.world.get_config },
@@ -105,7 +123,7 @@ class Insidious {
                         worldConfigRequest.addEventListener("timeout", () => reject(worldConfigRequest.status));
                         worldConfigRequest.addEventListener("load", () => {
                             if (worldConfigRequest.responseXML) {
-                                this.#parseXML(worldConfigRequest.responseXML.documentElement, { name: source.name })
+                                this.parseXML(worldConfigRequest.responseXML.documentElement, { name: source.name })
                                     .then((result) => resolve({ name: source.name, result: result }))
                                     .catch((err: unknown) => reject(err));
                             } else {
@@ -119,18 +137,18 @@ class Insidious {
                 }));
 
                 Promise.all(worldConfigData.map((config: { name: string, result: any }) => {
-                        browser.storage.local.set({ [config.name]: config.result })
+                        Store.set({ [config.name]: config.result })
                 })).catch((err) => {
                     if (err instanceof Error) {
                         InsidiousError.handle(err);
-                        browser.storage.local.remove(`worldConfigFetch_${this.world}`);
+                        Store.remove(this.worldConfigKey);
                     };
                 });
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastDataFetch || now - lastDataFetch > (3600000 * 24)) {
-                await browser.storage.local.set({ [`worldDataFetch_${this.world}`]: now });
+            if (!lastDataFetch || now - lastDataFetch > (3600000 * this.#fetchInterval)) {
+                await Store.set({ [this.worldDataKey]: now });
 
                 Utils.modal('Aguarde');
                 const modalWindow = document.querySelector('#insidious_modal');
@@ -174,7 +192,7 @@ class Insidious {
                         };
                     
                         try {
-                            await browser.storage.local.set({ [`v${thisID}_${this.world}`]: villageInfo });
+                            await Store.set({ [`v${thisID}_${this.world}`]: villageInfo });
                             progressInfo.textContent = `${villageName} (${otherData[1]}|${otherData[2]})`;
                             resolve();
 
@@ -213,7 +231,7 @@ class Insidious {
         };
     };
 
-    static #parseXML(configXML: Element, options: { name: string }) {
+    private static parseXML(configXML: Element, options: { name: string }) {
         return new Promise((resolve, reject) => {
             const getValue = (value: string): number => {
                 const valueField = configXML.querySelector(value);
@@ -270,7 +288,17 @@ class Insidious {
         });
     };
 
-    static get worldInfo() {return this.#worldInfo};
-    static get unitInfo() {return this.#unitInfo};
-    static get start() {return this.#start};
+    /** Define o mundo atual como ativo e o registra como sendo o último acessado. */
+    private static async setAsActiveWorld() {
+        let activeWorlds = await Store.get(this.activeWorldsKey) as Map<string, number> | undefined;
+        if (activeWorlds === undefined) activeWorlds = new Map();
+
+        const now = new Date().getTime();
+        activeWorlds.set(this.world as string, now);
+        Store.set({ [this.activeWorldsKey]: activeWorlds })
+            .then(() => Store.set({ [this.lastWorldKey]: this.world }))
+            .catch((err: unknown) => {
+                if (err instanceof Error) InsidiousError.handle(err);
+            });
+    };
 };

@@ -4,14 +4,14 @@ class MapTag extends TWMap {
     /** Chave para obter a última tag utilizada no mapa (lastCustomTag). */
     static readonly lastKey = `lastCustomTag_${Insidious.world}`;
 
-    static async #create(tagType: TagType) {
+    static async create(tagType: TagType) {
         // Desconecta qualquer observer de tag que esteja ativo no mapa.
         this.eventTarget.dispatchEvent(new Event('stoptagobserver'));
 
-        if ((await browser.storage.local.get(this.key))[this.key] === false) return;
+        if (await Store.get(this.key) === false) return;
 
         // Salva a última tag utilizada, para que seja ativada automaticamente na próxima vez.
-        browser.storage.local.set({ [this.lastKey]: tagType })
+        Store.set({ [this.lastKey]: tagType })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -46,10 +46,10 @@ class MapTag extends TWMap {
 
                 try {
                     const village = `v${id}_${Insidious.world}`;
-                    const result: VillageQuery = await browser.storage.local.get(village);
-                    if (!result[village]) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
+                    const villageData = await Store.get(village) as VillageInfo | undefined;
+                    if (!villageData) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
 
-                    const { x: targetX, y: targetY } = result[village];
+                    const { x: targetX, y: targetY } = villageData;
                     if (targetX === undefined || targetY === undefined) {
                         throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia alvo ${id}.`);
                     };
@@ -106,17 +106,17 @@ class MapTag extends TWMap {
                         villageCustomTag.textContent = distance.toFixed(1);
 
                     } else if (tagType === 'points') {
-                        if (!result[village].points) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
-                        if (result[village].player !== 0) villageCustomTag.textContent = String(result[village].points);
+                        if (!villageData.points) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
+                        if (villageData.player !== 0) villageCustomTag.textContent = String(villageData.points);
 
                     } else if (tagType === 'bbpoints') {
-                        if (!result[village].points) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
-                        if (result[village].player === 0) villageCustomTag.textContent = String(result[village].points);
+                        if (!villageData.points) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
+                        if (villageData.player === 0) villageCustomTag.textContent = String(villageData.points);
 
                     } else if (tagType.startsWith('time_')) {
                         const unitName = tagType.replace('time_', '') as UnitList;
                         if (!Insidious.unitInfo || !Insidious.worldInfo) {
-                            browser.storage.local.remove(Insidious.worldConfigKey);
+                            Store.remove(Insidious.worldConfigKey);
                             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                         };
 
@@ -127,7 +127,7 @@ class MapTag extends TWMap {
                         const fieldAmount = Utils.calcDistance(...getRelativeCoords());
                         const travelTime = millisecondsPerField * fieldAmount;
                         
-                        villageCustomTag.textContent = this.#getFullHours(travelTime);
+                        villageCustomTag.textContent = this.getFullHours(travelTime);
                     };
 
                     resolve();
@@ -144,7 +144,7 @@ class MapTag extends TWMap {
 
         // Verifica se houve mudança no DOM decorrente da movimentação do mapa.
         // Em caso positivo, dispara a função novamente.
-        const observeTag = new MutationObserver(() => this.#create(tagType));
+        const observeTag = new MutationObserver(() => this.create(tagType));
         observeTag.observe(mapContainer, { subtree: true, childList: true });
 
         const customTagsCtrl = new AbortController();
@@ -154,7 +154,7 @@ class MapTag extends TWMap {
         }, { signal: customTagsCtrl.signal });
     };
 
-    static #getFullHours(travelTime: number): string {
+    private static getFullHours(travelTime: number): string {
         // É necessário usar Math.trunc(), pois toFixed() arredonda o número.
         let hours = String(Math.trunc(travelTime / 3600000));
         let remainder = travelTime % 3600000;
@@ -170,6 +170,4 @@ class MapTag extends TWMap {
 
         return `${hours}:${minutes}:${seconds}`;
     };
-
-    static get create() { return this.#create };
 };

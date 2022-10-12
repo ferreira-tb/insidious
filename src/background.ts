@@ -1,1 +1,0 @@
-browser.action.onClicked.addListener(() => browser.storage.local.clear());

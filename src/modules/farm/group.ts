@@ -1,13 +1,13 @@
 class GroupAttack {
     /** Parte da URL da janela de ataques a caminho. */
     static readonly groupCreationScreen = 'screen=overview_villages&mode=groups&type=dynamic';
-    /** Chave para obter o ID do grupo Insidious usado pelo Plunder (farmGroupID). */
+    /** CHAVE: ID do grupo Insidious usado pelo Plunder (farmGroupID). */
     static readonly key = `farmGroupID_${Insidious.world}`;
-    /** Chave para obter o status da criação do grupo Insidious usado pelo Plunder (farmGroupCreation). */
+    /** CHAVE: retorna true se a criação do grupo Insidious usado pelo Plunder estiver pendente (farmGroupCreation). */
     static readonly creationKey = `farmGroupCreation_${Insidious.world}`;
 
-    static async #start() {
-        const groupID = (await browser.storage.local.get(this.key))[this.key] as string | undefined;
+    static async start() {
+        const groupID = await Store.get(this.key) as string | undefined;
         if (groupID) {
             const currentGroup = Utils.currentGroup();
 
@@ -30,13 +30,13 @@ class GroupAttack {
                 // Isso porquê o botão de navegação se torna um elemento diferente.
                 // Para solucionar isso, é feito um redirecionamento para a primeira aldeia do grupo Insidious.
                 Plunder.optionsParameters.last_group_jump = Insidious.village ?? '';
-                await browser.storage.local.set({ [Plunder.parametersKey]: Plunder.optionsParameters });
+                await Store.set({ [Plunder.parametersKey]: Plunder.optionsParameters });
                 groupJump.click();
             };
             
         } else {
             // Retorna caso o grupo já exista.
-            if (await this.#verify()) return;
+            if (await this.verify()) return;
 
             // Caso o grupo não exista, emite uma mensagem solicitando sua criação.
             Utils.modal('Insidious');
@@ -57,7 +57,7 @@ class GroupAttack {
             new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Criar' }, modalButtonArea).create()
                 .addEventListener('click', () => {
                     messageModalCtrl.abort();
-                    this.#navigateToGroupCreationScreen();
+                    this.navigateToGroupCreationScreen();
                 }, { signal: messageModalCtrl.signal });
 
             new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Desativar' }, modalButtonArea).create()
@@ -65,7 +65,7 @@ class GroupAttack {
                 messageModalCtrl.abort();
 
                 Plunder.options.group_attack = false;
-                browser.storage.local.set({ [Plunder.optionsKey]: Plunder.options })
+                Store.set({ [Plunder.optionsKey]: Plunder.options })
                     .then(() => setTimeout(() => window.location.reload(), Utils.getResponseTime()))
                     .catch((err: unknown) => {
                         if (err instanceof Error) InsidiousError.handle(err);
@@ -81,7 +81,7 @@ class GroupAttack {
     };
 
     // Verifica se o grupo Insidious já existe.
-    static async #verify(): Promise<boolean> {
+    private static async verify(): Promise<boolean> {
         if (!document.querySelector('div.popup_helper #group_popup')) {
             // Caso a janela de grupos não esteja aberta (mesmo que oculta), abre e a oculta logo em seguida.
             await new Promise<void>((resolve) => {
@@ -132,7 +132,7 @@ class GroupAttack {
                 const groupID = option.value.replace(/\D/g, '');
                 if (groupID.length === 0) throw new InsidiousError('O grupo Insidious existe, mas não foi possível obter seu id.');
 
-                await browser.storage.local.set({ [this.key]: groupID });
+                await Store.set({ [this.key]: groupID });
                 return true;
             };
         };
@@ -140,12 +140,12 @@ class GroupAttack {
         return false;
     };
 
-    static async #navigateToGroupCreationScreen() {
+    private static async navigateToGroupCreationScreen() {
         const currentVillageLocation = `${location.origin}\/game.php\?village=${Utils.currentVillage()}\&`;
         const targetLocation = currentVillageLocation + this.groupCreationScreen;
 
         try {
-            await browser.storage.local.set({ [this.creationKey]: 'pending' });
+            await Store.set({ [this.creationKey]: true });
             location.assign(targetLocation);
 
         } catch (err) {
@@ -153,8 +153,8 @@ class GroupAttack {
         };
     };
 
-    static async #createDynamicGroup() {
-        await browser.storage.local.remove(this.creationKey);
+    static async createDynamicGroup() {
+        await Store.remove(this.creationKey);
 
         const groupNameInput = document.querySelector('form input#group_name') as HTMLInputElement | null;
         if (!groupNameInput) throw new InsidiousError('DOM: form input#group_name');
@@ -164,7 +164,4 @@ class GroupAttack {
         if (!groupCreationButton) throw new InsidiousError('form input#btn_filters_create');
         groupCreationButton.click();
     };
-
-    static get start() {return this.#start};
-    static get createDynamicGroup() {return this.#createDynamicGroup};
 };

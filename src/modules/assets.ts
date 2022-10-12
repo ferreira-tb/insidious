@@ -1,5 +1,5 @@
 class TWAssets {
-    static #world = {
+    static readonly world = {
         village: location.origin + '/map/village.txt',
         player: location.origin + '/map/player.txt',
         ally: location.origin + '/map/ally.txt',
@@ -18,7 +18,7 @@ class TWAssets {
         kill_def_tribe: location.origin + '/map/kill_def_tribe.txt'
     };
 
-    static #image = {
+    static readonly image = {
         // Unidades.
         spear_18: 'https://dsbr.innogamescdn.com/asset/45436e33/graphic/unit/unit_spear.png',
         sword_18: 'https://dsbr.innogamescdn.com/asset/45436e33/graphic/unit/unit_sword.png',
@@ -34,7 +34,7 @@ class TWAssets {
         snob_18: 'https://dsbr.innogamescdn.com/asset/45436e33/graphic/unit/unit_snob.png'
     };
 
-    static #list = {
+    static readonly list = {
         all_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'ram', 'catapult', 'knight', 'snob'],
         all_units_archer: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob'],
         farm_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'knight'],
@@ -42,7 +42,7 @@ class TWAssets {
     };
 
     /** Aríetes e bárbaros, respectivamente. */
-    static #unitsToDestroyWall: { [index: number]: [number, number]} = {
+    static readonly unitsToDestroyWall: { [index: number]: [number, number]} = {
         1: [3, 50],
         2: [5, 50],
         3: [8, 50],
@@ -65,19 +65,11 @@ class TWAssets {
         20: [200, 1300]
     };
 
-    static #freeze() {
-        Object.freeze(this.#image);
-        Object.freeze(this.#world);
-        Object.freeze(this.#list);
+    static freeze() {
+        Object.freeze(this.image);
+        Object.freeze(this.world);
+        Object.freeze(this.list);
 
-        Object.freeze(this.#unitsToDestroyWall);
+        Object.freeze(this.unitsToDestroyWall);
     };
-
-    static get image() {return this.#image};
-    static get world() {return this.#world};
-    static get list() {return this.#list};
-
-    static get unitsToDestroyWall() {return this.#unitsToDestroyWall};
-
-    static get freeze() {return this.#freeze};
 };

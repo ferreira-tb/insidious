@@ -1,20 +1,18 @@
 class Defer {
-    static async #promises() {
+    static async promises() {
         return Promise.all([
-            this.#createInsidiousFarmGroup()
+            this.createInsidiousFarmGroup()
         ]);
     };
 
-    static #createInsidiousFarmGroup() {
+    private static createInsidiousFarmGroup() {
         return new Promise<void>(async (resolve) => {
             if (location.href.includes(GroupAttack.groupCreationScreen)) {
-                const groupCreationStatus = (await browser.storage.local.get(GroupAttack.creationKey))[GroupAttack.creationKey];
-                if (groupCreationStatus === 'pending') await GroupAttack.createDynamicGroup();
+                const groupCreationStatus = await Store.get(GroupAttack.creationKey) as boolean | undefined;
+                if (groupCreationStatus === true) await GroupAttack.createDynamicGroup();
             };
             
             resolve();
         });
     };
-
-    static get promises() {return this.#promises};
 };

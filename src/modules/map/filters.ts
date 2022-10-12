@@ -4,17 +4,17 @@ class MapFilter extends TWMap {
     /** Chave para obter o último filtro utilizado no mapa (lastMapFilter). */
     static readonly lastKey = `lastMapFilter_${Insidious.world}`;
 
-    static async #create(filterType: FilterType) {
+    static async create(filterType: FilterType) {
         // Desconecta qualquer observer de filtro que esteja ativo no mapa.
         this.eventTarget.dispatchEvent(new Event('stopfilterobserver'));
 
-        if ((await browser.storage.local.get(this.key))[this.key] === false) return;
+        if (await Store.get(this.key) === false) return;
 
         // Oculta as aldeias de convite.
-        this.#hideUndefinedVillages();
+        this.hideUndefinedVillages();
 
         // Salva o último filtro utilizado.
-        browser.storage.local.set({ [this.lastKey]: filterType })
+        Store.set({ [this.lastKey]: filterType })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -45,7 +45,7 @@ class MapFilter extends TWMap {
         // Guarda informações que serão usadas pelas promises.
         let filterContext: FilterContext;
         if (filterType === 'bbunknown') {
-            const attackHistory = (await browser.storage.local.get(Plunder.plunderedKey))[Plunder.plunderedKey] as Set<string> | undefined;
+            const attackHistory = await Store.get(Plunder.plunderedKey) as Set<string> | undefined;
             // Se não há aldeias registradas no banco de dados, não há o que filtrar.
             if (attackHistory === undefined) return;
             filterContext = attackHistory;
@@ -67,7 +67,7 @@ class MapFilter extends TWMap {
 
                 try {
                     const village = `v${id}_${Insidious.world}`;
-                    const result: VillageQuery = await browser.storage.local.get(village);
+                    const villageData = await Store.get(village) as VillageInfo | undefined;
 
                     const villageElement = document.querySelector(`#map_village_${id}`);
                     if (!villageElement) throw new InsidiousError(`DOM: #map_village_${id}`);
@@ -100,9 +100,9 @@ class MapFilter extends TWMap {
                     };
 
                     const isThisVillageRegistered = (): boolean => {
-                        if (result[village]) {
+                        if (villageData) {
                             switch (filterType) {
-                                case 'bbunknown': return result[village].player !== 0;
+                                case 'bbunknown': return villageData.player !== 0;
                                 default: return false;
                             };
 
@@ -113,18 +113,18 @@ class MapFilter extends TWMap {
 
                     // Se a aldeia já tenha sido atacada ou seja de jogador, esconde-a.
                     if (filterType === 'bbunknown' && ((filterContext as Set<string>).has(id) || isThisVillageRegistered())) {
-                        this.#hideMapItem(villageElement, filterType);
+                        this.hideMapItem(villageElement, filterType);
                         // Em seguida, busca outros elementos que tenham relação com essa aldeia e os esconde também.
                         const relatedElements = villageParent.querySelectorAll(`[id*="${id}"]:not([id^="map_village_"])`);
-                        if (relatedElements.length > 0) relatedElements.forEach((element) => this.#hideMapItem(element, filterType));
+                        if (relatedElements.length > 0) relatedElements.forEach((element) => this.hideMapItem(element, filterType));
 
                         // Verifica se há algum canvas relacionado à aldeia.
                         const canvasElement = getCanvas();
-                        if (canvasElement !== null) this.#hideMapItem(canvasElement, filterType);
+                        if (canvasElement !== null) this.hideMapItem(canvasElement, filterType);
 
                         // Caso o elemento possua alguma tag, oculta-a também.
                         const relatedTag = villageParent.querySelector(`div.insidious_map_villageCustomTag[insidious-village="${id}"]`);
-                        if (relatedTag) this.#hideMapItem(relatedTag, filterType);
+                        if (relatedTag) this.hideMapItem(relatedTag, filterType);
                     };
 
                     resolve();
@@ -140,7 +140,7 @@ class MapFilter extends TWMap {
 
         // Verifica se houve mudança no DOM decorrente da movimentação do mapa.
         // Em caso positivo, dispara a função novamente.
-        const observeFilter = new MutationObserver(() => this.#create(filterType));
+        const observeFilter = new MutationObserver(() => this.create(filterType));
         observeFilter.observe(mapContainer, { subtree: true, childList: true });
 
         const mapFiltersCtrl = new AbortController();
@@ -150,13 +150,13 @@ class MapFilter extends TWMap {
         }, { signal: mapFiltersCtrl.signal });
     };
 
-    static #hideMapItem(elementToHide: Element, filterType: FilterType) {
+    private static hideMapItem(elementToHide: Element, filterType: FilterType) {
         if (!elementToHide) throw new InsidiousError('Não foi possível ocultar o elemento.');
         elementToHide.setAttribute('insidious-map-filter', 'hidden');
         elementToHide.setAttribute('insidious-filter-type', filterType);
     };
 
-    static #hideUndefinedVillages(): void {
+    private static hideUndefinedVillages(): void {
         const mapContainer = document.querySelector('#map_container');
         if (!mapContainer) throw new InsidiousError('DOM: #map_container');
 
@@ -167,6 +167,4 @@ class MapFilter extends TWMap {
             };
         });
     };
-
-    static get create() { return this.#create };
 };

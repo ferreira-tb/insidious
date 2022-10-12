@@ -1,10 +1,10 @@
 class TWFarm {
-    /** Chave para obter as informações sobre o modelo de saque A (amodel). */
+    /** CHAVE: informações sobre o modelo de saque A (amodel). */
     static readonly aKey = `amodel_${Insidious.world}`;
-    /** Chave para obter as informações sobre o modelo de saque B (bmodel). */
+    /** CHAVE: informações sobre o modelo de saque B (bmodel). */
     static readonly bKey = `bmodel_${Insidious.world}`;
 
-    static async #open() {
+    static async open() {
         // Elementos originais.
         const plunderListFilters = document.querySelector('#plunder_list_filters');
         if (!plunderListFilters) throw new InsidiousError('DOM: #plunder_list_filters');
@@ -35,10 +35,10 @@ class TWFarm {
         }).create();
         
         ////// OPÇÕES
-        const optionsAreaItems: Manatsu[] = this.#createOptions();
+        const optionsAreaItems: Manatsu[] = this.createOptions();
 
         ////// DADOS
-        await this.#info();
+        await this.info();
 
         // Recolhe dados sobre os modelos salvos.
         // farmModels.firstElementChild é a linha com os ícones acima da área de input do modelo A.
@@ -77,7 +77,7 @@ class TWFarm {
         };
 
         // Salva os modelos no banco de dados.
-        browser.storage.local.set({ [this.aKey]: parentRow.a, [this.bKey]: parentRow.b })
+        Store.set({ [this.aKey]: parentRow.a, [this.bKey]: parentRow.b })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -90,16 +90,18 @@ class TWFarm {
 
             try {
                 // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
-                const plunderStatus = (await browser.storage.local.get(Plunder.key))[Plunder.key] as boolean | undefined;
+                const plunderStatus = await Store.get(Plunder.key) as boolean | undefined;
                 // Se estiver ativo no momento do clique, desativa o plunder e troca o texto do botão.
+                // Além disso, salva a quantia saqueada no histórico global.
                 if (plunderStatus === true) {
-                    await browser.storage.local.set({ [Plunder.key]: false });
+                    await TWFarm.setGlobalPlundered();
+                    await Store.set({ [Plunder.key]: false });
                     startPlunderBtn.textContent = 'Saquear';
 
                 // Em caso contrário, ativa o plunder.
                 } else if (plunderStatus === false) {
-                    await browser.storage.local.set({ [Plunder.key]: true });
-                    await browser.storage.local.remove(Plunder.totalKey);
+                    await Store.remove(Plunder.totalKey);
+                    await Store.set({ [Plunder.key]: true });
                     startPlunderBtn.textContent = 'Parar';
                     Plunder.start();
                 };
@@ -111,14 +113,14 @@ class TWFarm {
                 startPlunderBtn.addEventListener('click', plunderBtnEvents);
             };
         };
-
+        
         startPlunderBtn.addEventListener('click', plunderBtnEvents);
 
         // Exibe as opções do plunder.
         const optionsBtnEvents = async () => {
             if (!Plunder.options) {
                 // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options estará indefinido.
-                Plunder.options = (await browser.storage.local.get(Plunder.optionsKey))[Plunder.optionsKey] as PlunderOptions ?? {};
+                Plunder.options = await Store.get(Plunder.optionsKey) as PlunderOptions ?? {};
             };
 
             Manatsu.createAll(optionsAreaItems);
@@ -131,19 +133,19 @@ class TWFarm {
             if (Plunder.options.group_attack === true) groupAttack.checked = true;
             groupAttack.addEventListener('change', async (e) => {
                 optionsCtrl.abort();
-                await this.#saveOptions(e, 'group_attack');
+                await this.saveOptions(e, 'group_attack');
                 setTimeout(() => window.location.reload(), Utils.getResponseTime());
             }, { signal: optionsCtrl.signal });
 
             // Ignora aldeias com muralha.
             const ignoreWall = optionsArea.querySelector('#insidious_ignore_wall_checkbox') as HTMLInputElement;
             if (Plunder.options.ignore_wall === true) ignoreWall.checked = true;
-            ignoreWall.addEventListener('change', (e) => this.#saveOptions(e, 'ignore_wall'), { signal: optionsCtrl.signal });
+            ignoreWall.addEventListener('change', (e) => this.saveOptions(e, 'ignore_wall'), { signal: optionsCtrl.signal });
 
             // Destrói muralhas.
             const destroyWall = optionsArea.querySelector('#insidious_destroy_wall_checkbox') as HTMLInputElement;
             if (Plunder.options.destroy_wall === true) destroyWall.checked = true;
-            destroyWall.addEventListener('change', (e) => this.#saveOptions(e, 'destroy_wall'), { signal: optionsCtrl.signal });
+            destroyWall.addEventListener('change', (e) => this.saveOptions(e, 'destroy_wall'), { signal: optionsCtrl.signal });
 
             new Manatsu('button', optionsArea, { text: 'Fechar' }).createInside('div')
                 .addEventListener('click', () => {
@@ -157,35 +159,35 @@ class TWFarm {
 
         // Configura o botão de saque de acordo com o status do plunder.
         // Além disso, se o plunder já estiver marcado como ativo, chama Plunder.start() automaticamente.
-        browser.storage.local.get(Plunder.key)
-            .then((result: SBObject) => {
+        Store.get(Plunder.key)
+            .then((result: boolean | undefined) => {
                 buttonArea.appendChild(startPlunderBtn);
                 buttonArea.appendChild(showOptionsBtn);
 
-                if (result[Plunder.key] === true) {
+                if (result === true) {
                     startPlunderBtn.textContent = 'Parar';
                     Plunder.start();
 
-                // Caso não esteja ativo, apaga o histórico de recursos saqueados.
-                } else if (result[Plunder.key] === false) {
+                } else if (result === false) {
+                    // Caso não esteja ativo, também apaga o histórico de recursos saqueados.
                     startPlunderBtn.textContent = 'Saquear';
-                    browser.storage.local.remove(`totalPlundered_${Insidious.world}`);
+                    Store.remove(Plunder.totalKey);
 
-                } else if (result[Plunder.key] === undefined) {
+                } else if (result === undefined) {
                     startPlunderBtn.textContent = 'Saquear';
-                    browser.storage.local.set({ [Plunder.key]: false });
+                    Store.set({ [Plunder.key]: false });
                 };
 
             }).catch((err: unknown) => {
                 if (err instanceof Error) {
                     // Caso haja algum erro, desativa o plunder, por segurança.
-                    browser.storage.local.set({ [Plunder.key]: false });
+                    Store.set({ [Plunder.key]: false });
                     InsidiousError.handle(err);
                 };
             });
     };
 
-    static async #saveOptions(event: Event, item: keyof PlunderOptions) {
+    private static async saveOptions(event: Event, item: keyof PlunderOptions) {
         if (event.target instanceof HTMLInputElement) {
             if (event.target.checked === true) {
                 Plunder.options[item] = true;
@@ -195,14 +197,14 @@ class TWFarm {
         };
         
         try {
-            await browser.storage.local.set({ [Plunder.optionsKey]: Plunder.options });
+            await Store.set({ [Plunder.optionsKey]: Plunder.options });
 
         } catch (err) {
             if (err instanceof Error) InsidiousError.handle(err);
         };
     };
 
-    static async #info() {
+    private static async info() {
         try {
             // Célula de referência.
             const spearElem = document.querySelector('#farm_units #units_home tbody tr td#spear');
@@ -214,7 +216,7 @@ class TWFarm {
     
             // É necessário verificar se o mundo possui arqueiros.
             if (!Insidious.worldInfo.game) {
-                await browser.storage.local.remove(Insidious.worldConfigKey);
+                await Store.remove(Insidious.worldConfigKey);
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
     
@@ -236,12 +238,12 @@ class TWFarm {
             const currentVillageID: string | null = Utils.currentVillage();
             if (currentVillageID === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
 
-            const currentVillageData = await browser.storage.local.get(`v${currentVillageID}_${Insidious.world}`);
-            if (currentVillageData[`v${currentVillageID}_${Insidious.world}`] === undefined) {
+            const currentVillageData = await Store.get(`v${currentVillageID}_${Insidious.world}`) as VillageInfo | undefined;
+            if (currentVillageData === undefined) {
                 throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${currentVillageID}).`);
             };
 
-            const { x: currentX, y: currentY } = currentVillageData[`v${currentVillageID}_${Insidious.world}`] as VillageInfo  ?? { };
+            const { x: currentX, y: currentY } = currentVillageData;
             if (currentX === undefined || currentY === undefined) {
                 throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${currentVillageID}).`);
             };
@@ -249,7 +251,7 @@ class TWFarm {
             // Lista das aldeias que já foram atacadas alguma vez.
             // É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
             let alreadyPlunderedVillages: Set<string> = new Set();
-            const attackHistory = (await browser.storage.local.get(Plunder.plunderedKey))[Plunder.plunderedKey] as Set<string> | undefined;
+            const attackHistory = await Store.get(Plunder.plunderedKey) as Set<string> | undefined;
             if (attackHistory !== undefined) alreadyPlunderedVillages = attackHistory;
     
             // Ajuda a controlar o MutationObserver.
@@ -286,7 +288,7 @@ class TWFarm {
                                 const fields = row.querySelectorAll('td');
                                 for (const field of Array.from(fields)) {
                                     if (!field.textContent) continue;
-                                    const date = this.#decipherPlunderListDate(field.textContent);
+                                    const date = this.decipherPlunderListDate(field.textContent);
                                     if (!date) continue;
 
                                     row.setAttribute('insidious-date', String(date));
@@ -375,8 +377,8 @@ class TWFarm {
                             };
         
                             // Distância e coordenadas (adquirido de forma independente, não dependendo da posição na tabela).
-                            const targetVillageData = await browser.storage.local.get(`v${villageID}_${Insidious.world}`);
-                            const { x: targetX, y: targetY } = targetVillageData[`v${villageID}_${Insidious.world}`] as VillageInfo ?? { };
+                            const targetVillageData = await Store.get(`v${villageID}_${Insidious.world}`) as VillageInfo | undefined;
+                            const { x: targetX, y: targetY } = targetVillageData ?? { };
 
                             if (targetX !== undefined && targetY !== undefined) {
                                 const getRelativeCoords = (): number[] => {
@@ -417,7 +419,7 @@ class TWFarm {
                         };
                     };
 
-                    browser.storage.local.set({ [Plunder.plunderedKey]: alreadyPlunderedVillages })
+                    Store.set({ [Plunder.plunderedKey]: alreadyPlunderedVillages })
                         .catch((err: unknown) => {
                             if (err instanceof Error) InsidiousError.handle(err);
                         });
@@ -449,7 +451,7 @@ class TWFarm {
         };
     };
 
-    static #createOptions(): Manatsu[] {
+    private static createOptions(): Manatsu[] {
         const optionsArea = document.querySelector('#insidious_farmOptionsArea');
         if (!optionsArea) throw new InsidiousError('A área de opções não existe.');
 
@@ -478,7 +480,7 @@ class TWFarm {
         return optionsAreaItems;
     };
 
-    static #decipherPlunderListDate(date: string): number | null {
+    private static decipherPlunderListDate(date: string): number | null {
         // Exemplos de data: hoje às 00:05:26 | ontem às 16:29:50 | em 21.09. às 12:36:38
         const writtenDate = date.toLowerCase();
         if (!writtenDate.includes('às')) return null;
@@ -519,5 +521,21 @@ class TWFarm {
         return null;
     };
 
-    static get open() {return this.#open};
+    /** Atualiza a quantia total de recursos saqueados e ataques enviados pelo Plunder no mundo atual. */
+    protected static async setGlobalPlundered() {
+        const totalPlundered = await Store.get(Plunder.totalKey) as TotalPlundered | undefined;
+        if (!totalPlundered) return;
+        let globalPlundered = await Store.get(Plunder.globalKey) as TotalPlundered | undefined;
+        if (!globalPlundered) globalPlundered = { wood: 0, stone: 0, iron: 0, attack_amount: 0 };
+
+        for (const [key, value] of Object.entries(totalPlundered) as TotalPlunderedEntries) {
+            if (!Number.isInteger(value)) continue;
+            globalPlundered[key] = globalPlundered[key] + totalPlundered[key];
+        };
+
+        Store.set({ [Plunder.globalKey]: globalPlundered })
+            .catch((err: unknown) => {
+                if (err instanceof Error) InsidiousError.handle(err);
+            });
+    };
 };
