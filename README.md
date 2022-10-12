@@ -7,6 +7,7 @@ Insidious é uma extensão para o jogo de navegador Tribal Wars.
     - Derruba muralhas automaticamente.
 
 - Tags e filtros para o mapa
+- Etiqueta ataques automaticamente
 
 ## Notas
 - A lista de funcionalidades só contempla aquelas que já foram implementadas.
