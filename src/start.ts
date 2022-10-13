@@ -2,7 +2,6 @@
 // Todo código que não estiver contido numa classe deve vir aqui.
 
 // Insere os scripts com acesso ao contexto da página.
-new Manatsu('script', document.body, { src: browser.runtime.getURL('./page/objects.js') }).create();
 new Manatsu('script', document.body, { src: browser.runtime.getURL('./page/page.js') }).create();
 
 // Inicia o Insidious.
@@ -11,21 +10,10 @@ new Manatsu('script', document.body, { src: browser.runtime.getURL('./page/page.
     if (insidiousStatus !== false) {
         TWAssets.freeze();
 
-        new Promise<GameData>((resolve) => {
-            window.addEventListener('message', (e) => {
-                if (e?.data?.direction === 'from-tribalwars') {
-                    resolve(e.data.game_data as GameData);
-                };
+        Insidious.updateGameData()
+            .then(() => Insidious.start())
+            .catch((err: unknown) => {
+                if (err instanceof Error) InsidiousError.handle(err);
             });
-
-            window.postMessage('from-insidious');
-
-        }).then((data) => Insidious.start(data))
-        
-        
-        .catch((err: unknown) => {
-            if (err instanceof Error) InsidiousError.handle(err);
-        });
-
     };
 })();

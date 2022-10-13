@@ -46,6 +46,14 @@ type WebExtTabURLs = 'https://github.com/ferreira-tb/insidious';
 /** URLs permitidas em browser.windows.create() */
 type WebExtWindowURLs = '../config/config.html';
 
+type WindowMessageDirection = 'from-insidious' | 'from-tribalwars';
+type WindowMessageReason = 'get-game-data';
+type WindowMessage = {
+    direction: WindowMessageDirection,
+    reason?: WindowMessageReason
+    game_data?: TribalWarsGameData
+};
+
 /** Informações sobre as aldeias do mundo. */
 interface VillageInfo {
     name: string,
@@ -68,8 +76,11 @@ type NavigationHistory = {
     go_back: boolean
 };
 
-/** Quantia de recursos */
+/** Quantia de recursos. */
 type ResourceAmount = { [index in ResourceList]: number };
+
+/** Edifícios. */
+type BuildingName = keyof Buildings;
 
 // Níveis
 type WallLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;

@@ -202,7 +202,7 @@ class TWMap {
             const actionArea = document.querySelector('#insidious_mapActionArea');
             if (!actionArea) throw new InsidiousError('DOM: #insidious_mapActionArea');
 
-            if (!Insidious.worldInfo.game) {
+            if (!Game.worldInfo.game) {
                 await Store.remove(Keys.worldConfig);
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
@@ -214,7 +214,7 @@ class TWMap {
             }, { signal: imgIconCtrl.signal });
 
             const isThereArchers = () => {
-                switch (Insidious.worldInfo.game.archer) {
+                switch (Game.worldInfo.game.archer) {
                     case 0: return TWAssets.list.all_units;
                     case 1: return TWAssets.list.all_units_archer;
                     default: return TWAssets.list.all_units;

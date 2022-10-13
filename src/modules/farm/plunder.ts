@@ -25,7 +25,7 @@ class Plunder extends TWFarm {
             await this.showPlunderedAmount();
 
             // Informações sobre cada tipo de unidade do jogo.
-            if (!Insidious.unitInfo) {
+            if (!Game.unitInfo) {
                 await Store.remove(Keys.worldConfig);
                 throw new InsidiousError('Não foi possível obter as informações sobre as unidades do jogo.');
             };
@@ -308,7 +308,7 @@ class Plunder extends TWFarm {
             let result: number = 0;
             for (const key in unitModel) {
                 // Ignora o explorador, já que ele não pode carregar recursos.
-                if (key !== 'spy') result += unitModel[key] * Insidious.unitInfo[key as UnitList].carry;
+                if (key !== 'spy') result += unitModel[key] * Game.unitInfo[key as UnitList].carry;
             };
 
             if (!Number.isInteger(result)) {
@@ -330,7 +330,7 @@ class Plunder extends TWFarm {
 
     /** Retorna uma função que permite verificar a quantidade de tropas disponíveis. */
     private static getAvailableTroops() {
-        if (!Insidious.worldInfo.game) {
+        if (!Game.worldInfo.game) {
             Store.remove(Keys.worldConfig).catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -342,7 +342,7 @@ class Plunder extends TWFarm {
         let availableTroops: AvailableFarmUnits;
 
         // Caso o mundo tenha arqueiros, adiciona-os à lista.
-        if (Insidious.worldInfo.game.archer === 1) {
+        if (Game.worldInfo.game.archer === 1) {
             availableTroops = new PlunderAvailableTroops(TWAssets.list.farm_units_archer) as AvailableFarmUnits;
 
         } else {

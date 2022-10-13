@@ -1,27 +1,14 @@
 class Insidious {
-    static #worldInfo: WorldInfo;
-    static #unitInfo: UnitInfo;
-    /** Intervalo (em horas) entre cada Insidious.fetch(). */
-    private static fetchInterval: number = 24;
-
     /** Inicia a extensão. */
-    static async start(gameData: GameData) {
+    static async start() {
         try {
-            if (!gameData) throw new InsidiousError('Não foi possível iniciar o Insidious.');
-            this.#game_data = gameData;
-
             // Inicia os scripts de apoio.
             await browser.runtime.sendMessage({ type: 'start' });
             Game.verifyIntegrity();
 
             // Faz download dos dados necessários para executar a extensão.
             await this.fetch();
-
-            // Armazena as configurações do mundo para que as outras classes tenham acesso.
-            // A coerção de tipo está sendo feita porquê logo após ela há uma verificação do valor das variáveis.
-            this.#worldInfo = await Store.get(Keys.config) as WorldInfo;
-            this.#unitInfo = await Store.get(Keys.unit) as UnitInfo;
-            if (!this.#worldInfo || !this.#unitInfo) await Store.remove(Keys.worldConfig);
+            await Game.setGameInfo();
 
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
             switch (Game.screen) {
@@ -52,15 +39,35 @@ class Insidious {
         };
     };
 
-    
+    /** Atualiza os dados sobre o jogo. */
+    static updateGameData() {
+        return new Promise<void>((resolve, reject) => {
+            const startCtrl = new AbortController();
+            window.addEventListener('message', (e) => {
+                if (e?.data?.direction === 'from-tribalwars') {
+                    startCtrl.abort();
+                    if (!e.data.game_data) reject(new InsidiousError('Não foi possível iniciar o Insidious.'));
+                    this.#raw_game_data = e.data.game_data;
+                    resolve();
+                };
+            }, { signal: startCtrl.signal });
+
+            const message: WindowMessage = {
+                direction: 'from-insidious',
+                reason: 'get-game-data'
+            };
+
+            window.postMessage(message);
+        });
+    };
 
     private static async fetch() {
         try {
             /** Intervalo (em horas) entre cada operação fetch. */
-            this.fetchInterval = await Store.get(Keys.fetch) as number;
-            if (!this.fetchInterval || !Number.isInteger(this.fetchInterval)) {
-                this.fetchInterval = 24;
-                await Store.set({ [Keys.fetch]: 24 });
+            let fetchInterval = await Store.get(Keys.fetchInterval) as number ?? 24;
+            if (!Number.isInteger(fetchInterval)) {
+                fetchInterval = 24;
+                await Store.set({ [Keys.fetchInterval]: 24 });
             };
 
             // Verifica qual foi a hora do último fetch.
@@ -127,7 +134,7 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastDataFetch || now - lastDataFetch > (3600000 * this.fetchInterval)) {
+            if (!lastDataFetch || now - lastDataFetch > (3600000 * fetchInterval)) {
                 await Store.set({ [Keys.worldData]: now });
 
                 Utils.modal('Aguarde');
@@ -283,8 +290,7 @@ class Insidious {
         };
     };
 
-    static #game_data: GameData;
-    static get game_data() {return this.#game_data};
-    static get worldInfo() {return this.#worldInfo};
-    static get unitInfo() {return this.#unitInfo};
+    /** Dados ainda sem tratamento, obtidos diretamente do jogo. */
+    static #raw_game_data: TribalWarsGameData;
+    static get raw_game_data() {return this.#raw_game_data};
 };

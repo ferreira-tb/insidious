@@ -1,7 +1,7 @@
 class Keys {
     ////// INSIDIOUS
     /** CHAVE: intervalo (em horas) entre cada Insidius.fetch() (fetchInterval). */
-    static readonly fetch = `fetchInterval`;
+    static readonly fetchInterval = `fetchInterval`;
     /** CHAVE: data do último fetch das configurações do mundo atual (worldConfigFetch). */
     static readonly worldConfig = `worldConfigFetch_${Game.world}`;
     /** CHAVE: data do último fetch das informações sobre o estado atual do mundo (worldDataFetch). */

@@ -210,13 +210,13 @@ class TWFarm {
             spearElem.parentElement.setAttribute('insidious-available-unit-table', 'true');
     
             // É necessário verificar se o mundo possui arqueiros.
-            if (!Insidious.worldInfo.game) {
+            if (!Game.worldInfo.game) {
                 await Store.remove(Keys.worldConfig);
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
     
             const isThereArchers = () => {
-                switch (Insidious.worldInfo.game.archer) {
+                switch (Game.worldInfo.game.archer) {
                     case 0: return TWAssets.list.farm_units;
                     case 1: return TWAssets.list.farm_units_archer;
                     default: return TWAssets.list.farm_units;

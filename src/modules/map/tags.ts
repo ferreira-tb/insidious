@@ -89,8 +89,7 @@ class MapTag extends TWMap {
                     };
 
                     const getRelativeCoords = (): number[] => {
-                        const { x: currentX, y: currentY } = Game.coords;
-                        const coords: number[] = [currentX, currentY, targetX, targetY];
+                        const coords: number[] = [Game.x, Game.y, targetX, targetY];
                         if (coords.some(coord => !Number.isInteger(coord))) {
                             throw new InsidiousError(`As coordenadas obtidas são inválidas (${Game.village} e/ou ${id}).`);
                         };
@@ -111,13 +110,13 @@ class MapTag extends TWMap {
 
                     } else if (tagType.startsWith('time_')) {
                         const unitName = tagType.replace('time_', '') as UnitList;
-                        if (!Insidious.unitInfo || !Insidious.worldInfo) {
+                        if (!Game.unitInfo || !Game.worldInfo) {
                             Store.remove(Keys.worldConfig);
                             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
                         };
 
-                        const unitSpeed = Insidious.unitInfo[unitName].speed;
-                        const worldUnitSpeed = Insidious.worldInfo.unit_speed;
+                        const unitSpeed = Game.unitInfo[unitName].speed;
+                        const worldUnitSpeed = Game.worldInfo.unit_speed;
 
                         const millisecondsPerField = 60000 * (unitSpeed * worldUnitSpeed);
                         const fieldAmount = Utils.calcDistance(...getRelativeCoords());
