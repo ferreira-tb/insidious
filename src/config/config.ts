@@ -46,7 +46,7 @@ class InsidiousConfig {
             };
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            if (err instanceof Error) InsidiousError.handle(err, 'config');
         };
     };
 
@@ -98,7 +98,7 @@ class InsidiousConfig {
             }, { signal: updateCtrl.signal });
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            if (err instanceof Error) InsidiousError.handle(err, 'config');
         };
     };
 };

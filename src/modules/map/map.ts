@@ -68,11 +68,6 @@ class TWMap {
                 class: 'insidious_mapButtonArea_Btn'
             }, coordsArea).create();
 
-            // INFORMAÇÕES
-            // Emite um erro caso não consiga identificar a aldeia ou o mundo atual.
-            if (Insidious.village === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
-            if (Insidious.world === null) throw new InsidiousError('Não foi possível identificar o mundo atual.');
-
             ////// EVENTOS
             // Tags.
             showDistanceBtn.addEventListener('click', () => MapTag.create('distance'));
@@ -335,7 +330,7 @@ class TWMap {
         Promise.allSettled(Array.from(this.getVillagesID()).map((id: string) => {
             return new Promise<void>(async (resolve, reject) => {
                 try {
-                    const village = `v${id}_${Insidious.world}`;
+                    const village = `v${id}_${Game.world}`;
                     const villageInfo = await Store.get(village) as VillageInfo | undefined;
                     if (!villageInfo) throw new InsidiousError(`Aldeia não encontrada no registro: ${village}`);
 

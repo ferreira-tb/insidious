@@ -34,13 +34,13 @@ class MapTag extends TWMap {
         // Adiciona as novas tags.
         Promise.allSettled(Array.from(mapVillages).map((id: string) => {
             return new Promise<void>(async (resolve, reject) => {
-                if (id === Insidious.village) {
+                if (id === Game.village) {
                     reject();
                     return;
                 };
 
                 try {
-                    const village = `v${id}_${Insidious.world}`;
+                    const village = `v${id}_${Game.world}`;
                     const villageData = await Store.get(village) as VillageInfo | undefined;
                     if (!villageData) throw new InsidiousError(`Aldeia não encontrada no registro (${id}).`);
 
@@ -89,10 +89,10 @@ class MapTag extends TWMap {
                     };
 
                     const getRelativeCoords = (): number[] => {
-                        const { x: currentX, y: currentY } = Insidious.coords;
+                        const { x: currentX, y: currentY } = Game.coords;
                         const coords: number[] = [currentX, currentY, targetX, targetY];
                         if (coords.some(coord => !Number.isInteger(coord))) {
-                            throw new InsidiousError(`As coordenadas obtidas são inválidas (${Insidious.village} e/ou ${id}).`);
+                            throw new InsidiousError(`As coordenadas obtidas são inválidas (${Game.village} e/ou ${id}).`);
                         };
                         return coords;
                     };

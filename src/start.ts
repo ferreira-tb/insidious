@@ -9,8 +9,6 @@ new Manatsu('script', document.body, { src: browser.runtime.getURL('./page/page.
 (async () => {
     const insidiousStatus = await Store.get('insidiousStatus') as boolean | undefined;
     if (insidiousStatus !== false) {
-        if (insidiousStatus === undefined) await Store.set({ ['insidiousStatus']: true });
-
         TWAssets.freeze();
 
         new Promise<GameData>((resolve) => {
@@ -22,7 +20,10 @@ new Manatsu('script', document.body, { src: browser.runtime.getURL('./page/page.
 
             window.postMessage('from-insidious');
 
-        }).then((data) => Insidious.start(data)).catch((err: unknown) => {
+        }).then((data) => Insidious.start(data))
+        
+        
+        .catch((err: unknown) => {
             if (err instanceof Error) InsidiousError.handle(err);
         });
 

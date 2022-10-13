@@ -1,12 +1,18 @@
 class Insidious {
+    static #worldInfo: WorldInfo;
+    static #unitInfo: UnitInfo;
+    /** Intervalo (em horas) entre cada Insidious.fetch(). */
+    private static fetchInterval: number = 24;
+
     /** Inicia a extensão. */
     static async start(gameData: GameData) {
         try {
             if (!gameData) throw new InsidiousError('Não foi possível iniciar o Insidious.');
-            this.setGameData(gameData);
-            
-            // Inicia as chaves.
-            await browser.runtime.sendMessage({ type: 'keys' });
+            this.#game_data = gameData;
+
+            // Inicia os scripts de apoio.
+            await browser.runtime.sendMessage({ type: 'start' });
+            Game.verifyIntegrity();
 
             // Faz download dos dados necessários para executar a extensão.
             await this.fetch();
@@ -18,7 +24,7 @@ class Insidious {
             if (!this.#worldInfo || !this.#unitInfo) await Store.remove(Keys.worldConfig);
 
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
-            switch (this.#screen) {
+            switch (Game.screen) {
                 case 'am_farm': await TWFarm.open();
                     break;
                 case 'map': await TWMap.open();
@@ -166,7 +172,7 @@ class Insidious {
                         };
                     
                         try {
-                            await Store.set({ [`v${thisID}_${this.#world}`]: villageInfo });
+                            await Store.set({ [`v${thisID}_${Game.world}`]: villageInfo });
                             progressInfo.textContent = `${villageName} (${otherData[1]}|${otherData[2]})`;
                             resolve();
 
@@ -222,7 +228,7 @@ class Insidious {
                 return Number.parseFloat(valueField.textContent);
             };
 
-            if (options.name === `config_${this.#world}`) {
+            if (options.name === `config_${Game.world}`) {
                 const worldInfoSchema: WorldInfo = {
                     speed: getValue('speed'),
                     unit_speed: getValue('unit_speed'),
@@ -235,7 +241,7 @@ class Insidious {
                     resolve(worldInfoSchema);
                 };
                 
-            } else if (options.name === `unit_${this.#world}`) {
+            } else if (options.name === `unit_${Game.world}`) {
                 const unitInfoSchema = { };
                 for (const unit of TWAssets.list.all_units_archer) {
                     Object.defineProperty(unitInfoSchema, unit, {
@@ -265,9 +271,9 @@ class Insidious {
             if (activeWorlds === undefined) activeWorlds = new Map();
 
             const now = new Date().getTime();
-            activeWorlds.set(this.#world as string, now);
+            activeWorlds.set(Game.world as string, now);
             Store.set({ [Keys.activeWorlds]: activeWorlds })
-                .then(() => Store.set({ [Keys.lastWorld]: this.#world }))
+                .then(() => Store.set({ [Keys.lastWorld]: Game.world }))
                 .catch((err: unknown) => {
                     if (err instanceof Error) InsidiousError.handle(err);
                 });
@@ -277,47 +283,8 @@ class Insidious {
         };
     };
 
-    static #worldInfo: WorldInfo;
-    static #unitInfo: UnitInfo;
-    /** Mundo atual. */
-    static #world: string;
-    /** Janela atual. */
-    static #screen: string;
-    /** ID da aldeia atual. */
-    static #village: string;
-    /** ID do jogador. */
-    static #player: number;
-    /** ID do grupo de aldeias. */
-    static #group: string;
-    /** Coordenadas da aldeia atual. */
-    static #coords: { x: number, y: number };
-    
-    /** Intervalo (em horas) entre cada Insidious.fetch(). */
-    private static fetchInterval: number = 24;
-
-    private static setGameData(gameData: GameData) {
-        this.#world = gameData.world;
-        this.#screen = gameData.screen;
-        this.#village = gameData.village_id;
-        this.#player = gameData.player_id;
-        this.#group = gameData.group_id;
-        this.#coords = { x: gameData.village_x, y: gameData.village_y };
-
-        if (!this.#world) throw new InsidiousError('Não foi possível identificar o mundo atual.');
-        if (!this.#screen) throw new InsidiousError('Não foi possível identificar a janela atual.');
-        if (!this.#village) throw new InsidiousError('Não foi possível identificar a aldeia atual.');
-        if (!this.#player) throw new InsidiousError('Não foi possível identificar o jogador atual.');
-        if (!this.#group) throw new InsidiousError('Não foi possível identificar o grupo atual.');
-        if (!this.#coords.x || !this.#coords.y) throw new InsidiousError('Não foi possível identificar as coordenadas da aldeia atual.');
-    };
-
+    static #game_data: GameData;
+    static get game_data() {return this.#game_data};
     static get worldInfo() {return this.#worldInfo};
     static get unitInfo() {return this.#unitInfo};
-
-    static get world() {return this.#world};
-    static get village() {return this.#village};
-    static get screen() {return this.#screen};
-    static get player() {return this.#player};
-    static get group() {return this.#group};
-    static get coords() {return this.#coords};
 };

@@ -230,16 +230,16 @@ class TWFarm {
             });
 
             // Dados sobre a aldeia atual.
-            if (!Insidious.village) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
+            if (!Game.village) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
 
-            const currentVillageData = await Store.get(`v${Insidious.village}_${Insidious.world}`) as VillageInfo | undefined;
+            const currentVillageData = await Store.get(`v${Game.village}_${Game.world}`) as VillageInfo | undefined;
             if (currentVillageData === undefined) {
-                throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${Insidious.village}).`);
+                throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${Game.village}).`);
             };
 
             const { x: currentX, y: currentY } = currentVillageData;
             if (currentX === undefined || currentY === undefined) {
-                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${Insidious.village}).`);
+                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${Game.village}).`);
             };
 
             // Lista das aldeias que já foram atacadas alguma vez.
@@ -371,14 +371,14 @@ class TWFarm {
                             };
         
                             // Distância e coordenadas (adquirido de forma independente, não dependendo da posição na tabela).
-                            const targetVillageData = await Store.get(`v${villageID}_${Insidious.world}`) as VillageInfo | undefined;
+                            const targetVillageData = await Store.get(`v${villageID}_${Game.world}`) as VillageInfo | undefined;
                             const { x: targetX, y: targetY } = targetVillageData ?? { };
 
                             if (targetX !== undefined && targetY !== undefined) {
                                 const getRelativeCoords = (): number[] => {
                                     const coords: number[] = [currentX, currentY, targetX, targetY];
                                     if (coords.some(coord => !Number.isInteger(coord))) {
-                                        throw new InsidiousError(`As coordenadas obtidas são inválidas (${Insidious.village} e/ou ${villageID}).`);
+                                        throw new InsidiousError(`As coordenadas obtidas são inválidas (${Game.village} e/ou ${villageID}).`);
                                     };
                                     return coords;
                                 };

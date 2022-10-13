@@ -55,13 +55,13 @@ class MapFilter extends TWMap {
         // Adiciona os filtros.
         Promise.allSettled(Array.from(mapVillages).map((id: string) => {
             return new Promise<void>(async (resolve, reject) => {
-                if (id === Insidious.village) {
+                if (id === Game.village) {
                     reject();
                     return;
                 };
 
                 try {
-                    const village = `v${id}_${Insidious.world}`;
+                    const village = `v${id}_${Game.world}`;
                     const villageData = await Store.get(village) as VillageInfo | undefined;
 
                     const villageElement = document.querySelector(`#map_village_${id}`);

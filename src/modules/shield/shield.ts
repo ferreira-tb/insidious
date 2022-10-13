@@ -382,9 +382,9 @@ class TWShield {
     private static async switchToDefaultGroup() {
         await Store.set({ [Keys.shieldStatus]: { step: 'group', next: 'rename', time: new Date().getTime() } as ShieldStatus });
 
-        if (Insidious.group !== '0') {
+        if (Game.group !== '0') {
             if (location.href.includes('group=')) {
-                location.assign(location.href.replace(`&group=${Insidious.group}`, '&group=0'));
+                location.assign(location.href.replace(`&group=${Game.group}`, '&group=0'));
             } else {
                 location.assign(`${location.href}&group=0`);
             };

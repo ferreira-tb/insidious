@@ -373,7 +373,7 @@ class Plunder extends TWFarm {
             // Para impedir isso, é necessário verificar qual foi a última aldeia que realizou um ataque.
             // O valor de last_attacking_village só é atualizado durante a execução de navigateToNextVillage().
             // Como isso ocorre somente após a verificação, não há risco envolvido.
-            if (this.optionsParameters.last_attacking_village === Insidious.village) return;
+            if (this.optionsParameters.last_attacking_village === Game.village) return;
             if (this.options.group_attack === true) this.navigateToNextVillage();
             return;
         };
@@ -441,13 +441,13 @@ class Plunder extends TWFarm {
     private static async navigateToNextVillage() {
         try {
             const groupID = (await browser.storage.local.get(Keys.farmGroup))[Keys.farmGroup] as string | undefined;
-            if (Insidious.group !== groupID) return;
+            if (Game.group !== groupID) return;
 
             const rightArrow = document.querySelector('a#village_switch_right span.groupRight') as HTMLSpanElement | null;
             if (rightArrow) {
                 // Antes de mudar de aldeia, salva a atual como última aldeia atacante.
-                if (Insidious.village) {
-                    this.optionsParameters.last_attacking_village = Insidious.village;
+                if (Game.village) {
+                    this.optionsParameters.last_attacking_village = Game.village;
                     await Store.set({ [Keys.plunderParameters]: this.optionsParameters });
                 };
 

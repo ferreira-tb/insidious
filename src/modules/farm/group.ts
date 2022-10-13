@@ -12,19 +12,19 @@ class GroupAttack {
              */
             const groupJump = document.querySelector('span.groupJump a.jump_link img') as HTMLImageElement | null;
 
-            if (Insidious.group !== groupID) {
+            if (Game.group !== groupID) {
                 if (location.href.includes('group=')) {
-                    location.assign(location.href.replace(`&group=${Insidious.group}`, `&group=${groupID}`));
+                    location.assign(location.href.replace(`&group=${Game.group}`, `&group=${groupID}`));
                 } else {
                     location.assign(location.href + `&group=${groupID}`);
                 };
                 
-            } else if (groupJump && Plunder.optionsParameters.last_group_jump !== Insidious.village) {
+            } else if (groupJump && Plunder.optionsParameters.last_group_jump !== Game.village) {
                 // A aldeia atual permanece a mesma após a navegação para o grupo correto.
                 // Caso essa aldeia não pertença ao grupo, a navegação entre as aldeias do grupo se torna impossível.
                 // Isso porquê o botão de navegação se torna um elemento diferente.
                 // Para solucionar isso, é feito um redirecionamento para a primeira aldeia do grupo Insidious.
-                Plunder.optionsParameters.last_group_jump = Insidious.village ?? '';
+                Plunder.optionsParameters.last_group_jump = Game.village ?? '';
                 await Store.set({ [Keys.plunderParameters]: Plunder.optionsParameters });
                 groupJump.click();
             };
@@ -136,7 +136,7 @@ class GroupAttack {
     };
 
     private static async navigateToGroupCreationScreen() {
-        const currentVillageLocation = `${location.origin}\/game.php\?village=${Insidious.village}\&`;
+        const currentVillageLocation = `${location.origin}\/game.php\?village=${Game.village}\&`;
         const targetLocation = currentVillageLocation + this.groupCreationScreen;
 
         try {
