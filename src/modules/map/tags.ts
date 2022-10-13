@@ -89,7 +89,8 @@ class MapTag extends TWMap {
                     };
 
                     const getRelativeCoords = (): number[] => {
-                        const coords: number[] = [this.currentX, this.currentY, targetX, targetY];
+                        const { x: currentX, y: currentY } = Insidious.coords;
+                        const coords: number[] = [currentX, currentY, targetX, targetY];
                         if (coords.some(coord => !Number.isInteger(coord))) {
                             throw new InsidiousError(`As coordenadas obtidas são inválidas (${Insidious.village} e/ou ${id}).`);
                         };

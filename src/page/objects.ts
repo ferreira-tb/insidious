@@ -20,7 +20,7 @@ class GameData {
 
 
     constructor(gameData: TribalWarsGameData) {
-        this.group_id = gameData.group_id;
+        this.group_id = String(gameData.group_id);
         this.screen = gameData.screen;
         this.world = gameData.world;
 

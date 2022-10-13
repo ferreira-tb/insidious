@@ -17,6 +17,7 @@ class TWShield {
                 if (shieldStatus.next === null) return;
 
                 if (shieldStatus.next === 'group') {
+                    // Caso o grupo já seja "todos", ele executará o mesmo switch existente no próximo IF.
                     await this.switchToDefaultGroup();
 
                 } else if (shieldStatus.next === 'rename') {
@@ -316,7 +317,7 @@ class TWShield {
 
     /** Verifica se o usuário está na janela de ataques a caminho. */
     private static isOverviewIncomingsScreen(url: string): boolean {
-        if (!url.includes('overview_villages')) return false;
+        if (Utils.currentScreen(url) !== 'overview_villages') return false;
         if (Utils.currentMode(url) !== 'incomings') return false;
         if (Utils.currentSubType(url) !== 'attacks') return false;
         return true;
@@ -379,13 +380,22 @@ class TWShield {
 
     /** Altera o grupo atual para "todos" caso já não seja. */
     private static async switchToDefaultGroup() {
-        const currentGroup = Utils.currentGroup();
         await Store.set({ [Keys.shieldStatus]: { step: 'group', next: 'rename', time: new Date().getTime() } as ShieldStatus });
 
-        if (currentGroup === null) {
-            location.assign(`${location.href}&group=0`);
-        } else if (currentGroup !== '0') {
-            location.assign(location.href.replace(`&group=${currentGroup}`, `&group=0`));
+        if (Insidious.group !== '0') {
+            if (location.href.includes('group=')) {
+                location.assign(location.href.replace(`&group=${Insidious.group}`, '&group=0'));
+            } else {
+                location.assign(`${location.href}&group=0`);
+            };
+
+        } else {
+            switch (this.wereAllRenamed()) {
+                case true: await this.resetShieldStatus();
+                    break;
+                case false: await this.renameAttacks();
+                    break;
+            };
         };
     };
 

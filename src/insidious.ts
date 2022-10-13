@@ -1,31 +1,12 @@
 class Insidious {
-    static #worldInfo: WorldInfo;
-    static #unitInfo: UnitInfo;
-    /** Mundo atual. */
-    static #world: string;
-    /** Janela atual. */
-    static #screen: string;
-    /** ID da aldeia atual. */
-    static #village: string;
-    
-    /** Intervalo (em horas) entre cada Insidious.fetch(). */
-    private static fetchInterval: number = 24;
-
     /** Inicia a extensão. */
     static async start(gameData: GameData) {
         try {
             if (!gameData) throw new InsidiousError('Não foi possível iniciar o Insidious.');
-
-            this.#world = gameData.world;
-            this.#screen = gameData.screen;
-            this.#village = gameData.village_id;
-
+            this.setGameData(gameData);
+            
             // Inicia as chaves.
             await browser.runtime.sendMessage({ type: 'keys' });
-
-            if (!this.#world) throw new InsidiousError('Não foi possível identificar o mundo atual.');
-            if (!this.#screen) throw new InsidiousError('Não foi possível identificar a janela atual.');
-            if (!this.#village) throw new InsidiousError('Não foi possível identificar a aldeia atual.');
 
             // Faz download dos dados necessários para executar a extensão.
             await this.fetch();
@@ -65,6 +46,8 @@ class Insidious {
         };
     };
 
+    
+
     private static async fetch() {
         try {
             /** Intervalo (em horas) entre cada operação fetch. */
@@ -99,8 +82,8 @@ class Insidious {
                 await Store.set({ [Keys.worldConfig]: now });
 
                 const configSource = [
-                    { name: `config_${this.#world}`, url: TWAssets.world.get_config },
-                    { name: `unit_${this.#world}`, url: TWAssets.world.get_unit_info }
+                    { name: Keys.config, url: TWAssets.world.get_config },
+                    { name: Keys.unit, url: TWAssets.world.get_unit_info }
                 ];
 
                 const worldConfigData = await Promise.all(configSource.map((source) => {
@@ -294,10 +277,47 @@ class Insidious {
         };
     };
 
+    static #worldInfo: WorldInfo;
+    static #unitInfo: UnitInfo;
+    /** Mundo atual. */
+    static #world: string;
+    /** Janela atual. */
+    static #screen: string;
+    /** ID da aldeia atual. */
+    static #village: string;
+    /** ID do jogador. */
+    static #player: number;
+    /** ID do grupo de aldeias. */
+    static #group: string;
+    /** Coordenadas da aldeia atual. */
+    static #coords: { x: number, y: number };
+    
+    /** Intervalo (em horas) entre cada Insidious.fetch(). */
+    private static fetchInterval: number = 24;
+
+    private static setGameData(gameData: GameData) {
+        this.#world = gameData.world;
+        this.#screen = gameData.screen;
+        this.#village = gameData.village_id;
+        this.#player = gameData.player_id;
+        this.#group = gameData.group_id;
+        this.#coords = { x: gameData.village_x, y: gameData.village_y };
+
+        if (!this.#world) throw new InsidiousError('Não foi possível identificar o mundo atual.');
+        if (!this.#screen) throw new InsidiousError('Não foi possível identificar a janela atual.');
+        if (!this.#village) throw new InsidiousError('Não foi possível identificar a aldeia atual.');
+        if (!this.#player) throw new InsidiousError('Não foi possível identificar o jogador atual.');
+        if (!this.#group) throw new InsidiousError('Não foi possível identificar o grupo atual.');
+        if (!this.#coords.x || !this.#coords.y) throw new InsidiousError('Não foi possível identificar as coordenadas da aldeia atual.');
+    };
+
     static get worldInfo() {return this.#worldInfo};
     static get unitInfo() {return this.#unitInfo};
 
     static get world() {return this.#world};
     static get village() {return this.#village};
     static get screen() {return this.#screen};
+    static get player() {return this.#player};
+    static get group() {return this.#group};
+    static get coords() {return this.#coords};
 };

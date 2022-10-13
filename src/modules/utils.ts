@@ -12,11 +12,10 @@ class Utils {
     };
 
     private static currentField(fieldName: string) {
-        return function(url?: string) {
-            if (url !== undefined && typeof url !== 'string') throw new InsidiousError('A URL fornecida é inválida.');
+        return function(url: string) {
+            if (typeof url !== 'string') throw new InsidiousError('A URL fornecida é inválida.');
 
-            const urlToGetFieldsFrom = url ?? location.search;
-            const urlFields: string[] = (urlToGetFieldsFrom.replace('\?', '')).split('\&');
+            const urlFields = (url.replace('\?', '')).split('\&');
             for (const field of urlFields) {
                 if (field.includes(`${fieldName}=`)) return field.replace(`${fieldName}=`, '');
             };
@@ -24,19 +23,9 @@ class Utils {
         };
     };
 
-    static readonly currentGroup = this.currentField('group');
+    static readonly currentScreen = this.currentField('screen');
     static readonly currentMode = this.currentField('mode');
     static readonly currentSubType = this.currentField('subtype');
-
-    /** Retorna o ID do jogador. */
-    static currentPlayer() {
-        return new Promise((resolve, reject) => {
-            const village =  `v${Insidious.village}_${Insidious.world}`;
-            Store.get(village)
-                .then((result: VillageInfo) => resolve(result.player))
-                .catch((err: unknown) => reject(err));
-        });
-    };
 
     /** 
      * Corrige os nomes codificados.

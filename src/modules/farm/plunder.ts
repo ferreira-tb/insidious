@@ -437,11 +437,11 @@ class Plunder extends TWFarm {
         };
     };
 
-    // Navega para a próxima aldeia caso this.#options.group_attack === true.
+    // Navega para a próxima aldeia caso this.options.group_attack === true.
     private static async navigateToNextVillage() {
         try {
             const groupID = (await browser.storage.local.get(Keys.farmGroup))[Keys.farmGroup] as string | undefined;
-            if (Utils.currentGroup() !== groupID) return;
+            if (Insidious.group !== groupID) return;
 
             const rightArrow = document.querySelector('a#village_switch_right span.groupRight') as HTMLSpanElement | null;
             if (rightArrow) {

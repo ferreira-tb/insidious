@@ -5,8 +5,6 @@ class GroupAttack {
     static async start() {
         const groupID = await Store.get(Keys.farmGroup) as string | undefined;
         if (groupID) {
-            const currentGroup = Utils.currentGroup();
-
             /** 
              * Não haverá emissão de erro caso groupJump não exista.
              * Como nem sempre sua ausência é sinônimo de comportamento indesejado,
@@ -14,12 +12,13 @@ class GroupAttack {
              */
             const groupJump = document.querySelector('span.groupJump a.jump_link img') as HTMLImageElement | null;
 
-            if (currentGroup === null) {
-                location.assign(location.href + `&group=${groupID}`);
-
-            } else if (currentGroup !== groupID) {
-                location.assign(location.href.replace(`&group=${currentGroup}`, `&group=${groupID}`));
-
+            if (Insidious.group !== groupID) {
+                if (location.href.includes('group=')) {
+                    location.assign(location.href.replace(`&group=${Insidious.group}`, `&group=${groupID}`));
+                } else {
+                    location.assign(location.href + `&group=${groupID}`);
+                };
+                
             } else if (groupJump && Plunder.optionsParameters.last_group_jump !== Insidious.village) {
                 // A aldeia atual permanece a mesma após a navegação para o grupo correto.
                 // Caso essa aldeia não pertença ao grupo, a navegação entre as aldeias do grupo se torna impossível.

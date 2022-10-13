@@ -1,9 +1,6 @@
 class TWMap {
     protected static readonly eventTarget: EventTarget = new EventTarget();
-    // currentX e currentY são inicializados com um uso de Object.defineProperties().
-    protected static readonly currentX: number;
-    protected static readonly currentY: number;
-    
+
     static async open() {
         try {
             // Elementos originais.
@@ -75,28 +72,6 @@ class TWMap {
             // Emite um erro caso não consiga identificar a aldeia ou o mundo atual.
             if (Insidious.village === null) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
             if (Insidious.world === null) throw new InsidiousError('Não foi possível identificar o mundo atual.');
-
-            const currentVillage = await Store.get(`v${Insidious.village}_${Insidious.world}`) as VillageInfo | undefined;
-            const { x: currentX, y: currentY } = currentVillage ?? { };
-            if (currentX === undefined || currentY === undefined) {
-                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual(${Insidious.village}).`);
-            } else {
-                Object.defineProperties(this, {
-                    'currentX': {
-                        value: currentX,
-                        enumerable: true,
-                        configurable: false,
-                        writable: false
-                    },
-
-                    'currentY': {
-                        value: currentY,
-                        enumerable: true,
-                        configurable: false,
-                        writable: false
-                    },
-                });
-            };
 
             ////// EVENTOS
             // Tags.
