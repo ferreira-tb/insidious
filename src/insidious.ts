@@ -5,9 +5,9 @@ class Insidious {
             // Inicia os scripts de apoio.
             await browser.runtime.sendMessage({ type: 'start' });
             Game.verifyIntegrity();
-
             // Faz download dos dados necessários para executar a extensão.
             await this.fetch();
+            // Armazena as informações obtidas em propriedades da classe Game.
             await Game.setGameInfo();
 
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
@@ -73,25 +73,25 @@ class Insidious {
             // Verifica qual foi a hora do último fetch.
             const now: number = new Date().getTime();
             const lastConfigFetch = await Store.get(Keys.worldConfig) as number | undefined;
-            const lastDataFetch = await Store.get(Keys.worldData) as number | undefined;
+            const lastVillageDataFetch = await Store.get(Keys.villageData) as number | undefined;
 
             // Informa a data do último fetch na barra inferior, onde se encontra a hora do servidor.
-            if (lastDataFetch) {
-                const lastFetchInfo = new Manatsu('span', { id: 'insidious_lastFetchInfo' }).create();
-                lastFetchInfo.textContent = `Insidious: ${new Date(lastDataFetch).toLocaleDateString('pt-br', {
-                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-                })} @ `;
-
+            if (lastVillageDataFetch) {
                 const serverInfo = document.querySelector('p.server_info');
                 if (!serverInfo) throw new InsidiousError('DOM: p.server_info');
-                serverInfo.insertBefore(lastFetchInfo, serverInfo.firstChild);  // Não se deve usar firstElementChild aqui.
+
+                const lastFetchInfo = new Manatsu('span', { id: 'insidious_lastFetchInfo' })
+                    .createBefore(serverInfo.firstChild); // Não se deve usar firstElementChild aqui.
+                lastFetchInfo.textContent = `Insidious: ${new Date(lastVillageDataFetch).toLocaleDateString('pt-br', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                })} @ `;   
             };
 
             // Caso o plunder esteja ativo, impede que a função continue.
             if (await Store.get(Keys.plunder) === true) return;
             
             // Salva as configurações do mundo, caso ainda não estejam.
-            if (lastConfigFetch === undefined) {
+            if (!lastConfigFetch) {
                 await Store.set({ [Keys.worldConfig]: now });
 
                 const configSource = [
@@ -134,8 +134,8 @@ class Insidious {
             };
             
             // Caso o registro seja antigo ou não exista, faz um novo fetch.
-            if (!lastDataFetch || now - lastDataFetch > (3600000 * fetchInterval)) {
-                await Store.set({ [Keys.worldData]: now });
+            if (!lastVillageDataFetch || now - lastVillageDataFetch > (3600000 * fetchInterval)) {
+                await Store.set({ [Keys.villageData]: now });
 
                 Utils.modal('Aguarde');
                 const modalWindow = document.querySelector('#insidious_modal');
@@ -290,7 +290,7 @@ class Insidious {
         };
     };
 
-    /** Dados ainda sem tratamento, obtidos diretamente do jogo. */
+    /** Dados, ainda sem tratamento, obtidos diretamente do jogo. */
     static #raw_game_data: TribalWarsGameData;
     static get raw_game_data() {return this.#raw_game_data};
 };

@@ -45,17 +45,17 @@ class Game {
     readonly iron: number;
 
     /** Cria um objeto com informações atualizadas sobre o jogo. */
-    constructor(raw_game_data: TribalWarsGameData) {
-        this.world = raw_game_data.world;
-        this.screen = raw_game_data.screen;
-        this.village = String(raw_game_data.village.id);
-        this.player = raw_game_data.player.id;
-        this.group = String(raw_game_data.group_id);
-        this.x = raw_game_data.village.x;
-        this.y = raw_game_data.village.y;
-        this.wood = raw_game_data.village.wood;
-        this.stone = raw_game_data.village.stone;
-        this.iron = raw_game_data.village.iron;
+    constructor() {
+        this.world = Insidious.raw_game_data.world;
+        this.screen = Insidious.raw_game_data.screen;
+        this.village = String(Insidious.raw_game_data.village.id);
+        this.player = Insidious.raw_game_data.player.id;
+        this.group = String(Insidious.raw_game_data.group_id);
+        this.x = Insidious.raw_game_data.village.x;
+        this.y = Insidious.raw_game_data.village.y;
+        this.wood = Insidious.raw_game_data.village.wood;
+        this.stone = Insidious.raw_game_data.village.stone;
+        this.iron = Insidious.raw_game_data.village.iron;
     };
 
     /** Verifica se os dados obtidos são válidos. */

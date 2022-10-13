@@ -4,8 +4,8 @@ class Keys {
     static readonly fetchInterval = `fetchInterval`;
     /** CHAVE: data do último fetch das configurações do mundo atual (worldConfigFetch). */
     static readonly worldConfig = `worldConfigFetch_${Game.world}`;
-    /** CHAVE: data do último fetch das informações sobre o estado atual do mundo (worldDataFetch). */
-    static readonly worldData = `worldDataFetch_${Game.world}`;
+    /** CHAVE: data do último fetch das informações sobre as aldeias do mundo (villageDataFetch). */
+    static readonly villageData = `villageDataFetch_${Game.world}`;
     /** CHAVE: configurações do mundo atual (config). */
     static readonly config = `config_${Game.world}`;
     /** CHAVE: detalhes sobre as unidades do jogo (unit). */

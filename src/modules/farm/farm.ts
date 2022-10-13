@@ -17,7 +17,7 @@ class TWFarm {
         const actionArea = new Manatsu({ id: 'insidious_farmActionArea' }, menuArea).create();
 
         ////// BOTÕES
-        // Os botões são adicionados à página após o Insidious terminar de verificar o status do plunder.
+        // Os botões são adicionados à página após o Insidious terminar de verificar o status do Plunder.
         const startPlunderBtn = new Manatsu('button', {
             class: 'insidious_farmButtonArea_Btn',
             id: 'insidious_startPlunderBtn'
@@ -215,7 +215,8 @@ class TWFarm {
                 throw new InsidiousError('Não foi possível obter as configurações do mundo.');
             };
     
-            const isThereArchers = () => {
+            /** Retorna uma array com as tropas disponíveis no mundo atual (aquelas que podem saquear). */
+            const getFarmUnits = () => {
                 switch (Game.worldInfo.game.archer) {
                     case 0: return TWAssets.list.farm_units;
                     case 1: return TWAssets.list.farm_units_archer;
@@ -223,7 +224,7 @@ class TWFarm {
                 };
             };
     
-            isThereArchers().forEach((unit) => {
+            getFarmUnits().forEach((unit) => {
                 const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
                 if (!unitElem) throw new InsidiousError(`DOM: #farm_units #units_home tbody tr td#${unit}`);
                 unitElem.setAttribute('insidious-available-units', unit);

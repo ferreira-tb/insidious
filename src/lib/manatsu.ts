@@ -36,21 +36,26 @@ class Manatsu {
 
     /** 
      * Cria um elemento a partir do objeto Manatsu e o insere antes do elemento indicado como referência.
-     * 
-     * O método createBefore() só funcionará caso parent tenha sido definido no objeto Manatsu.
+     * Se o elemento de referência for null, createBefore() tem o mesmo efeito de create().
+     * Além disso, se o objeto Manatsu possuir um pai, ele é trocado pelo pai do elemento de referência.
      * @param referenceNode - Elemento antes do qual o novo será inserido.
      */
-    createBefore(referenceNode: Element): HTMLElement {
-        if (!(referenceNode instanceof Element)) throw new ManatsuError('O elemento de referência é inválido.');
-        if (!this.#parent) throw new ManatsuError('Não foi especificado um elemento pai.');
-        if (referenceNode.parentElement !== this.#parent) {
-            throw new ManatsuError('O elemento de referência possui um pai diferente.');
+    createBefore(referenceNode: Node | null): HTMLElement {
+        if (!(referenceNode instanceof Node)) {
+            switch (referenceNode) {
+                case null: return this.create();
+                default: throw new ManatsuError('O elemento de referência é inválido.');
+            };
+
+        } else {
+            if (!referenceNode.parentElement) throw new ManatsuError('O elemento de referência não possui um pai.');
+            if (this.#parent) this.#parent = referenceNode.parentElement;
+
+            const newElement = this.createElement();
+            referenceNode.parentElement.insertBefore(newElement, referenceNode);
+    
+            return newElement;
         };
-
-        const newElement = this.createElement();
-        this.#parent.insertBefore(newElement, referenceNode);
-
-        return newElement;
     };
 
     /** 

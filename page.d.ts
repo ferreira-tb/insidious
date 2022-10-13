@@ -7,6 +7,7 @@ type TribalWarsGameData = {
     locale: string,
     majorVersion: string,
     market: string,
+    mode: string | null,
     player: Player,
     pregame: boolean,
     screen: string,
