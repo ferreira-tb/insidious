@@ -39,17 +39,19 @@ class GroupAttack {
             const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
             if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
-            const firstRequestMessage = 'Para atacar com mais de uma aldeia é necessário criar um grupo chamado \"Insidious\", onde deverão estar ' +
-            'todas as aldeias das quais se deseja atacar.';
-            new Manatsu({ text: firstRequestMessage, class: 'insidious_farmRequestMessage' }, modalWindow).create();
+            const warningMessages = [
+                'Para atacar com mais de uma aldeia é necessário criar um grupo chamado \"Insidious\", onde deverão estar ' +
+                'todas as aldeias das quais se deseja atacar.',
+                'Recomenda-se que o grupo seja do tipo dinâmico, pois isso aumenta consideravelmente a velocidade do ' +
+                'processo, já que evita navegação desnecessária entre as aldeias.'
+            ];
 
-            const secondRequestMessage = 'Recomenda-se que o grupo seja do tipo dinâmico, pois isso aumenta consideravelmente a velocidade do ' +
-            'processo, já que evita navegação desnecessária entre as aldeias.';
+            const warningMessageElements = Manatsu.repeat(2, modalWindow, { class: 'insidious_modalMessage' }, true);
+            Manatsu.addTextContent(warningMessageElements, warningMessages);
 
-            new Manatsu({ text: secondRequestMessage, class: 'insidious_farmRequestMessage' }, modalWindow).create();
-
-            const modalButtonArea = new Manatsu(modalWindow).create();
             const messageModalCtrl = new AbortController();
+            const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
+            
             new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Criar' }, modalButtonArea).create()
                 .addEventListener('click', () => {
                     messageModalCtrl.abort();
@@ -57,15 +59,17 @@ class GroupAttack {
                 }, { signal: messageModalCtrl.signal });
 
             new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Desativar' }, modalButtonArea).create()
-            .addEventListener('click', () => {
-                messageModalCtrl.abort();
-                Plunder.options.group_attack = false;
-                Store.set({ [Keys.plunderOptions]: Plunder.options })
-                    .then(() => setTimeout(() => window.location.reload(), Utils.responseTime))
-                    .catch((err: unknown) => {
-                        if (err instanceof Error) InsidiousError.handle(err);
-                    });
-            }, { signal: messageModalCtrl.signal });
+                .addEventListener('click', () => {
+                    messageModalCtrl.abort();
+                    Plunder.options.group_attack = false;
+
+                    Store.set({ [Keys.plunderOptions]: Plunder.options })
+                        .then(() => setTimeout(() => window.location.reload(), Utils.responseTime))
+                        .catch((err: unknown) => {
+                            if (err instanceof Error) InsidiousError.handle(err);
+                        });
+                        
+                }, { signal: messageModalCtrl.signal });
 
             new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Fechar' }, modalButtonArea).create()
                 .addEventListener('click', () => {
@@ -86,19 +90,17 @@ class GroupAttack {
                 const observerTimeout = setTimeout(handleTimeout, 5000);
                 const observeHelper = new MutationObserver((mutationList) => {
                     for (const mutation of mutationList) {
-                        if (mutation.type === 'childList') {
-                            for (const node of Array.from(mutation.addedNodes)) {
-                                if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('class')?.includes('popup_helper')) {
-                                    clearTimeout(observerTimeout);
-                                    observeHelper.disconnect();
+                        for (const node of Array.from(mutation.addedNodes)) {
+                            if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('class')?.includes('popup_helper')) {
+                                clearTimeout(observerTimeout);
+                                observeHelper.disconnect();
 
-                                    const closeGroupPopupButton = document.querySelector('a#closelink_group_popup') as HTMLAnchorElement | null;
-                                    if (!closeGroupPopupButton) throw new InsidiousError('DOM: a#closelink_group_popup');
-                                    closeGroupPopupButton.click();
+                                const closeGroupPopupButton = document.querySelector('a#closelink_group_popup') as HTMLAnchorElement | null;
+                                if (!closeGroupPopupButton) throw new InsidiousError('DOM: a#closelink_group_popup');
+                                closeGroupPopupButton.click();
 
-                                    resolve();
-                                    break;
-                                };
+                                resolve();
+                                return;
                             };
                         };
                     };

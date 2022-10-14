@@ -68,7 +68,7 @@ class Action {
     /** Define o status atual do Insidious. */
     private static async getInsidiousStatus() {
         this.insidiousStatus = await Store.get(this.key) as boolean | undefined;
-        if (this.insidiousStatus === undefined) {
+        if (typeof this.insidiousStatus !== 'boolean') {
             await Store.set({ [this.key]: true });
             this.insidiousStatus = true;
         };

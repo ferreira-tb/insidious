@@ -211,7 +211,7 @@ class TWShield {
                 'caso não queira recebê-los.'
             ];
 
-            const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'insidious_shieldWarningMessage' }, true);
+            const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'insidious_modalMessage' }, true);
             Manatsu.addTextContent(warningMessageElements, warningMessages);
 
             const messageModalCtrl = new AbortController();
@@ -340,7 +340,7 @@ class TWShield {
             'Após cinco segundos, você será redirecionado de volta para a página na qual estava.'
         ];
 
-        const warningMessageElements = Manatsu.repeat(2, modalWindow, { class: 'insidious_shieldWarningMessage' }, true);
+        const warningMessageElements = Manatsu.repeat(2, modalWindow, { class: 'insidious_modalMessage' }, true);
         Manatsu.addTextContent(warningMessageElements, warningMessages);
 
         const messageModalCtrl = new AbortController();

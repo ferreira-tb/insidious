@@ -757,7 +757,7 @@ class Plunder extends TWFarm {
                     'Em caso negativo, o Insidious será encerrado.'
                 ];
 
-                const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'insidious_farmWarningMessage' }, true);
+                const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'insidious_modalMessage' }, true);
                 Manatsu.addTextContent(warningMessageElements, warningMessages);
 
                 const messageModalCtrl = new AbortController();
@@ -766,7 +766,7 @@ class Plunder extends TWFarm {
                 new Manatsu('button', { class: 'insidious_modalButton', text: 'Sim' }, modalButtonArea).create()
                     .addEventListener('click', async () => {
                         messageModalCtrl.abort();
-                        Manatsu.removeChildren(modalWindow, ['.insidious_farmWarningMessage', '.insidious_modalButtonArea']);
+                        Manatsu.removeChildren(modalWindow, ['.insidious_modalMessage', '.insidious_modalButtonArea']);
                         new Manatsu({ text: 'A página será recarregada em alguns instantes. Por favor, aguarde.'}, modalWindow).create();
                         includeVillagesUnderAttack.click();
 
@@ -779,7 +779,7 @@ class Plunder extends TWFarm {
                         messageModalCtrl.abort();
                         document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
                         resolve(true);
-                }, { signal: messageModalCtrl.signal });
+                    }, { signal: messageModalCtrl.signal });
 
             } else {
                 resolve(false);

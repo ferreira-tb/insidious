@@ -41,12 +41,21 @@ class Insidious {
     static updateGameData() {
         return new Promise<void>((resolve, reject) => {
             const startCtrl = new AbortController();
-            window.addEventListener('message', (e) => {
+            window.addEventListener('message', async (e) => {
                 if (e?.data?.direction === 'from-tribalwars') {
                     startCtrl.abort();
-                    if (!e.data.game_data) reject(new InsidiousError('Não foi possível iniciar o Insidious.'));
-                    this.#raw_game_data = e.data.game_data;
-                    resolve();
+                    if (!e.data.game_data) throw new InsidiousError('Não foi possível iniciar o Insidious.');
+
+                    if (e.data.premium === false) {
+                        // Caso o jogador não possua conta premium, o Insidious é desativado.
+                        await Store.set({ insidiousStatus: false });
+                        this.warnAboutPremiumStatus();
+                        reject();
+
+                    } else {
+                        this.#raw_game_data = e.data.game_data;
+                        resolve();
+                    };  
                 };
             }, { signal: startCtrl.signal });
 
@@ -123,6 +132,21 @@ class Insidious {
         } catch (err) {
             if (err instanceof Error) InsidiousError.handle(err);
         };
+    };
+
+    private static warnAboutPremiumStatus() {
+        Utils.modal('Insidious');
+        const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
+        if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
+
+        const warningMessage = 'Não é possível utilizar o Insidious sem uma conta premium ativada.';
+        new Manatsu(modalWindow, { class: 'insidious_modalMessage', text: warningMessage }).create();
+
+        const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
+        new Manatsu('button', { class: 'insidious_modalButton', text: 'OK' }, modalButtonArea).create()
+            .addEventListener('click', () => {
+                document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
+            });
     };
 
     /** Dados, ainda sem tratamento, obtidos diretamente do jogo. */

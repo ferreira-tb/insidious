@@ -1,5 +1,7 @@
 class Keys {
     ////// INSIDIOUS
+    /** CHAVE: indica se o Insidious está ativado ou não (insidious). */
+    static readonly insidious = 'insidiousStatus';
     /** CHAVE: indica se as configurações do mundo atual foram salvas (worldConfigFetch). */
     static readonly worldConfig = `worldConfigFetch_${Game.world}`;
     /** CHAVE: configurações do mundo atual (config). */
@@ -7,9 +9,9 @@ class Keys {
     /** CHAVE: detalhes sobre as unidades do jogo (unit). */
     static readonly unit: XMLType = `unit_${Game.world}`;
     /** CHAVE: último mundo acessado pelo jogador (lastWorld). */
-    static readonly lastWorld = `lastWorld`;
+    static readonly lastWorld = 'lastWorld';
     /** CHAVE: mundos nos quais o jogador está ativo (activeWorlds). */
-    static readonly activeWorlds = `activeWorlds`;
+    static readonly activeWorlds = 'activeWorlds';
 
     ////// PLUNDER
     /** CHAVE: informações sobre o modelo de saque A (amodel). */

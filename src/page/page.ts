@@ -19,9 +19,10 @@ class PageScript {
     };
 
     private static postGameData() {
-        const message: WindowMessage = {
+        const message: WindowMessageFromPage = {
             direction: 'from-tribalwars',
-            game_data: TribalWars.getGameData()
+            game_data: TribalWars.getGameData(),
+            premium: premium
         };
 
         window.postMessage(message);

@@ -46,11 +46,15 @@ type WebExtWindowURLs = '../config/config.html';
 
 type WindowMessageDirection = 'from-insidious' | 'from-tribalwars';
 type WindowMessageReason = 'get-game-data';
-type WindowMessage = {
+interface WindowMessage {
     direction: WindowMessageDirection,
     reason?: WindowMessageReason
-    game_data?: TribalWarsGameData
-};
+}
+
+interface WindowMessageFromPage extends WindowMessage {
+    game_data?: TribalWarsGameData,
+    premium?: boolean
+}
 
 /** Histórico de navegação entre páginas do jogo. */
 type NavigationHistory = {
