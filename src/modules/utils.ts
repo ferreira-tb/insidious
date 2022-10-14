@@ -45,7 +45,11 @@ class Utils {
         const hcaptchaFrame = document.querySelector('iframe[data-title*="hCaptcha" i]');
 
         if (botCheck || hcaptcha || hcaptchaFrame) {
-            Store.set({ lastCaptcha: new Date().getTime() });
+            Store.set({ lastCaptcha: new Date().getTime() })
+                .catch((err : unknown) => {
+                    if (err instanceof Error) InsidiousError.handle(err);
+                });
+
             return true;
         };
 
@@ -80,5 +84,24 @@ class Utils {
 
         const titleContainer = new Manatsu(modalWindow).create();
         new Manatsu('h1', { id: 'insidious_modal_h1', text: modalTitle }, titleContainer).create();
+    };
+
+    static queryXMLTags(configXML: XMLDocument) {
+        return function(tag: XMLTags): number {
+            const valueField = configXML.querySelector(tag);
+            if (!valueField) {
+                // Caso não exista campo para arqueiros, assume que o mundo não possui arqueiros.
+                if (tag.includes('archer')) return 0;
+                throw new InsidiousError(`O campo \"${tag}\" não foi encontrado no documento XML.`);
+            };
+
+            if (valueField.textContent === null) {
+                throw new InsidiousError(`O campo \"${tag}\" foi encontrado no documento XML, mas está vazio.`);
+            };
+
+            const result = Number.parseFloat(valueField.textContent);
+            if (Number.isNaN(result)) throw new InsidiousError(`O valor de \"${tag}\" obtido no documento XML é inválido.`);
+            return result;
+        };
     };
 };

@@ -4,7 +4,7 @@ class TWOverview {
     };
 
     /**
-     * Verifica se o grupo Insidious existe.
+     * Verifica se o grupo Insidious, usado pelo Plunder, existe.
      * Em caso negativo, remove o id salvo no banco de dados.
      */ 
     private static async verifyInsidiousFarmGroup() {

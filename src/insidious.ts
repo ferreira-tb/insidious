@@ -6,7 +6,7 @@ class Insidious {
             await browser.runtime.sendMessage({ type: 'start' });
             Game.verifyIntegrity();
             // Faz download dos dados necessários para executar a extensão.
-            await this.fetchWorldInfo();
+            await this.fetchWorldConfig();
             // Armazena as informações obtidas em propriedades da classe Game.
             await Game.setWorldInfo();
 
@@ -59,18 +59,19 @@ class Insidious {
         });
     };
 
-    private static async fetchWorldInfo() {
+    private static async fetchWorldConfig() {
         try {
             // Verifica se as configurações do mundo atual foram salvas.
             // Em caso negativo, faz download dos arquivos XML.
-            if (!(await Store.get(Keys.worldConfig))) {
-                const configSource = [
+            const worldConfigStatus = await Store.get(Keys.worldConfig);
+            if (!worldConfigStatus) {
+                const configSources = [
                     { name: Keys.config, url: TWAssets.info.get_config },
                     { name: Keys.unit, url: TWAssets.info.get_unit_info }
                 ];
 
-                const worldConfigData = await Promise.all(configSource.map((source) => {
-                    return new Promise((resolve, reject) => {
+                const worldConfigData = await Promise.all(configSources.map((source) => {
+                    return new Promise<WorldInfo | UnitInfo>((resolve, reject) => {
                         const request = new XMLHttpRequest();
                         request.timeout = 2000;
 
@@ -78,8 +79,13 @@ class Insidious {
                         request.addEventListener("timeout", () => reject(request.status));
                         request.addEventListener("load", () => {
                             if (request.responseXML) {
-                                const result = this.parseXML(request.responseXML.documentElement, source.name);
-                                resolve({ name: source.name, result: result });
+                                const configXML = request.responseXML;
+                                switch (source.name) {
+                                    case Keys.config: resolve(new WorldInfo(configXML));
+                                        break;
+                                    case Keys.unit: resolve(new UnitInfo(configXML));
+                                        break;
+                                };
 
                             } else {
                                 reject(new InsidiousError('\"XMLHttpRequest.responseXML\" não está presente.'));
@@ -91,8 +97,9 @@ class Insidious {
                     });
                 }));
 
-                await Promise.all(worldConfigData.map((config: { name: string, result: any }) => {
-                    Store.set({ [config.name]: config.result });
+                await Promise.all(worldConfigData.map((config: WorldInfo | UnitInfo) => {
+                    if (config instanceof WorldInfo) return Store.set({ [Keys.config]: config }); 
+                    return Store.set({ [Keys.unit]: config });
                 }));
 
                 await Store.set({ [Keys.worldConfig]: true });
@@ -102,60 +109,6 @@ class Insidious {
             await Store.remove(Keys.worldConfig);
             if (err instanceof Error) InsidiousError.handle(err);
         };
-    };
-
-    private static parseXML(configXML: Element, type: XMLType ) {
-        const getValue = (value: string): number => {
-            const valueField = configXML.querySelector(value);
-            if (!valueField) {
-                // Caso não exista campo para arqueiros, assume que o mundo não possui arqueiros.
-                if (value.includes('archer')) {
-                    return 0;
-                } else {
-                    throw new InsidiousError(`O campo \"${value}\" não foi encontrado no documento XML.`);
-                };
-            };
-
-            if (valueField.textContent === null) {
-                throw new InsidiousError(`O campo \"${value}\" foi encontrado no documento XML, mas está vazio.`)
-            };
-
-            return Number.parseFloat(valueField.textContent);
-        };
-
-        if (type === Keys.config) {
-            const worldInfoSchema: WorldInfo = {
-                speed: getValue('speed'),
-                unit_speed: getValue('unit_speed'),
-                game: { archer: getValue('archer') }
-            };
-
-            if (!Object.hasOwn(worldInfoSchema, 'speed')) {
-                throw new InsidiousError(`Erro na leitura do documento XML (${type}).`);
-            } else {
-                return worldInfoSchema;
-            };
-            
-        } else if (type === Keys.unit) {
-            const unitInfoSchema = { };
-            for (const unit of TWAssets.list.all_units_archer) {
-                Object.defineProperty(unitInfoSchema, unit, {
-                    value: {
-                        speed: getValue(`${unit} speed`),
-                        carry: getValue(`${unit} carry`)
-                    },
-                    enumerable: true
-                });
-            };
-
-            if (!Object.hasOwn(unitInfoSchema, 'spear')) {
-                throw new InsidiousError(`Erro na leitura do documento XML (${type}).`);
-            } else {
-                return unitInfoSchema;
-            };
-        };
-
-        throw new InsidiousError('O nome do documento XML é inválido.');
     };
 
     /** Define o mundo atual como ativo e o registra como sendo o último acessado. */

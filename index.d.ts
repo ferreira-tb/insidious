@@ -77,37 +77,28 @@ type WallLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15
 type ErrorContext = 'main' | 'action' | 'background'| 'config';
 
 ////// INSIDIOUS
-/** Configurações do mundo atual. */
-type WorldInfo = {
-    speed: number,
-    unit_speed: number,
-    game: {
-        archer: number
-    }
-};
-
 type XMLType = `config_${string}` | `unit_${string}`;
 
-/** Velocidade e capacidade de carga individual de cada unidade do jogo. */
-type UnitInfo = {
-    [index in UnitListWithArchers]: { speed: number; carry: number; }
-}
+type UnitDetails = {
+    speed: number;
+    carry: number;
+};
 
 ////// MENSAGEM
 type StandardMessage = {
     type: 'start'
-}
+};
 
 type ErrorMessage = {
     type: 'error'
     error: Error
-}
+};
 
 type AllMessageTypes = StandardMessage | ErrorMessage;
 
 type FetchURLs = {
     village: string
-}
+};
 
 ////// ASSETS
 type AssetsList = {
@@ -118,6 +109,14 @@ type AssetsList = {
 
     resources: ResourceList[]
 };
+
+////// UTILS
+type XMLTags =
+    | 'speed'
+    | 'unit_speed'
+    | 'archer'
+    | `${UnitListWithArchers} speed`
+    | `${UnitListWithArchers} carry`
 
 ////// PLUNDER
 type AB = 'a' | 'b';
