@@ -26,16 +26,7 @@ class Utils {
     static readonly currentScreen = this.currentField('screen');
     static readonly currentMode = this.currentField('mode');
     static readonly currentSubType = this.currentField('subtype');
-
-    /** 
-     * Corrige os nomes codificados.
-     * 
-     * "Aldeia+de+b%C3%A1rbaros" se torna "Aldeia de bárbaros").
-     */
-    static urlDecode(url: string): string {
-        return decodeURIComponent(url.replace(/\+/g, ' '));
-    };
-
+    
     /** Calcula distância em campos entre duas coordenadas. */
     static calcDistance(...args: number[]) {
         const [originX, originY, destinationX, destinationY] = args;

@@ -38,41 +38,21 @@ class TWFarm {
         // Recolhe dados sobre os modelos salvos.
         // farmModels.firstElementChild é a linha com os ícones acima da área de input do modelo A.
         if (!farmModels.firstElementChild) throw new InsidiousError('Não foi possível obter a linha principal da tabela de modelos A.');
-        const aRow = farmModels.firstElementChild.nextElementSibling;
-        const parentRow = { a: {}, b: {} };
 
-        const farmModelsInputFields = farmModels.querySelectorAll('tr td input[type=\"text\"][name]');
+        // Linha com os campos do modelo A.
+        const aRow = farmModels.firstElementChild.nextElementSibling;
+        if (!aRow) throw new InsidiousError('Não foi possível encontrar a linha do modelo A.')
+        
+        // São ao menos sete campos em cada modelo.
         // Em mundos com arqueiros esse número é maior.
+        const farmModelsInputFields = farmModels.querySelectorAll('tr td input[type=\"text\"][name]');
         if (farmModelsInputFields.length < 14) throw new InsidiousError('Não foi possível encontrar os campos de texto dos modelos.');
 
-        for (const field of Array.from(farmModelsInputFields)) {
-            const fieldName = field.getAttribute('name');
-            if (!fieldName) throw new InsidiousError('O atributo \"name\" não foi encontrado nos campos de texto dos modelos.');
-
-            const fieldType = fieldName.slice(0, fieldName.indexOf('\['));
-            const fieldValue = field.getAttribute('value');
-            if (fieldValue === null) throw new InsidiousError(`Não foi possível encontrar o valor do campo de texto \"${fieldType}\".`);
-
-            // Verifica se o campo pertence ao modelo A.
-            if (field.parentElement?.parentElement === aRow) {
-                field.setAttribute('insidious-model-a', fieldType);
-                Object.defineProperty(parentRow.a, fieldType, {
-                    value: Number.parseInt(fieldValue, 10),
-                    enumerable: true
-                });
-
-            // Em caso contrário, assume que pertence ao modelo B.
-            } else {
-                field.setAttribute('insidious-model-b', fieldType);
-                Object.defineProperty(parentRow.b, fieldType, {
-                    value: Number.parseInt(fieldValue, 10),
-                    enumerable: true
-                });
-            };
-        };
+        // Quantidade de tropas em cada modelo.
+        const eachModelUnitAmount = new ModelUnitAmount(farmModelsInputFields, aRow);
 
         // Salva os modelos no banco de dados.
-        Store.set({ [Keys.plunderA]: parentRow.a, [Keys.plunderB]: parentRow.b })
+        Store.set({ [Keys.plunderA]: eachModelUnitAmount.a, [Keys.plunderB]: eachModelUnitAmount.b })
             .catch((err: unknown) => {
                 if (err instanceof Error) InsidiousError.handle(err);
             });
@@ -84,16 +64,16 @@ class TWFarm {
             Manatsu.removeChildren(actionArea);
 
             try {
-                // Insidious não pode realizar operações fetch enquanto o plunder estiver ativo.
                 const plunderStatus = await Store.get(Keys.plunder) as boolean | undefined;
                 // Se estiver ativo no momento do clique, desativa o plunder e troca o texto do botão.
-                // Além disso, salva a quantia saqueada no histórico global.
+                // Além disso, salva a quantia saqueada no histórico global e remove o histórico de navegação.
                 if (plunderStatus === true) {
                     await TWFarm.setGlobalPlundered();
+                    await Store.remove(Keys.plunderNavigation);
                     await Store.set({ [Keys.plunder]: false });
                     startPlunderBtn.textContent = 'Saquear';
 
-                // Em caso contrário, ativa o plunder.
+                // Caso contrário, ativa o plunder.
                 } else if (plunderStatus === false) {
                     await Store.remove(Keys.totalPlundered);
                     await Store.set({ [Keys.plunder]: true });
@@ -111,13 +91,14 @@ class TWFarm {
         
         startPlunderBtn.addEventListener('click', plunderBtnEvents);
 
-        // Exibe as opções do plunder.
+        /** Exibe as opções do plunder. */
         const optionsBtnEvents = async () => {
             if (!Plunder.options) {
-                // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options estará indefinido.
+                // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options será undefined.
                 Plunder.options = await Store.get(Keys.plunderOptions) as PlunderOptions ?? {};
             };
 
+            // Adiciona as opções disponíveis.
             Manatsu.createAll(optionsAreaItems);
             showOptionsBtn.setAttribute('disabled', '');
 
@@ -128,19 +109,23 @@ class TWFarm {
             if (Plunder.options.group_attack === true) groupAttack.checked = true;
             groupAttack.addEventListener('change', async (e) => {
                 optionsCtrl.abort();
-                await this.saveOptions(e, 'group_attack');
+                await this.saveOptions(e.target, 'group_attack');
                 setTimeout(() => window.location.reload(), Utils.responseTime);
             }, { signal: optionsCtrl.signal });
 
             // Ignora aldeias com muralha.
             const ignoreWall = optionsArea.querySelector('#insidious_ignore_wall_checkbox') as HTMLInputElement;
             if (Plunder.options.ignore_wall === true) ignoreWall.checked = true;
-            ignoreWall.addEventListener('change', (e) => this.saveOptions(e, 'ignore_wall'), { signal: optionsCtrl.signal });
+            ignoreWall.addEventListener('change', (e) => {
+                this.saveOptions(e.target, 'ignore_wall');
+            }, { signal: optionsCtrl.signal });
 
             // Destrói muralhas.
             const destroyWall = optionsArea.querySelector('#insidious_destroy_wall_checkbox') as HTMLInputElement;
             if (Plunder.options.destroy_wall === true) destroyWall.checked = true;
-            destroyWall.addEventListener('change', (e) => this.saveOptions(e, 'destroy_wall'), { signal: optionsCtrl.signal });
+            destroyWall.addEventListener('change', (e) => {
+                this.saveOptions(e.target, 'destroy_wall');
+            }, { signal: optionsCtrl.signal });
 
             new Manatsu('button', optionsArea, { text: 'Fechar' }).createInside('div')
                 .addEventListener('click', () => {
@@ -182,16 +167,21 @@ class TWFarm {
             });
     };
 
-    private static async saveOptions(event: Event, item: keyof PlunderOptions) {
-        if (event.target instanceof HTMLInputElement) {
-            if (event.target.checked === true) {
-                Plunder.options[item] = true;
-            } else {
-                Plunder.options[item] = false;
-            };
-        };
-        
+    /**
+     * Salva o status atual da opção no banco de dados.
+     * @param target - Elemento correspondente à opção.
+     * @param name - Nome da opção.
+     */
+    private static async saveOptions(target: EventTarget | null, name: keyof PlunderOptions) {
         try {
+            if (target instanceof HTMLInputElement) {
+                if (target.checked === true) {
+                    Plunder.options[name] = true;
+                } else {
+                    Plunder.options[name] = false;
+                };
+            };
+
             await Store.set({ [Keys.plunderOptions]: Plunder.options });
 
         } catch (err) {
@@ -201,7 +191,7 @@ class TWFarm {
 
     private static async info() {
         try {
-            // Célula de referência.
+            // Célula usada como referência.
             const spearElem = document.querySelector('#farm_units #units_home tbody tr td#spear');
             if (!spearElem) throw new InsidiousError('DOM: #farm_units #units_home tbody tr td#spear');
     
@@ -230,47 +220,36 @@ class TWFarm {
                 unitElem.setAttribute('insidious-available-units', unit);
             });
 
-            // Dados sobre a aldeia atual.
-            if (!Game.village) throw new InsidiousError('Não foi possível obter o ID da aldeia atual.');
-
-            const currentVillageData = await Store.get(`v${Game.village}_${Game.world}`) as VillageInfo | undefined;
-            if (currentVillageData === undefined) {
-                throw new InsidiousError(`Não foi possível obter dados relativos à aldeia atual (${Game.village}).`);
-            };
-
-            const { x: currentX, y: currentY } = currentVillageData;
-            if (currentX === undefined || currentY === undefined) {
-                throw new InsidiousError(`Não foi possível obter as coordenadas da aldeia atual (${Game.village}).`);
-            };
-
-            // Lista das aldeias que já foram atacadas alguma vez.
-            // É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
+            /** 
+             * Lista das aldeias que já foram atacadas alguma vez.
+             * É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
+             */
             let alreadyPlunderedVillages: Set<string> = new Set();
             const attackHistory = await Store.get(Keys.alreadyPlundered) as Set<string> | undefined;
             if (attackHistory !== undefined) alreadyPlunderedVillages = attackHistory;
     
-            // Ajuda a controlar o MutationObserver.
+            /** Ajuda a controlar o MutationObserver. */
             const infoEventTarget = new EventTarget();
     
-             // Adiciona informações úteis às tags HTML originais da página.
+            /** Adiciona informações úteis às tags HTML originais da página. */
             const addInfo = async () => {
                 // Desconecta qualquer observer que esteja ativo.
                 infoEventTarget.dispatchEvent(new Event('stopinfoobserver'));
 
                 try {
-                    // https://developer.mozilla.org/en-US/docs/Web/CSS/Attribute_selectors
                     const plunderListRows = document.querySelectorAll('#plunder_list tbody tr[id^="village_"]');
                     for (const row of Array.from(plunderListRows)) {
                         if (!row.hasAttribute('insidious-village')) {
-                            // A coerção à string é válida pois já foi verificada a existência do ID ao usar querySelectorAll();
-                            let villageID: string = row.getAttribute('id') as string;
+                            // A coerção à string é válida pois já foi verificada a existência do id ao usar querySelectorAll();
+                            let villageID = row.getAttribute('id') as string;
                             villageID = villageID.replace(/\D/g, '');
 
-                            const verifyVillageID: number = Number.parseInt(villageID, 10);
-                            if (Number.isNaN(verifyVillageID)) throw new InsidiousError(`O ID da aldeia é inválido (${villageID})`);
+                            // Salva a aldeia na lista de aldeias já atacadas.
                             alreadyPlunderedVillages.add(villageID);
 
                             row.setAttribute('insidious-village', villageID);
+                            // Esse atributo é utilizado pela função sendAttack() do Plunder.
+                            // É selecionando ele que o Plunder tem acesso às linhas da tabela.
                             row.setAttribute('insidious-tr-farm', 'true');
 
                             // Relatório.
@@ -279,7 +258,11 @@ class TWFarm {
                             reportLink.setAttribute('insidious-td-type', 'report');
                             
                             // Data do último ataque.
-                            const findDateField = (): HTMLElement | null => {
+                            /**
+                             * Vasculha as células da linha até encontrar a que contém a data.
+                             * @returns A célula com a data do último ataque.
+                             */
+                            const findDateField = (): HTMLTableCellElement | null => {
                                 const fields = row.querySelectorAll('td');
                                 for (const field of Array.from(fields)) {
                                     if (!field.textContent) continue;
@@ -301,9 +284,9 @@ class TWFarm {
                             const findResourcesField = (): HTMLElement | null => {
                                 const fields = row.querySelectorAll('td');
                                 for (const field of Array.from(fields)) {
-                                    const woodField = field.querySelector('.nowrap span[class*="wood"] + span');
-                                    const stoneField = field.querySelector('.nowrap span[class*="stone"] + span');
-                                    const ironField = field.querySelector('.nowrap span[class*="iron"] + span');
+                                    const woodField = field.querySelector('span span[class*="wood"] + span');
+                                    const stoneField = field.querySelector('span span[class*="stone"] + span');
+                                    const ironField = field.querySelector('span span[class*="iron"] + span');
                                     if (!woodField || !stoneField || !ironField) continue;
 
                                     let totalAmount: number = 0;
@@ -313,16 +296,16 @@ class TWFarm {
                                         resAmount = resAmount.replace(/\D/g, '');
 
                                         // Adiciona o valor à quantia total.
-                                        const parsedResAmount: number = parseInt(resAmount, 10);
+                                        const parsedResAmount = Number.parseInt(resAmount, 10);
                                         if (!Number.isNaN(parsedResAmount)) {
                                             totalAmount += parsedResAmount;
                                         } else {
                                             throw new InsidiousError(`A quantia de recursos calculada não é válida (${villageID}).`);
                                         };
 
-                                        // A coerção é possível pois a existência já foi verificada ao usar querySelector() com o seletor "+".
+                                        // A coerção é possível pois a existência já foi verificada ao usar querySelector com o seletor "+".
                                         let resType = resField.previousElementSibling!.getAttribute('class') as string;
-                                        const resName = ['wood', 'stone', 'iron'].some((name) => {
+                                        const resName = TWAssets.list.resources.some((name) => {
                                             if (resType.includes(name)) {
                                                 resType = name;
                                                 return true;
@@ -360,7 +343,7 @@ class TWFarm {
                                 let wallLevel: string | null = wallLevelField.textContent;
                                 if (wallLevel !== null) {
                                     const parsed = Number.parseInt(wallLevel, 10);
-                                    if (Number.isNaN(parsed) || parsed !== Number(wallLevel)) {
+                                    if (!Number.isInteger(parsed)) {
                                         throw new InsidiousError(`O valor encontrado não corresponde ao nível da muralha (${villageID}).`);
                                     };
 
@@ -370,30 +353,9 @@ class TWFarm {
                                     throw new InsidiousError(`O nível da muralha não foi encontrado (${villageID}).`);
                                 };
                             };
-        
-                            // Distância e coordenadas (adquirido de forma independente, não dependendo da posição na tabela).
-                            const targetVillageData = await Store.get(`v${villageID}_${Game.world}`) as VillageInfo | undefined;
-                            const { x: targetX, y: targetY } = targetVillageData ?? { };
 
-                            if (targetX !== undefined && targetY !== undefined) {
-                                const getRelativeCoords = (): number[] => {
-                                    const coords: number[] = [currentX, currentY, targetX, targetY];
-                                    if (coords.some(coord => !Number.isInteger(coord))) {
-                                        throw new InsidiousError(`As coordenadas obtidas são inválidas (${Game.village} e/ou ${villageID}).`);
-                                    };
-                                    return coords;
-                                };
-    
-                                const distance = Utils.calcDistance(...getRelativeCoords());
-                                row.setAttribute('insidious-distance', distance.toFixed(1));
-                                row.setAttribute('insidious-x', String(targetX));
-                                row.setAttribute('insidious-y', String(targetY));
-
-                            } else {
-                                // Nesse caso, muito provavelmente a aldeia não está salva no banco de dados.
-                                row.setAttribute('insidious-distance', 'unknown');
-                            };
-
+                            // Não pode haver emissão de erro caso os botões não forem encontrados.
+                            // Isso porquê eles naturalmente não estarão presentes caso não haja modelo registrado.
                             // A
                             const aFarmBtn = row.querySelector('td a[class*="farm_icon_a" i]:not([class*="disabled" i])');
                             if (aFarmBtn) aFarmBtn.setAttribute('insidious-farm-btn', `a_${villageID}`);
@@ -431,6 +393,7 @@ class TWFarm {
                 const observeTable = new MutationObserver(() => addInfo());
                 observeTable.observe(plunderList, { subtree: true, childList: true });
     
+                // Caso a função seja chamada novamente, desconecta o observer ativo.
                 const farmTableCtrl = new AbortController();
                 infoEventTarget.addEventListener('stopinfoobserver', () => {
                     observeTable.disconnect();
@@ -475,15 +438,22 @@ class TWFarm {
         return optionsAreaItems;
     };
 
+    /**
+     * Verifica se o campo corresponde à data do último ataque.
+     * Em caso positivo, converte o valor para milisegundos.
+     * 
+     * Exemplos de data: hoje às 00:05:26 | ontem às 16:29:50 | em 21.09. às 12:36:38
+     * @param date - Texto do campo a analisar.
+     * @returns Data do último ataque em milisegundos.
+     */
     private static decipherPlunderListDate(date: string): number | null {
-        // Exemplos de data: hoje às 00:05:26 | ontem às 16:29:50 | em 21.09. às 12:36:38
         const writtenDate = date.toLowerCase();
         if (!writtenDate.includes('às')) return null;
 
         // splitDate representa apenas as horas, os minutos e os segundos.
         const splitDate: string | undefined = writtenDate.split(' ').pop();
         if (splitDate) {
-            const date: number[] = splitDate.split('\:').map((item: string) => Number.parseInt(item, 10));
+            const date = splitDate.split('\:').map((item) => Number.parseInt(item, 10));
             if (date.length !== 3) return null;
             if (date.some((item) => Number.isNaN(item))) return null;
 
@@ -502,12 +472,14 @@ class TWFarm {
                 dayAndMonth = dayAndMonth.split('.').map((item: string) => Number.parseInt(item, 10));
                 dayAndMonth.filter((item) => !Number.isNaN(item));
 
-                let anyDay: number = new Date().setHours(date[0], date[1], date[2]);
-                // O valor para o mês começa com índica zero, por isso é preciso diminuir em 1.
+                let anyDay = new Date().setHours(date[0], date[1], date[2]);
+                // O valor para o mês começa com índice zero, por isso é preciso diminuir em 1.
                 anyDay = new Date(anyDay).setMonth(dayAndMonth[1] - 1, dayAndMonth[0]);
 
                 // Caso essa condição for verdadeira, há diferença de ano entre a data atual e a data do ataque.
-                if (anyDay > new Date().getTime()) throw new InsidiousError('Issue #2: https://github.com/ferreira-tb/insidious/issues/2#issue-1383251210');
+                if (anyDay > new Date().getTime()) {
+                    throw new InsidiousError('Issue #2: https://github.com/ferreira-tb/insidious/issues/2#issue-1383251210');
+                };
                 
                 return anyDay;
             };

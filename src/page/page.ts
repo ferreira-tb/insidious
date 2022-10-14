@@ -6,16 +6,19 @@ class PageScript {
                 return;
             };
         });
+
+        const insidious = document.createElement('insidious');
+        document.head.appendChild(insidious);
     };
 
     private static handleMessage(reason: WindowMessageReason) {
         switch (reason) {
-            case 'get-game-data': PageScript.requestGameData()
+            case 'get-game-data': PageScript.postGameData()
                 break;
         };
     };
 
-    private static requestGameData() {
+    private static postGameData() {
         const message: WindowMessage = {
             direction: 'from-tribalwars',
             game_data: TribalWars.getGameData()

@@ -1,8 +1,4 @@
 // Global
-type SSObject = { [index: string]: string };
-type SNObject = { [index: string]: number };
-type SBObject = { [index: string]: boolean };
-
 /** Os três recursos do jogo: madeira, argila e ferro. */
 type ResourceList = 
     | 'wood'
@@ -54,16 +50,6 @@ type WindowMessage = {
     game_data?: TribalWarsGameData
 };
 
-/** Informações sobre as aldeias do mundo. */
-interface VillageInfo {
-    name: string,
-    x: number,
-    y: number,
-    player: number,
-    points: number,
-    rank: number
-}
-
 /** Histórico de navegação entre páginas do jogo. */
 type NavigationHistory = {
     /** URL da página em que o usuário estava antes da navegação ser feita. */
@@ -98,46 +84,42 @@ type WorldInfo = {
     }
 };
 
+type XMLType = `config_${string}` | `unit_${string}`;
+
 /** Velocidade e capacidade de carga individual de cada unidade do jogo. */
 type UnitInfo = {
-    [index in UnitList]: { speed: number; carry: number; };
-};
+    [index in UnitListWithArchers]: { speed: number; carry: number; }
+}
 
 ////// MENSAGEM
 type StandardMessage = {
-    type: string,
-    sender?: string
-};
+    type: 'start'
+}
 
 type ErrorMessage = {
-    type: 'error',
+    type: 'error'
     error: Error
-};
+}
 
 type AllMessageTypes = StandardMessage | ErrorMessage;
 
+type FetchURLs = {
+    village: string
+}
+
 ////// ASSETS
-type ImageIndex = `${UnitListWithArchers}_18`;
-
-type ImageURL = `https://dsbr.innogamescdn.com/asset/45436e33/graphic/unit/unit_${UnitListWithArchers}.png`;
-
-type AssetsImage = {
-    [index in ImageIndex]: ImageURL;
-};
-
 type AssetsList = {
-    all_units: UnitList[],
-    all_units_archer: UnitListWithArchers[],
-    farm_units: FarmUnits[],
+    all_units: UnitList[]
+    all_units_archer: UnitListWithArchers[]
+    farm_units: FarmUnits[]
     farm_units_archer: FarmUnitsWithArchers[]
+
+    resources: ResourceList[]
 };
 
 ////// PLUNDER
 type AB = 'a' | 'b';
 type ABNull = AB | null;
-
-/** Capacidade de carga dos modelos A e B. */
-type CarryCapacity = { [index in AB]: number };
 
 /** Quantidade de unidades disponíveis para uso nos modelos do assistente de saque. */
 type AvailableFarmUnits = {
@@ -168,27 +150,7 @@ type PlunderOptions = {
     group_attack: boolean
 };
 
-/** Parâmetros que auxiliam o funcionamento das opções do plunder. 
- *  São todos resetados sempre que o evento "stopplundering" é emitido.
- */
-type PlunderOptionsParameters = {
-    /** Última aldeia com a qual o Plunder atacou. */
-    last_attacking_village: string,
-    /** Aldeia na qual o Plunder estava quando utilizou a opção "Group Jump" pela última vez. */
-    last_group_jump: string
-};
-
-////// MAP
-type FilterContext = Set<string> | undefined;
-
-/** Tags de mapa. */
-type TagType = 'distance' | 'points' | 'bbpoints' | `time_${UnitList}`;
-/** Filtros de mapa. */
-type FilterType = 'bbunknown';
-/** Tags e filtros de mapa. */
-type AllMapTypes = TagType | FilterType;
-
-// shield.ts
+////// SHIELD
 /** Possíveis operações executadas pelo Shield. 
  * @param redirect - O usuário será redirecionado.
  * @param group - O grupo atual será alterado para "todos".

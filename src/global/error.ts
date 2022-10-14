@@ -1,7 +1,3 @@
-/**
- * Essa classe não pode depender de nada que esteja fora do arquivo no qual se encontra.
- * Isso acontece pois ela é usada por diferentes contextos da extensão.
- **/
 class InsidiousError extends Error {
     constructor(message: string) {
         super();
@@ -15,6 +11,8 @@ class InsidiousError extends Error {
      * @param global - Contexto global no qual o erro foi emitido.
      */
     static handle(err: Error, global: ErrorContext = 'main') {
+        console.error(err);
+        
         if (global === 'main') {
             browser.runtime.sendMessage({ type: 'error', error: err })
                 .catch((err: unknown) => {

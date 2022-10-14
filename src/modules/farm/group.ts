@@ -10,7 +10,7 @@ class GroupAttack {
              * Como nem sempre sua ausência é sinônimo de comportamento indesejado,
              * essa variável é extremamente vulnerável a mudanças no DOM do jogo.
              */
-            const groupJump = document.querySelector('span.groupJump a.jump_link img') as HTMLImageElement | null;
+            const groupJumpButton = document.querySelector('span.groupJump a.jump_link img') as HTMLImageElement | null;
 
             if (Game.group !== groupID) {
                 if (location.href.includes('group=')) {
@@ -19,19 +19,20 @@ class GroupAttack {
                     location.assign(location.href + `&group=${groupID}`);
                 };
                 
-            } else if (groupJump && Plunder.optionsParameters.last_group_jump !== Game.village) {
+            } else if (groupJumpButton && Plunder.navigation.last_group_jump !== Game.village) {
                 // A aldeia atual permanece a mesma após a navegação para o grupo correto.
                 // Caso essa aldeia não pertença ao grupo, a navegação entre as aldeias do grupo se torna impossível.
                 // Isso porquê o botão de navegação se torna um elemento diferente.
                 // Para solucionar isso, é feito um redirecionamento para a primeira aldeia do grupo Insidious.
-                Plunder.optionsParameters.last_group_jump = Game.village ?? '';
-                await Store.set({ [Keys.plunderParameters]: Plunder.optionsParameters });
-                groupJump.click();
+                Plunder.navigation = new PlunderGroupNavigation('jump');
+                await Store.set({ [Keys.plunderNavigation]: Plunder.navigation });
+                groupJumpButton.click();
             };
             
         } else {
             // Retorna caso o grupo já exista.
-            if (await this.verify()) return;
+            const alreadyExists: boolean = await this.checkIfGroupAlreadyExists();
+            if (alreadyExists) return;
 
             // Caso o grupo não exista, emite uma mensagem solicitando sua criação.
             Utils.modal('Insidious');
@@ -58,7 +59,6 @@ class GroupAttack {
             new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Desativar' }, modalButtonArea).create()
             .addEventListener('click', () => {
                 messageModalCtrl.abort();
-
                 Plunder.options.group_attack = false;
                 Store.set({ [Keys.plunderOptions]: Plunder.options })
                     .then(() => setTimeout(() => window.location.reload(), Utils.responseTime))
@@ -75,8 +75,8 @@ class GroupAttack {
         };
     };
 
-    // Verifica se o grupo Insidious já existe.
-    private static async verify(): Promise<boolean> {
+    /** Verifica se o grupo Insidious já existe. */
+    private static async checkIfGroupAlreadyExists(): Promise<boolean> {
         if (!document.querySelector('div.popup_helper #group_popup')) {
             // Caso a janela de grupos não esteja aberta (mesmo que oculta), abre e a oculta logo em seguida.
             await new Promise<void>((resolve) => {
@@ -107,7 +107,7 @@ class GroupAttack {
                 // Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro.
                 function handleTimeout() {
                     observeHelper.disconnect();
-                    throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder.');
+                    InsidiousError.handle(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (checkIfGroupAlreadyExists).'));
                 };
         
                 observeHelper.observe(document.body, { subtree: true, childList: true });

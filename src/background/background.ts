@@ -9,13 +9,14 @@ class Core {
 
     private static async handleMessage(message: AllMessageTypes, sender: browser.runtime.MessageSender) {
         switch (message.type) {
-            case 'start': return Core.loadScripts(sender.tab?.id as number);
-            case 'error': return Core.showErrorNotification((message as ErrorMessage).error);
+            case 'start': return Core.loadScripts(sender.tab?.id);
+            case 'error': return Core.showErrorNotification(message.error);
             default: return;
         };
     };
 
-    private static loadScripts(id: number) {
+    private static loadScripts(id: number | undefined) {
+        if (id === undefined) throw new InsidiousError('O ID da aba é inválido.');
         return browser.scripting.executeScript({
             files: ['./modules/game.js', './modules/keys.js'],
             injectImmediately: true,

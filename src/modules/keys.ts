@@ -1,15 +1,11 @@
 class Keys {
     ////// INSIDIOUS
-    /** CHAVE: intervalo (em horas) entre cada Insidius.fetch() (fetchInterval). */
-    static readonly fetchInterval = `fetchInterval`;
-    /** CHAVE: data do último fetch das configurações do mundo atual (worldConfigFetch). */
+    /** CHAVE: indica se as configurações do mundo atual foram salvas (worldConfigFetch). */
     static readonly worldConfig = `worldConfigFetch_${Game.world}`;
-    /** CHAVE: data do último fetch das informações sobre as aldeias do mundo (villageDataFetch). */
-    static readonly villageData = `villageDataFetch_${Game.world}`;
     /** CHAVE: configurações do mundo atual (config). */
-    static readonly config = `config_${Game.world}`;
+    static readonly config: XMLType = `config_${Game.world}`;
     /** CHAVE: detalhes sobre as unidades do jogo (unit). */
-    static readonly unit = `unit_${Game.world}`;
+    static readonly unit: XMLType = `unit_${Game.world}`;
     /** CHAVE: último mundo acessado pelo jogador (lastWorld). */
     static readonly lastWorld = `lastWorld`;
     /** CHAVE: mundos nos quais o jogador está ativo (activeWorlds). */
@@ -25,15 +21,17 @@ class Keys {
     static readonly plunder = `isPlunderActive_${Game.world}`;
     /** CHAVE: opções do Plunder (plunderOptions). */
     static readonly plunderOptions = `plunderOptions_${Game.world}`;
-    /** CHAVE: parâmetros das opções do Plunder (plunderOptionsParameters). */
-    static readonly plunderParameters = `plunderOptionsParameters_${Game.world}`;
+    /** CHAVE: histórico de navegação entre aldeias quando se está atacando com um grupo (plunderNavigationHistory). */
+    static readonly plunderNavigation = `plunderNavigationHistory_${Game.world}`;
+    /** CHAVE: detalhes sobre a última troca de página (plunderPage). */
+    static readonly plunderPage = `plunderPage_${Game.world}`;
     /** CHAVE: recursos saqueados e ataques enviados pelo processo atual do Plunder (totalPlundered). */
     static readonly totalPlundered = `totalPlundered_${Game.world}`;
     /** CHAVE: soma dos recursos saqueados e ataques enviados desde a primeira execução do Plunder (globalPlundered). */
     static readonly globalPlundered = `globalPlundered_${Game.world}`;
     /** CHAVE: lista de aldeias já atacadas pelo Plunder (alreadyPlunderedVillages). */
     static readonly alreadyPlundered = `alreadyPlunderedVillages_${Game.world}`;
-    /** CHAVE: quantidade total de muralhas destruídas pelo Plunder. */
+    /** CHAVE: quantidade total de muralhas destruídas pelo Plunder (plunderDestroyedWalls). */
     static readonly plunderWalls = `plunderDestroyedWalls_${Game.world}`;
 
     /** CHAVE: ID do grupo Insidious usado pelo Plunder (farmGroupID). */
