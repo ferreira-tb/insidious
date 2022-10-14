@@ -1,13 +1,14 @@
 class InsidiousConfig {
     /** CHAVE: último mundo acessado pelo jogador (lastWorld). */
-    static readonly lastWorldKey = `lastWorld`;
+    static readonly lastWorldKey = 'lastWorld';
     /** CHAVE: mundos nos quais o jogador está ativo (activeWorlds). */
-    static readonly activeWorldsKey = `activeWorlds`;
+    static readonly activeWorldsKey = 'activeWorlds';
 
     static async start() {
         try {
-            const activeWorlds = await Store.get(this.activeWorldsKey) as Map<string, number> ?? new Map();
-            if (activeWorlds.size > 0) {
+            const activeWorlds = await Store.get(this.activeWorldsKey) as SNObject ?? { };
+            const activeWorldsEntries = Object.entries(activeWorlds);
+            if (activeWorldsEntries.length > 0) {
                 const div = document.querySelector('#active-worlds') as HTMLDivElement;
                 div.textContent = 'Mundos ativos: '
 
@@ -15,10 +16,10 @@ class InsidiousConfig {
                 worldSelection.addEventListener('change', () => this.showWorldInfo(worldSelection.value));
 
                 const now = new Date().getTime();
-                for (const [key, value] of activeWorlds.entries()) {
+                for (const [key, value] of activeWorldsEntries) {
                     // Se o último acesso foi há mais de um mês, remove-o do mapa.
                     if (now - value > 2629800000) {
-                        activeWorlds.delete(key);
+                        delete activeWorlds[key];
                         continue;
 
                     } else {
@@ -33,8 +34,8 @@ class InsidiousConfig {
             };
 
             const lastWorld = await Store.get(this.lastWorldKey) as string | undefined;
-            if (lastWorld && activeWorlds.has(lastWorld)) {
-                const lastAcess = new Date(activeWorlds.get(lastWorld) as number);
+            if (lastWorld && activeWorlds[lastWorld]) {
+                const lastAcess = new Date(activeWorlds[lastWorld]);
                 const lastAcessDate = lastAcess.toLocaleDateString('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' });
                 const lastAcessHour = lastAcess.toLocaleTimeString('pt-br', { hour: '2-digit', minute: '2-digit' });
 
@@ -50,6 +51,7 @@ class InsidiousConfig {
         };
     };
 
+    /** Exibe informações sobre o mundo selecionado. */
     private static async showWorldInfo(world: string) {
         try {
             let globalPlundered = await Store.get(`globalPlundered_${world}`) as TotalPlundered | undefined;

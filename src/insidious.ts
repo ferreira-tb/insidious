@@ -14,7 +14,7 @@ class Insidious {
             switch (Game.screen) {
                 case 'am_farm': await TWFarm.open();
                     break;
-                case 'overview': this.setAsActiveWorld();
+                case 'overview': await this.setAsActiveWorld();
                     break;
                 case 'overview_villages': await TWOverview.open();
                     break;
@@ -161,16 +161,11 @@ class Insidious {
     /** Define o mundo atual como ativo e o registra como sendo o último acessado. */
     private static async setAsActiveWorld() {
         try {
-            let activeWorlds = await Store.get(Keys.activeWorlds) as Map<string, number> | undefined;
-            if (activeWorlds === undefined) activeWorlds = new Map();
+            const activeWorlds = await Store.get(Keys.activeWorlds) as SNObject ?? { };
+            activeWorlds[Game.world] = new Date().getTime();
 
-            const now = new Date().getTime();
-            activeWorlds.set(Game.world as string, now);
-            Store.set({ [Keys.activeWorlds]: activeWorlds })
-                .then(() => Store.set({ [Keys.lastWorld]: Game.world }))
-                .catch((err: unknown) => {
-                    if (err instanceof Error) InsidiousError.handle(err);
-                });
+            await Store.set({ [Keys.activeWorlds]: activeWorlds });
+            await Store.set({ [Keys.lastWorld]: Game.world });
 
         } catch (err) {
             if (err instanceof Error) InsidiousError.handle(err);

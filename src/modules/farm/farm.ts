@@ -224,9 +224,9 @@ class TWFarm {
              * Lista das aldeias que já foram atacadas alguma vez.
              * É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
              */
-            let alreadyPlunderedVillages: Set<string> = new Set();
-            const attackHistory = await Store.get(Keys.alreadyPlundered) as Set<string> | undefined;
-            if (attackHistory !== undefined) alreadyPlunderedVillages = attackHistory;
+            
+            const attackHistory = await Store.get(Keys.alreadyPlundered) as string[] ?? [];
+            const alreadyPlunderedVillages: Set<string> = new Set(attackHistory);
     
             /** Ajuda a controlar o MutationObserver. */
             const infoEventTarget = new EventTarget();
@@ -376,7 +376,7 @@ class TWFarm {
                         };
                     };
 
-                    Store.set({ [Keys.alreadyPlundered]: alreadyPlunderedVillages })
+                    Store.set({ [Keys.alreadyPlundered]: Array.from(alreadyPlunderedVillages) })
                         .catch((err: unknown) => {
                             if (err instanceof Error) InsidiousError.handle(err);
                         });

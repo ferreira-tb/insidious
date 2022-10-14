@@ -85,7 +85,7 @@ class TWShield {
                             const incomingsScreenLink = incomingsScreenAnchor.getAttribute('href');
                             if (!incomingsScreenLink) throw new InsidiousError('O elemento-pai de #incomings_amount não possui atributo HREF.');
 
-                            await Store.set({ [Keys.shieldStatus]: { step: null, next: 'redirect', time: new Date().getTime() } as ShieldStatus });
+                            await Store.set({ [Keys.shieldStatus]: { step: null, next: 'redirect', time: new Date().getTime() } });
                             TWShield.shouldItRedirect(incomingsScreenLink);
                         };
 
@@ -115,9 +115,8 @@ class TWShield {
         if (shieldStatus.next !== 'rename') return;
 
         /** Registra os IDs dos ataques a caminho para que seja possível verificar quais já foram renomeados. */
-        let renamedIncomingsList: Set<string> = new Set();
-        const incomingsIDList = await Store.get(Keys.shieldIncomings) as Set<string> | undefined;
-        if (incomingsIDList instanceof Set) renamedIncomingsList = incomingsIDList;
+        const incomingsIDList = await Store.get(Keys.shieldIncomings) as string[] ?? [];
+        const renamedIncomingsList: Set<string> = new Set(incomingsIDList);
 
         /** 
          * IDs dos ataques a caminho no momento em que essa função é executada.
@@ -163,16 +162,16 @@ class TWShield {
         // Remove registros obsoletos.
         // Entende-se como obsoleto um registro que esteja salvo no banco de dados mas não exista na lista de ataques a caminho.
         // Isso comumente indica que o ataque já chegou ou foi cancelado.
-        const obsoleteRecords: string[] = [];
+        const obsoleteRecords: Set<string> = new Set();
         renamedIncomingsList.forEach((attack) => {
-            if (!currentIncomingsList.has(attack)) obsoleteRecords.push(attack);
+            if (!currentIncomingsList.has(attack)) obsoleteRecords.add(attack);
         });
         obsoleteRecords.forEach((record) => renamedIncomingsList.delete(record));
 
         // Salva no banco de dados os IDs dos ataques renomeados.
-        await Store.set({ [Keys.shieldIncomings]: renamedIncomingsList });
+        await Store.set({ [Keys.shieldIncomings]: Array.from(renamedIncomingsList) });
         // Instrui o Shield a voltar para a página onde o usuário estava anteriormente.
-        await Store.set({ [Keys.shieldStatus]: { step: 'rename', next: 'go_back', time: new Date().getTime() } as ShieldStatus });
+        await Store.set({ [Keys.shieldStatus]: { step: 'rename', next: 'go_back', time: new Date().getTime() } });
 
         // Renomeia os ataques marcados, caso exista algum.
         if (isSomethingChecked === true) {
@@ -380,7 +379,7 @@ class TWShield {
 
     /** Altera o grupo atual para "todos" caso já não seja. */
     private static async switchToDefaultGroup() {
-        await Store.set({ [Keys.shieldStatus]: { step: 'group', next: 'rename', time: new Date().getTime() } as ShieldStatus });
+        await Store.set({ [Keys.shieldStatus]: { step: 'group', next: 'rename', time: new Date().getTime() } });
 
         if (Game.group !== '0') {
             if (location.href.includes('group=')) {

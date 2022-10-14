@@ -1,4 +1,6 @@
 // Global
+type SNObject = { [index: string]: number };
+
 /** Os três recursos do jogo: madeira, argila e ferro. */
 type ResourceList = 
     | 'wood'
