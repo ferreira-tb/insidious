@@ -275,9 +275,7 @@ class PlunderPageNavigation {
     /** ID da aldeia atual. */
     readonly village: string = Game.village;
 
-    /**
-     * Cria um objeto detalhes sobre a última troca de página no Plunder.
-     */
+    /** Cria um objeto detalhes sobre a última troca de página no Plunder. */
     constructor() {
         this.date = new Date().getTime();
     };
@@ -285,9 +283,9 @@ class PlunderPageNavigation {
 
 class PlunderPageURL {
     /** URL da primeira página. */
-    first: string;
+    readonly first: string;
     /** URL da próxima página. */
-    next: string | null = null;
+    readonly next: string | null = null;
     
     /**
      * Cria um objeto contendo as URLs para navegação entre páginas do Plunder.

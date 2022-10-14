@@ -1,7 +1,7 @@
 class WorldInfo {
-    speed: number;
-    unit_speed: number;
-    game = { archer: 0 };
+    readonly speed: number;
+    readonly unit_speed: number;
+    readonly game = { archer: 0 };
 
     /** Configurações do mundo atual. */
     constructor(configXML: XMLDocument) {
@@ -14,18 +14,18 @@ class WorldInfo {
 };
 
 class UnitInfo {
-    spear?: UnitDetails;
-    sword?: UnitDetails;
-    axe?: UnitDetails;
-    archer?: UnitDetails;
-    spy?: UnitDetails;
-    light?: UnitDetails;
-    marcher?: UnitDetails;
-    heavy?: UnitDetails;
-    ram?: UnitDetails;
-    catapult?: UnitDetails;
-    knight?: UnitDetails;
-    snob?: UnitDetails;
+    readonly spear!: UnitDetails;
+    readonly sword!: UnitDetails;
+    readonly axe!: UnitDetails;
+    readonly archer!: UnitDetails;
+    readonly spy!: UnitDetails;
+    readonly light!: UnitDetails;
+    readonly marcher!: UnitDetails;
+    readonly heavy!: UnitDetails;
+    readonly ram!: UnitDetails;
+    readonly catapult!: UnitDetails;
+    readonly knight!: UnitDetails;
+    readonly snob!: UnitDetails;
 
     /** Velocidade e capacidade de carga individual de cada unidade do jogo. */
     constructor(configXML: XMLDocument) {

@@ -11,6 +11,7 @@ class Utils {
         return responseTime;
     };
 
+    /** Obtém o valor de algum campo da URL. */
     private static currentField(fieldName: string) {
         return function(url: string) {
             if (typeof url !== 'string') throw new InsidiousError('A URL fornecida é inválida.');

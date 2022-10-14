@@ -15,8 +15,6 @@ declare namespace browser.storage {
     | null
     | undefined
     | StorageArray
-    | StorageMap
-    | StorageSet
     | StorageObject
 
     // Valores específicos do Insidious.
@@ -24,10 +22,10 @@ declare namespace browser.storage {
     | PlunderPageNavigation
     | WorldInfo
     | UnitInfo
+    | ShieldStatus
+    | ShieldNavigation
 
     interface StorageArray extends Array<StorageValue> {}
-    interface StorageMap extends Map<StorageValue, StorageValue> {}
-    interface StorageSet extends Set<StorageValue> {}
 
     interface StorageObject {
         [key: string]: StorageValue;

@@ -158,13 +158,4 @@ type PlunderOptions = {
  * @param rename - Renomeia os ataques a caminho.
  * @param go_back - O Shield redirecionará o usuário de volta para a página onde estava.
 */
-type ShieldOperations = 'redirect' | 'group' | 'rename' | 'go_back';
-
-type ShieldStatus = {
-    /** Etapa sendo executada no momento. */
-    step: ShieldOperations | null,
-    /** Próxima etapa a ser executada. */
-    next: ShieldOperations | null
-    /** Hora da última atualização. */
-    time: number
-};
+type ShieldOperations = null | 'redirect' | 'group' | 'rename' | 'go_back';

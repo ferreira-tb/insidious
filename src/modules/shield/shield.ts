@@ -11,7 +11,7 @@ class TWShield {
             let shieldStatus = await this.getShieldStatus();
             // Reseta o registro caso ele seja antigo o suficiente.
             const now = new Date().getTime();
-            if (now - shieldStatus.time > 60000 * 3) shieldStatus = await this.resetShieldStatus();
+            if (now - shieldStatus.date > 60000 * 3) shieldStatus = await this.resetShieldStatus();
 
             if (this.isOverviewIncomingsScreen(location.search)) {
                 if (shieldStatus.next === null) return;
@@ -21,7 +21,7 @@ class TWShield {
                     await this.switchToDefaultGroup();
 
                 } else if (shieldStatus.next === 'rename') {
-                    // #wereAllRenamed() só pode ser chamado dentro da janela de ataques a caminho.
+                    // this.wereAllRenamed() só pode ser chamado dentro da janela de ataques a caminho.
                     // Do contrário, a ausência da tabela de ataques causará a emissão de um erro.
                     // Se o grupo atual não for "todos", também há a possibilidade de a tabela estar ausente.
                     // Isso porquê as aldeias sob ataque podem não pertencer ao grupo atual.
@@ -34,8 +34,8 @@ class TWShield {
 
                 } else if (shieldStatus.next === 'go_back') {
                     // Após renomear os ataques, verifica se deve voltar para a página anterior.
-                    const navigationHistory = await Store.get(Keys.shieldNavigation) as NavigationHistory | undefined;
-                    if (navigationHistory?.go_back === true) await this.goBackToPreviousScreen(navigationHistory);
+                    const shieldNavigation = await Store.get(Keys.shieldNavigation) as ShieldNavigation | undefined;
+                    if (shieldNavigation?.go_back === true) await this.goBackToPreviousScreen(shieldNavigation);
                 };
             };
 
@@ -71,11 +71,12 @@ class TWShield {
                     if (mutation.addedNodes.length > 0) {
                         const addedNodeContent = mutation.addedNodes[0].textContent;
                         if (addedNodeContent === null) return;
+
                         const amountNow = Number.parseInt(addedNodeContent, 10);
                         if (Number.isNaN(amountNow) || amountNow === 0) return;
 
                         // Se a quantidade de ataques agora for maior que a última registrada, verifica a janela atual.
-                        // Caso já estiver na janela de ataques a caminho, tenta renomear os ataques.
+                        // Caso o jogador já esteja na janela de ataques a caminho, tenta renomear os ataques.
                         // Do contrário, redireciona para a janela de ataques.
                         if (amountNow > (incomingsRecord.get(lastUpdate) as number)) {
                             const incomingsScreenAnchor = incomingsAmount.parentElement as HTMLAnchorElement | null;
@@ -85,16 +86,16 @@ class TWShield {
                             const incomingsScreenLink = incomingsScreenAnchor.getAttribute('href');
                             if (!incomingsScreenLink) throw new InsidiousError('O elemento-pai de #incomings_amount não possui atributo HREF.');
 
-                            await Store.set({ [Keys.shieldStatus]: { step: null, next: 'redirect', time: new Date().getTime() } });
+                            await Store.set({ [Keys.shieldStatus]: { step: null, next: 'redirect', date: new Date().getTime() } });
                             TWShield.shouldItRedirect(incomingsScreenLink);
                         };
 
                     } else if (mutation.removedNodes.length > 0) {
-                        const now = new Date().getTime();
                         const removedNodeContent = mutation.removedNodes[0].textContent;
                         if (removedNodeContent === null) return;
-                        const lastIncomingsAmount = Number.parseInt(removedNodeContent, 10);
 
+                        const now = new Date().getTime();
+                        const lastIncomingsAmount = Number.parseInt(removedNodeContent, 10);
                         incomingsRecord.set(now, lastIncomingsAmount);
                         lastUpdate = now;
                     };
@@ -171,7 +172,8 @@ class TWShield {
         // Salva no banco de dados os IDs dos ataques renomeados.
         await Store.set({ [Keys.shieldIncomings]: Array.from(renamedIncomingsList) });
         // Instrui o Shield a voltar para a página onde o usuário estava anteriormente.
-        await Store.set({ [Keys.shieldStatus]: { step: 'rename', next: 'go_back', time: new Date().getTime() } });
+        shieldStatus = new ShieldStatus('rename', 'go_back');
+        await Store.set({ [Keys.shieldStatus]: shieldStatus });
 
         // Renomeia os ataques marcados, caso exista algum.
         if (isSomethingChecked === true) {
@@ -246,25 +248,16 @@ class TWShield {
 
                 }, { signal: messageModalCtrl.signal });
 
-            /**
-             * Redireciona para a janela de ataques a caminho.
-             * Se a página atual for a do AS e o plunder estiver ativo, retorna para ela após renomear os ataques.
-             */
+            /** Redireciona para a janela de ataques a caminho. */
             async function redirectToIncomingsScreen() {
                 messageModalCtrl.abort();
 
-                const navigationHistory: NavigationHistory = {
-                    previous: location.search,
-                    target: link,
-                    date: new Date().getTime(),
-                    go_back: true
-                };
-
                 // Salva o histórico de navegação do Shield.
+                const navigationHistory = new ShieldNavigation(link);
                 await Store.set({ [Keys.shieldNavigation]: navigationHistory });
 
                 // Registra a etapa atual da operação.
-                shieldStatus = { step: 'redirect', next: 'group', time: new Date().getTime() };
+                shieldStatus = new ShieldStatus('redirect', 'group');
                 await Store.set({ [Keys.shieldStatus]: shieldStatus });
 
                 location.assign(link);
@@ -326,7 +319,7 @@ class TWShield {
      * Volta para a página na qual o usuário estava antes do Shield o redirecionar.
      * Não faz nada caso a página anterior também seja a janela de ataques a caminho.
      */
-     private static async goBackToPreviousScreen(navigationHistory: NavigationHistory) {
+     private static async goBackToPreviousScreen(navigationHistory: ShieldNavigation) {
         if (!navigationHistory.go_back) return;
         if (!navigationHistory.previous) return;
         if (this.isOverviewIncomingsScreen(navigationHistory.previous)) return;
@@ -344,7 +337,7 @@ class TWShield {
 
         const warningMessages = [
             'Os ataques foram renomeados com sucesso.',
-            'Você será redirecionado de volta para a página na qual estava.'
+            'Após cinco segundos, você será redirecionado de volta para a página na qual estava.'
         ];
 
         const warningMessageElements = Manatsu.repeat(2, modalWindow, { class: 'insidious_shieldWarningMessage' }, true);
@@ -377,9 +370,13 @@ class TWShield {
         await TWShield.resetShieldStatus();
     };
 
-    /** Altera o grupo atual para "todos" caso já não seja. */
+    /**
+     * Altera o grupo atual para "todos" caso já não seja.
+     * Não é possível renomear com segurança caso o jogador esteja em algum grupo mais específico.
+     */
     private static async switchToDefaultGroup() {
-        await Store.set({ [Keys.shieldStatus]: { step: 'group', next: 'rename', time: new Date().getTime() } });
+        const shieldStatus = new ShieldStatus('group', 'rename');
+        await Store.set({ [Keys.shieldStatus]: shieldStatus });
 
         if (Game.group !== '0') {
             if (location.href.includes('group=')) {
@@ -402,7 +399,7 @@ class TWShield {
     static async getShieldStatus(): Promise<ShieldStatus> {
         let shieldStatus = await Store.get(Keys.shieldStatus) as ShieldStatus | undefined;
         if (shieldStatus === undefined) {
-            shieldStatus = { step: null, next: null, time: 0 };
+            shieldStatus = new ShieldStatus();
             await Store.set({ [Keys.shieldStatus]: shieldStatus });
         };
 
@@ -411,7 +408,7 @@ class TWShield {
 
     /** Reseta o status do Shield para null. */
     static async resetShieldStatus(): Promise<ShieldStatus> {
-        const shieldStatus: ShieldStatus = { step: null, next: null, time: 0 };
+        const shieldStatus = new ShieldStatus();
         await Store.set({ [Keys.shieldStatus]: shieldStatus });
         return shieldStatus;
     };

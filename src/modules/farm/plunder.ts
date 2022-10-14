@@ -600,57 +600,55 @@ class Plunder extends TWFarm {
                     const observerTimeout = setTimeout(handleTimeout, 5000);
                     const observeCommandForm = new MutationObserver(async (mutationList) => {
                         for (const mutation of mutationList) {
-                            if (mutation.type === 'childList') {
-                                for (const node of Array.from(mutation.addedNodes)) {
-                                    if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('id') === 'command-data-form') {
-                                        clearTimeout(observerTimeout);
-                                        observeCommandForm.disconnect();
+                            for (const node of Array.from(mutation.addedNodes)) {
+                                if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('id') === 'command-data-form') {
+                                    clearTimeout(observerTimeout);
+                                    observeCommandForm.disconnect();
 
-                                        const submitAttack = (node as Element).querySelector('#troop_confirm_submit') as HTMLInputElement | null;
-                                        if (!submitAttack) throw new InsidiousError('DOM: #troop_confirm_submit');
+                                    const submitAttack = (node as Element).querySelector('#troop_confirm_submit') as HTMLInputElement | null;
+                                    if (!submitAttack) throw new InsidiousError('DOM: #troop_confirm_submit');
 
-                                        // Obtém informações a respeito das tropas que estão sendo enviadas.
-                                        const confirmRamField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-ram');
-                                        if (!confirmRamField || !confirmRamField.textContent) {
-                                            throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-ram')
-                                        };
-                                        
-                                        const confirmAxeField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-axe');
-                                        if (!confirmAxeField || !confirmAxeField.textContent) {
-                                            throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-axe')
-                                        };
-                                        
-                                        const confirmSpyField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-spy');
-                                        if (!confirmSpyField || !confirmSpyField.textContent) {
-                                            throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-spy')
-                                        };
+                                    // Obtém informações a respeito das tropas que estão sendo enviadas.
+                                    const confirmRamField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-ram');
+                                    if (!confirmRamField || !confirmRamField.textContent) {
+                                        throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-ram')
+                                    };
+                                    
+                                    const confirmAxeField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-axe');
+                                    if (!confirmAxeField || !confirmAxeField.textContent) {
+                                        throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-axe')
+                                    };
+                                    
+                                    const confirmSpyField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-spy');
+                                    if (!confirmSpyField || !confirmSpyField.textContent) {
+                                        throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-spy')
+                                    };
 
-                                        const confirmRamAmount = confirmRamField.textContent.replace(/\D/g, '');
-                                        const confirmAxeAmount = confirmAxeField.textContent.replace(/\D/g, '');
-                                        const confirmSpyAmount = confirmSpyField.textContent.replace(/\D/g, '');
+                                    const confirmRamAmount = confirmRamField.textContent.replace(/\D/g, '');
+                                    const confirmAxeAmount = confirmAxeField.textContent.replace(/\D/g, '');
+                                    const confirmSpyAmount = confirmSpyField.textContent.replace(/\D/g, '');
 
-                                        // E então verifica se a quantidade de tropas está correta.
-                                        if (confirmRamAmount !== neededRams) {
-                                            throw new InsidiousError(`A quantidade de aríetes (${confirmRamAmount}) não condiz com o necessário(${neededRams}).`);
-                                        } else if (confirmAxeAmount !== neededAxes) {
-                                            throw new InsidiousError(`A quantidade de bárbaros (${confirmAxeAmount}) não condiz com o necessário(${neededAxes}).`);
-                                        } else if (confirmSpyAmount !== '1') {
-                                            throw new InsidiousError(`A quantidade de exploradores (${confirmSpyAmount}) é diferente de 1.`);
+                                    // E então verifica se a quantidade de tropas está correta.
+                                    if (confirmRamAmount !== neededRams) {
+                                        throw new InsidiousError(`A quantidade de aríetes (${confirmRamAmount}) não condiz com o necessário(${neededRams}).`);
+                                    } else if (confirmAxeAmount !== neededAxes) {
+                                        throw new InsidiousError(`A quantidade de bárbaros (${confirmAxeAmount}) não condiz com o necessário(${neededAxes}).`);
+                                    } else if (confirmSpyAmount !== '1') {
+                                        throw new InsidiousError(`A quantidade de exploradores (${confirmSpyAmount}) é diferente de 1.`);
 
-                                        // Se estiver tudo certo, envia o ataque.
+                                    // Se estiver tudo certo, envia o ataque.
+                                    } else {
+                                        submitAttack.click();
+                                        const destroyedWalls = await Store.get(Keys.plunderWalls) as number | undefined;
+                                        if (typeof destroyedWalls !== 'number') {
+                                            await Store.set({ [Keys.plunderWalls]: wallLevel });
                                         } else {
-                                            submitAttack.click();
-                                            const destroyedWalls = await Store.get(Keys.plunderWalls) as number | undefined;
-                                            if (typeof destroyedWalls !== 'number') {
-                                                await Store.set({ [Keys.plunderWalls]: wallLevel });
-                                            } else {
-                                                await Store.set({ [Keys.plunderWalls]: destroyedWalls + wallLevel });
-                                            };
-
-                                            await Utils.wait();
-                                            resolve(true);
-                                            break;
+                                            await Store.set({ [Keys.plunderWalls]: destroyedWalls + wallLevel });
                                         };
+
+                                        await Utils.wait();
+                                        resolve(true);
+                                        return;
                                     };
                                 };
                             };
@@ -706,24 +704,22 @@ class Plunder extends TWFarm {
             const observerTimeout = setTimeout(handleTimeout, 5000);
             const observeRams = new MutationObserver((mutationList) => {
                 for (const mutation of mutationList) {
-                    if (mutation.type === 'childList') {
-                        for (const node of Array.from(mutation.addedNodes)) {
-                            if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('id') === 'command-data-form') {
-                                clearTimeout(observerTimeout);
-                                observeRams.disconnect();
+                    for (const node of Array.from(mutation.addedNodes)) {
+                        if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('id') === 'command-data-form') {
+                            clearTimeout(observerTimeout);
+                            observeRams.disconnect();
 
-                                const ramField = (node as Element).querySelector('#units_entry_all_ram');
-                                if (!ramField || !ramField.textContent) {
-                                    throw new InsidiousError('O campo com a quantidade de aríetes não está presente.');
-                                };
-
-                                let ramAmount: string | null = ramField.textContent;
-                                if (!ramAmount) throw new InsidiousError('Não foi possível determinar a quantidade de aríetes disponíveis.');
-                                ramAmount = ramAmount.replace(/\D/g, '');
-
-                                resolve(Number.parseInt(ramAmount, 10));
-                                break;
+                            const ramField = (node as Element).querySelector('#units_entry_all_ram');
+                            if (!ramField || !ramField.textContent) {
+                                throw new InsidiousError('O campo com a quantidade de aríetes não está presente.');
                             };
+
+                            let ramAmount: string | null = ramField.textContent;
+                            if (!ramAmount) throw new InsidiousError('Não foi possível determinar a quantidade de aríetes disponíveis.');
+                            ramAmount = ramAmount.replace(/\D/g, '');
+
+                            resolve(Number.parseInt(ramAmount, 10));
+                            return;
                         };
                     };
                 };
