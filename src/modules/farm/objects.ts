@@ -257,7 +257,7 @@ class PlunderGroupNavigation {
      */
     constructor(type?: 'attack' | 'jump') {
         if (type) {
-            this.date = new Date().getTime();
+            this.date = Date.now();
 
             switch (type) {
                 case 'attack': this.last_attacking_village = Game.village;
@@ -277,7 +277,7 @@ class PlunderPageNavigation {
 
     /** Cria um objeto detalhes sobre a última troca de página no Plunder. */
     constructor() {
-        this.date = new Date().getTime();
+        this.date = Date.now();
     };
 };
 

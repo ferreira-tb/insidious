@@ -46,7 +46,7 @@ class Utils {
         const hcaptchaFrame = document.querySelector('iframe[data-title*="hCaptcha" i]');
 
         if (botCheck || hcaptcha || hcaptchaFrame) {
-            Store.set({ lastCaptcha: new Date().getTime() })
+            Store.set({ lastCaptcha: Date.now() })
                 .catch((err : unknown) => {
                     if (err instanceof Error) InsidiousError.handle(err);
                 });

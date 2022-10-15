@@ -10,8 +10,7 @@ class TWShield {
 
             let shieldStatus = await this.getShieldStatus();
             // Reseta o registro caso ele seja antigo o suficiente.
-            const now = new Date().getTime();
-            if (now - shieldStatus.date > 60000 * 3) shieldStatus = await this.resetShieldStatus();
+            if (Date.now() - shieldStatus.date > 60000 * 3) shieldStatus = await this.resetShieldStatus();
 
             if (this.isOverviewIncomingsScreen(location.search)) {
                 if (shieldStatus.next === null) return;
@@ -52,7 +51,7 @@ class TWShield {
         const incomingsRecord: Map<number, number> = new Map();
 
         /** Hora da última atualização no registro de ataques. */
-        let lastUpdate: number = new Date().getTime();
+        let lastUpdate: number = Date.now();
         /** Quantidade de ataques a caminho. */
         const currentIncomingsAmount = Number.parseInt(incomingsAmount.textContent, 10);
         if (Number.isNaN(currentIncomingsAmount)) throw new InsidiousError('A quantidade de ataques obtida é inválida.');
@@ -86,7 +85,7 @@ class TWShield {
                             const incomingsScreenLink = incomingsScreenAnchor.getAttribute('href');
                             if (!incomingsScreenLink) throw new InsidiousError('O elemento-pai de #incomings_amount não possui atributo HREF.');
 
-                            await Store.set({ [Keys.shieldStatus]: { step: null, next: 'redirect', date: new Date().getTime() } });
+                            await Store.set({ [Keys.shieldStatus]: { step: null, next: 'redirect', date: Date.now() } });
                             TWShield.shouldItRedirect(incomingsScreenLink);
                         };
 
@@ -94,7 +93,7 @@ class TWShield {
                         const removedNodeContent = mutation.removedNodes[0].textContent;
                         if (removedNodeContent === null) return;
 
-                        const now = new Date().getTime();
+                        const now = Date.now();
                         const lastIncomingsAmount = Number.parseInt(removedNodeContent, 10);
                         incomingsRecord.set(now, lastIncomingsAmount);
                         lastUpdate = now;
@@ -325,8 +324,7 @@ class TWShield {
         if (this.isOverviewIncomingsScreen(navigationHistory.previous)) return;
 
         // Se a data do registro de navegação for de mais de três minutos atrás, remove-o e cancela a operação.
-        const now = new Date().getTime();
-        if (now - navigationHistory.date > 60000 * 3) {
+        if (Date.now() - navigationHistory.date > 60000 * 3) {
             await Store.remove(Keys.shieldNavigation);
             return;
         };

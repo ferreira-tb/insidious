@@ -1,6 +1,6 @@
 class ShieldNavigation implements NavigationHistory {
     readonly previous = location.search;
-    readonly date = new Date().getTime();
+    readonly date = Date.now();
     readonly go_back = true;
     target: string;
 
@@ -27,7 +27,7 @@ class ShieldStatus {
      * @param next Próxima etapa.
      */
     constructor(step?: ShieldOperations, next?: ShieldOperations) {
-        if (step || next) this.date = new Date().getTime();
+        if (step || next) this.date = Date.now();
         if (step) this.step = step;
         if (next) this.next = next;   
     };

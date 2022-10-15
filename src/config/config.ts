@@ -15,10 +15,9 @@ class InsidiousConfig {
                 const worldSelection = new Manatsu('select', div, { id: 'world-selection' }).create() as HTMLSelectElement;
                 worldSelection.addEventListener('change', () => this.showWorldInfo(worldSelection.value));
 
-                const now = new Date().getTime();
                 for (const [key, value] of activeWorldsEntries) {
                     // Se o último acesso foi há mais de um mês, remove-o do mapa.
-                    if (now - value > 2629800000) {
+                    if (Date.now() - value > 2629800000) {
                         delete activeWorlds[key];
                         continue;
 

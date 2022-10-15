@@ -124,7 +124,7 @@ class Insidious {
     private static async setAsActiveWorld() {
         try {
             const activeWorlds = await Store.get(Keys.activeWorlds) as SNObject ?? { };
-            activeWorlds[Game.world] = new Date().getTime();
+            activeWorlds[Game.world] = Date.now();
 
             await Store.set({ [Keys.activeWorlds]: activeWorlds });
             await Store.set({ [Keys.lastWorld]: Game.world });

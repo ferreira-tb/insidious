@@ -16,7 +16,7 @@ class Plunder extends TWFarm {
     static navigation = new PlunderGroupNavigation();
     
     /** Ajuda a controlar o estado das promises. */
-    private static readonly eventTarget = new EventTarget();
+    static readonly eventTarget = new EventTarget();
 
     static async start() {
         try {
@@ -40,8 +40,7 @@ class Plunder extends TWFarm {
                 // Histórico de navegação entre aldeias.
                 const plunderNavigation = await Store.get(Keys.plunderNavigation) as PlunderGroupNavigation | undefined;
                 if (plunderNavigation) {
-                    const now = new Date().getTime();
-                    if ((now - plunderNavigation.date) < (3000 + Utils.responseTime)) {
+                    if ((Date.now() - plunderNavigation.date) < (3000 + Utils.responseTime)) {
                         this.navigation = plunderNavigation;
                     } else {
                         // Se o registro for antigo, ele é removido.
@@ -83,7 +82,7 @@ class Plunder extends TWFarm {
             // O usuário poderá ou desativá-la ou encerrar o Plunder.
             const areThereVillagesUnderAttack = await this.areThereVillagesUnderAttack();
             if (areThereVillagesUnderAttack) {
-                this.forceStopPlunder();
+                TWFarm.togglePlunder();
                 return;
             };
             
@@ -161,13 +160,13 @@ class Plunder extends TWFarm {
                         // Esse return não pode ser removido, caso contrário o código após o FOR será executado indevidamente.
                         return new Promise<void>((resolve, reject) => {
                             if (Utils.isThereCaptcha()) {
-                                this.forceStopPlunder();
+                                TWFarm.togglePlunder();
                                 reject();
-                                return;   
+                                return;
                             };
 
                             const attackCtrl = new AbortController();
-                            const timerID = setTimeout(async () => {
+                            const attackTimeout = setTimeout(async () => { 
                                 try {
                                     // Envia o ataque e espera até que o servidor dê uma resposta.
                                     await this.handleAttack(village, bestRatio as AB);
@@ -175,27 +174,28 @@ class Plunder extends TWFarm {
                                     await this.updatePlunderedAmount(expectedResources);
 
                                     // Remove a aldeia da tabela.
-                                    village.parentElement?.removeChild(village);
-
-                                    attackCtrl.abort();
+                                    village.parentElement?.removeChild(village);     
                                     resolve();
 
                                 } catch (err) {
-                                    attackCtrl.abort();
                                     reject(err);
+
+                                } finally {
+                                    attackCtrl.abort();
                                 };
 
                             // O jogo possui um limite de cinco ações por segundo.
                             }, Utils.generateIntegerBetween(200, 300));
 
-                            this.eventTarget.addEventListener('stopplundering', () => {
-                                clearTimeout(timerID);
+                            Plunder.eventTarget.addEventListener('stopplundering', () => {
+                                clearTimeout(attackTimeout);
                                 attackCtrl.abort();
                                 reject();
                             }, { signal: attackCtrl.signal });
 
-                            document.querySelector('#insidious_startPlunderBtn')?.addEventListener('click', () => {
-                                clearTimeout(timerID);
+                            // É preciso também ter um evento no botão, do contrário há risco dele ainda continuar atacando.
+                            document.querySelector('#insidious_plunderButton')?.addEventListener('click', () => {
+                                clearTimeout(attackTimeout);
                                 attackCtrl.abort();
                                 reject();
                             }, { signal: attackCtrl.signal });
@@ -211,7 +211,7 @@ class Plunder extends TWFarm {
 
             // Caso, em toda tabela, não haja aldeia adequada para envio do ataque, verifica se há mais páginas.
             // Em caso positivo, navega para a próxima após um breve delay.
-            // Se não houverem outras páginas ou tropas disponíveis, navega para a próxima aldeia caso this.options.group_attack === true.
+            // Se não houverem outras páginas ou tropas disponíveis, navega para a próxima aldeia caso options.group_attack === true.
             setTimeout(() => this.navigateToNextPlunderPage(), Utils.generateIntegerBetween(1000, 2000));
 
         } catch (err) {
@@ -492,27 +492,36 @@ class Plunder extends TWFarm {
     };
 
     private static setPlunderTimeout() {
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<void>((resolve) => {
+            const plunderListTitle = document.querySelector('div#am_widget_Farm h4');
+            if (!plunderListTitle) throw new InsidiousError('DOM: div#am_widget_Farm h4');
+
+            /** Tempo até o recarregamento automático. */
+            const timeout = Utils.generateIntegerBetween((60000 * 10), (60000 * 20));
+            /** Horário do próximo recarregamento automático da página. */
+            const nextAutoReloadDate = new Date(Date.now() + timeout);
+            const dateString = nextAutoReloadDate.toLocaleDateString('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            const hourString = nextAutoReloadDate.toLocaleTimeString('pt-br', { hour: '2-digit', minute: '2-digit' });
+            const spanMessage = `A página será recarregada automaticamente em ${dateString} às ${hourString}`;
+
+            // Apenas substitui o texto caso o elemento já exista.
+            const spanElement = document.querySelector('#insidious_nextAutoReloadDate');
+            if (spanElement) {
+                spanElement.textContent = spanMessage;
+            } else {
+                new Manatsu('span', plunderListTitle, { text: spanMessage, id: 'insidious_nextAutoReloadDate' }).create();
+            };
+            
             const autoReloadCtrl = new AbortController();
 
-            const plunderTimeoutID = setTimeout(() => {
-                // Interrompe qualquer atividade no plunder e inicia a preparação para o recarregamento.
-                this.eventTarget.dispatchEvent(new Event('stopplundering'));
+            const plunderTimeout = setTimeout(() => {
                 autoReloadCtrl.abort();
-                setTimeout(() => window.location.reload(), 5000);
-                resolve();
+                setTimeout(() => location.reload(), 5000);
+                resolve();       
+            }, timeout);
 
-                // 60000 milisegundos equivalem a 1 minuto.
-            }, Utils.generateIntegerBetween((60000 * 10), (60000 * 20)));
-
-            document.querySelector('#insidious_startPlunderBtn')?.addEventListener('click', () => {
-                clearTimeout(plunderTimeoutID);
-                autoReloadCtrl.abort();
-                reject();
-            }, { signal: autoReloadCtrl.signal });
-
-            this.eventTarget.addEventListener('cancelautoreload', () => {
-                clearTimeout(plunderTimeoutID);
+            Plunder.eventTarget.addEventListener('cancelautoreload', () => {
+                clearTimeout(plunderTimeout);
                 autoReloadCtrl.abort();
                 resolve();
             }, { signal: autoReloadCtrl.signal });
@@ -785,25 +794,6 @@ class Plunder extends TWFarm {
                 resolve(false);
             };
         });
-    };
-
-    /**
-     * Força a parada do Plunder, remove o histórico de navegação
-     * e salva a quantia saqueada no histórico global.
-     */
-    private static async forceStopPlunder() {
-        await this.setGlobalPlundered();
-        await Store.remove(Keys.plunderNavigation);
-        await Store.set({ [Keys.plunder]: false });
-
-        const startPlunderBtn = document.querySelector('#insidious_startPlunderBtn');
-        if (startPlunderBtn) startPlunderBtn.textContent = 'Saquear';
-
-        this.eventTarget.dispatchEvent(new Event('stopplundering'));
-        this.eventTarget.dispatchEvent(new Event('cancelautoreload'));
-
-        const actionArea = document.querySelector('#insidious_farmActionArea');
-        if (actionArea) Manatsu.removeChildren(actionArea);
     };
 
     static get amount() {return this.plundered};

@@ -7,6 +7,19 @@ class Manatsu {
         for (const arg of args) if (arg !== null && arg !== undefined) this.setProperty(arg);
     };
 
+    private setProperty(value: AcceptableProperty) {
+        if (typeof value === 'string') {
+            if (!Validation.isValidElementName(value)) return;
+            this.#element = value.toLowerCase();
+
+        } else if (value instanceof Element) {
+            if (this.#parent === null) this.#parent = value;
+
+        } else if (Validation.isValidOption(value)) {
+            if (this.#options === null) this.#options = value;
+        };
+    };
+
     private createElement(): HTMLElement {
         const newElement = document.createElement(this.#element);
         
@@ -71,25 +84,13 @@ class Manatsu {
         return this.create();
     };
 
-    private setProperty(value: AcceptableProperty) {
-        if (typeof value === 'string') {
-            if (!Validation.isValidElementName(value)) return;
-            this.#element = value.toLowerCase();
-
-        } else if (value instanceof Element) {
-            if (this.#parent === null) this.#parent = value;
-
-        } else if (Validation.isValidOption(value)) {
-            if (this.#options === null) this.#options = value;
-        };
-    };
-
-    /** 
+    /**
      * Adiciona novos atributos ao objeto Manatsu.
      * @param option - Lista com novos atributos para o elemento.
      * @param overwrite - Determina se os atributos serão sobrescritos caso já existam.
+     * @returns O próprio objeto Manatsu, agora modificado.
      */
-    private addOptions(option: Option, overwrite: boolean = true) {
+    addOptions(option: Option, overwrite: boolean = true) {
         if (Validation.isValidOption(option)) {
             const oldOptions = this.#options ? { ...this.#options } : { };
             for (const [attribute, content] of Object.entries(option as object)) {
@@ -294,6 +295,33 @@ class Manatsu {
     };
 
     ////// GERAL
+    /**
+     * Remove um elemento ou mais elementos do documento.
+     * Ao contrário de Node.removeChild(), não é necessário especificar o pai.
+     * Além disso, quando mais de um elemento é fornecido, não é necessário que todos tenham o mesmo pai.
+     * @param elementsToRemove Elemento(s) que se deseja remover do documento.
+     */
+    static remove(elementsToRemove: Element | Element[]) {
+        if (Array.isArray(elementsToRemove)) {
+            elementsToRemove.forEach((element) => {
+                if (!(element instanceof Element)) throw new ManatsuError('O elemento é inválido.');
+
+                const parentElement = element.parentElement;
+                if (!parentElement) throw new ManatsuError('O elemento não possui um pai.');
+                parentElement.removeChild(element);
+            });
+
+        } else if (elementsToRemove instanceof Element) {
+            const parentElement = elementsToRemove.parentElement;
+            if (!parentElement) throw new ManatsuError('O elemento não possui um pai.');
+            parentElement.removeChild(elementsToRemove);
+
+        } else {
+            throw new ManatsuError('O elemento é inválido.');
+        };
+    };
+
+
     /** 
      * Remove todos os filhos do elemento indicado. 
      * Caso um seletor CSS seja fornecido, remove apenas os filhos que o satisfaçam.
