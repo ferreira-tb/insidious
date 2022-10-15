@@ -1,6 +1,6 @@
 class TWFarm {
     /** Opções do Plunder. */
-    private static readonly optionsAreaItems: Manatsu[] = this.createOptions();
+    private static readonly optionsAreaItems: Manatsu[] = [];
 
     static async open() {
         // Elementos originais.
@@ -21,6 +21,9 @@ class TWFarm {
         const buttonClass = 'insidious_farmButtonArea_Btn';
         const plunderButton = new Manatsu('button', { class: buttonClass, id: 'insidious_plunderButton' }).create();
         const optionsButton = new Manatsu('button', { class: buttonClass, id: 'insidious_optionsButton', text: 'Opções' }).create();
+
+        ////// OPÇÕES
+        this.createOptions();
 
         ////// DADOS
         await this.info();
@@ -49,7 +52,7 @@ class TWFarm {
 
         ////// EVENTOS
         plunderButton.addEventListener('click', TWFarm.togglePlunder);
-        optionsButton.addEventListener('click', TWFarm.toggleOptions);
+        optionsButton.addEventListener('click', () => this.toggleOptions());
 
         // Configura o botão de saque de acordo com o status do plunder.
         // Além disso, se o plunder já estiver marcado como ativo, chama Plunder.start() automaticamente.
@@ -411,33 +414,29 @@ class TWFarm {
         };
     };
 
-    private static createOptions(): Manatsu[] {
+    private static createOptions() {
         const optionsArea = document.querySelector('#insidious_farmOptionsArea');
         if (!optionsArea) throw new InsidiousError('A área de opções não existe.');
 
-        const optionsAreaItems: Manatsu[] = [];
-
         // Ataca de múltiplas aldeias usando um grupo como referência.
         // O nome do grupo obrigatoriamente precisa ser Insidious.
-        optionsAreaItems.push(...Manatsu.createCheckbox({
+        this.optionsAreaItems.push(...Manatsu.createCheckbox({
             id: 'insidious_group_attack_checkbox',
             label: 'Usar grupo'
         }, false, optionsArea) as Manatsu[]);
 
         // Não ataca aldeias que tenham muralha.
-        optionsAreaItems.push(...Manatsu.createCheckbox({
+        this.optionsAreaItems.push(...Manatsu.createCheckbox({
             id: 'insidious_ignore_wall_checkbox',
             label: 'Ignorar muralha'
         }, false, optionsArea) as Manatsu[]);
 
         // Envia ataques com aríetes em aldeias com muralha.
         // Independe de como "ignorar muralha" está configurado.
-        optionsAreaItems.push(...Manatsu.createCheckbox({
+        this.optionsAreaItems.push(...Manatsu.createCheckbox({
             id: 'insidious_destroy_wall_checkbox',
             label: 'Demolir muralha'
         }, false, optionsArea) as Manatsu[]);
-
-        return optionsAreaItems;
     };
 
     /**
