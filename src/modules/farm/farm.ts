@@ -1,6 +1,6 @@
 class TWFarm {
     /** Opções do Plunder. */
-    private static readonly optionsAreaItems: Manatsu[] = [];
+    private static readonly optionsCheckboxes: Manatsu[] = [];
 
     static async open() {
         // Elementos originais.
@@ -134,7 +134,7 @@ class TWFarm {
         if (!optionsButton) throw new InsidiousError('DOM: #insidious_optionsButton');
 
         // Adiciona as opções disponíveis.
-        Manatsu.createAll(this.optionsAreaItems);
+        Manatsu.createAll(this.optionsCheckboxes);
         optionsButton.setAttribute('disabled', '');
 
         const optionsCtrl = new AbortController();
@@ -160,6 +160,20 @@ class TWFarm {
         if (Plunder.options.destroy_wall === true) destroyWall.checked = true;
         destroyWall.addEventListener('change', (e) => {
             this.saveOptions(e.target, 'destroy_wall');
+        }, { signal: optionsCtrl.signal });
+
+        // Usa o modelo C para atacar.
+        const useCModel = optionsArea.querySelector('#insidious_use_c_model') as HTMLInputElement;
+        if (Plunder.options.use_c === true) useCModel.checked = true;
+        useCModel.addEventListener('change', (e) => {
+            this.saveOptions(e.target, 'use_c');
+        }, { signal: optionsCtrl.signal });
+
+        // Ataca rapidamente, enviando vários ataques simultaneamente.
+        const rushMode = optionsArea.querySelector('#insidious_rush_mode') as HTMLInputElement;
+        if (Plunder.options.rush_mode === true) rushMode.checked = true;
+        rushMode.addEventListener('change', (e) => {
+            this.saveOptions(e.target, 'rush_mode');
         }, { signal: optionsCtrl.signal });
 
         new Manatsu('button', optionsArea, { text: 'Fechar' }).createInside('div')
@@ -367,8 +381,18 @@ class TWFarm {
                             if (bFarmBtn) bFarmBtn.setAttribute('insidious-farm-btn', `b_${villageID}`);
         
                             // C
-                            const cFarmBtn = row.querySelector('td a[class*="farm_icon_c" i]:not([class*="disabled" i])');
-                            if (cFarmBtn) cFarmBtn.setAttribute('insidious-farm-btn', `c_${villageID}`);
+                            const cFarmBtn = row.querySelector('td a[class*="farm_icon_c" i][onclick]');
+                            if (cFarmBtn) {
+                                cFarmBtn.setAttribute('insidious-farm-btn', `c_${villageID}`);
+
+                                // Verifica o status do botão C.
+                                const cFarmBtnStatus = cFarmBtn.getAttribute('class');
+                                if (cFarmBtnStatus?.includes('disabled')) {
+                                    row.setAttribute('insidious-c-btn', 'off');
+                                } else {
+                                    row.setAttribute('insidious-c-btn', 'on');
+                                };
+                            };
 
                             // Praça de reunião.
                             const placeButton = row.querySelector('td a[href*="screen=place" i][onclick]');
@@ -420,22 +444,34 @@ class TWFarm {
 
         // Ataca de múltiplas aldeias usando um grupo como referência.
         // O nome do grupo obrigatoriamente precisa ser Insidious.
-        this.optionsAreaItems.push(...Manatsu.createCheckbox({
+        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
             id: 'insidious_group_attack_checkbox',
             label: 'Usar grupo'
         }, false, optionsArea) as Manatsu[]);
 
         // Não ataca aldeias que tenham muralha.
-        this.optionsAreaItems.push(...Manatsu.createCheckbox({
+        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
             id: 'insidious_ignore_wall_checkbox',
             label: 'Ignorar muralha'
         }, false, optionsArea) as Manatsu[]);
 
         // Envia ataques com aríetes em aldeias com muralha.
         // Independe de como "ignorar muralha" está configurado.
-        this.optionsAreaItems.push(...Manatsu.createCheckbox({
+        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
             id: 'insidious_destroy_wall_checkbox',
             label: 'Demolir muralha'
+        }, false, optionsArea) as Manatsu[]);
+
+        // Ataca usando o modelo C.
+        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
+            id: 'insidious_use_c_model',
+            label: 'Usar C'
+        }, false, optionsArea) as Manatsu[]);
+
+        // Rush Mode
+        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
+            id: 'insidious_rush_mode',
+            label: 'Atacar rapidamente'
         }, false, optionsArea) as Manatsu[]);
     };
 

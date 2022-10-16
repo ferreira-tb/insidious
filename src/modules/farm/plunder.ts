@@ -24,7 +24,7 @@ class Plunder extends TWFarm {
             if (isFirstPage === false) this.goBackToFirstPage();
 
             // Exibe a quantidade de recursos saqueado durante o período em que o plunder estiver ativo.
-            // A função #updatePlunderedAmount() atualiza essa informação após cada ataque feito.
+            // A função updatePlunderedAmount() atualiza essa informação após cada ataque feito.
             await this.showPlunderedAmount();
 
             // Informações sobre cada tipo de unidade do jogo.
@@ -62,7 +62,7 @@ class Plunder extends TWFarm {
             this.carry = new CarryCapacity();
 
             // Alea iacta est.
-            this.sendAttack();
+            this.handleAttack();
 
             // Após vários minutos, recarrega a página.
             // Como isPlunderActive === true, o plunder voltará a atacar automaticamente.
@@ -76,7 +76,7 @@ class Plunder extends TWFarm {
     };
 
     /** Envia um ataque usando os modelos A e B. */
-    private static async sendAttack(): Promise<void> {
+    private static async handleAttack(): Promise<void> {
         try {
             // Se a opção de exibir aldeias sob ataque estiver ativa, exibe um aviso.
             // O usuário poderá ou desativá-la ou encerrar o Plunder.
@@ -89,51 +89,52 @@ class Plunder extends TWFarm {
             /** Array com todas as linhas da tabela. */
             const villageRows = Array.from(document.querySelectorAll('tr[insidious-tr-farm="true"]')) as HTMLElement[];
             for (const village of villageRows) {
-                // Ignora a linha caso ela esteja oculta.
+                // Ignora a linha caso ela esteja oculta, removendo-a da tabela.
                 // Elas automaticamente ficam ocultas assim que são atacadas.
-                // Também remove a aldeia da tabela.
                 if (village.getAttribute('style')?.includes('display: none')) {
-                    village.parentElement?.removeChild(village);
+                    Manatsu.remove(village);
                     continue;
                 };
                 
                 // Caso não hajam informações obtidas por exploradores, a linha é ignorada.
                 // No entanto, emite um erro caso a função addInfo() tenha falhado em criar o atributo.
                 const spyStatus = village.getAttribute('insidious-spy-status');
-                if (!spyStatus) {
-                    throw new InsidiousError('A linha não possui atributo indicando se foi explorada ou não.');
-                } else if (spyStatus === 'false') {
-                    continue;
+                switch (spyStatus) {
+                    case 'false': continue;
+                    case null: throw new InsidiousError('A aldeia não foi corretamente identificada.');
                 };
 
-                // Representa a quantidade total de recursos disponível na aldeia alvo.
-                const resourceAmount = Number.parseInt(village.getAttribute('insidious-resources') as string, 10);
-                if (Number.isNaN(resourceAmount)) throw new InsidiousError('Não foi possível obter a quantidade de recursos da aldeia.');
-
-                // Determina o nível da muralha.
-                let wallLevel: string | number | null = village.getAttribute('insidious-wall');
-                if (!wallLevel) throw new InsidiousError('Não foi possível determinar o nível da muralha.');
-
-                wallLevel = Number.parseInt(wallLevel, 10)
-                if (Number.isNaN(wallLevel) || wallLevel > 20) throw new InsidiousError('O nível da muralha é inválido.');
+                // Informações sobre o ataque atual.
+                const attack = new PlunderAttack(village);
 
                 // Envia aríetes caso a aldeia possua muralha e "demolir muralha" esteja ativo.
                 // Se o ataque for enviado com sucesso, pula para a próxima aldeia.
                 // Em hipótese alguma "destroy_wall" pode estar após "ignore_wall".
-                if (this.options.destroy_wall === true && wallLevel > 0) {
-                    const skipToNextVillage = await this.destroyWall(village, wallLevel as WallLevel);
+                if (this.options.destroy_wall === true && attack.wall_level > 0) {
+                    const skipToNextVillage = await this.destroyWall(attack.id, attack.wall_level as WallLevel);
                     if (skipToNextVillage === true) continue;
                 };
 
                 // A aldeia é ignorada caso possua muralha e "ignorar muralha" esteja ativo.
-                if (this.options.ignore_wall === true && wallLevel !== 0) continue;
+                if (this.options.ignore_wall === true && attack.wall_level !== 0) continue;
 
-                let { ratioIsOk, bestRatio, otherRatio } = new ModelRatio(resourceAmount);
+                // Verifica se o Plunder deve ou não usar o modelo C.
+                // Em caso positivo, também verifica se o botão está ativado.
+                if (this.options.use_c === true) {
+                    if (attack.c_button === 'off') continue;
+                    const expectedResources = new ExpectedResources(village, 'c');
+                    return this.prepareAttack(attack.id, expectedResources)
+                        .then(() => Manatsu.remove(village))
+                        .then(() => this.handleAttack())
+                        .catch((err: unknown) => {
+                            if (err instanceof Error) InsidiousError.handle(err);
+                        });
+                };
+
+                let { ratioIsOk, bestRatio, otherRatio } = new ModelRatio(attack.resources);
                 // Verifica o modelo mais adequado e em seguida se há tropas disponíveis.
                 if (ratioIsOk) {
-                    if (bestRatio === null) {
-                        throw new InsidiousError('Devido a uma falha, não foi possível determinar qual modelo utilizar.');
-                    };
+                    if (!bestRatio) throw new InsidiousError('Não foi possível determinar qual modelo utilizar.');
 
                     // Retorna uma função, que então é guardada em checkAvailability.
                     // Essa nova função guarda o escopo de this.getAvailableTroops.
@@ -157,54 +158,14 @@ class Plunder extends TWFarm {
                     
                     // Se as tropas estiverem disponíveis, envia o ataque após um delay aleatório.
                     if (attackIsPossible) {
+                        const expectedResources = new ExpectedResources(village, bestRatio);
                         // Esse return não pode ser removido, caso contrário o código após o FOR será executado indevidamente.
-                        return new Promise<void>((resolve, reject) => {
-                            if (Utils.isThereCaptcha()) {
-                                TWFarm.togglePlunder();
-                                reject();
-                                return;
-                            };
-
-                            const attackCtrl = new AbortController();
-                            const attackTimeout = setTimeout(async () => { 
-                                try {
-                                    // Envia o ataque e espera até que o servidor dê uma resposta.
-                                    await this.handleAttack(village, bestRatio as AB);
-                                    const expectedResources = new ExpectedResources(village, this.carry[bestRatio as AB]);
-                                    await this.updatePlunderedAmount(expectedResources);
-
-                                    // Remove a aldeia da tabela.
-                                    village.parentElement?.removeChild(village);     
-                                    resolve();
-
-                                } catch (err) {
-                                    reject(err);
-
-                                } finally {
-                                    attackCtrl.abort();
-                                };
-
-                            // O jogo possui um limite de cinco ações por segundo.
-                            }, Utils.generateIntegerBetween(200, 300));
-
-                            Plunder.eventTarget.addEventListener('stopplundering', () => {
-                                clearTimeout(attackTimeout);
-                                attackCtrl.abort();
-                                reject();
-                            }, { signal: attackCtrl.signal });
-
-                            // É preciso também ter um evento no botão, do contrário há risco dele ainda continuar atacando.
-                            document.querySelector('#insidious_plunderButton')?.addEventListener('click', () => {
-                                clearTimeout(attackTimeout);
-                                attackCtrl.abort();
-                                reject();
-                            }, { signal: attackCtrl.signal });
-
-                        }).then(() => this.sendAttack()).catch((err: unknown) => {
-                            if (err instanceof Error) {
-                                InsidiousError.handle(err);
-                            };
-                        });
+                        return this.prepareAttack(attack.id, expectedResources)
+                            .then(() => Manatsu.remove(village))
+                            .then(() => this.handleAttack())
+                            .catch((err: unknown) => {
+                                if (err instanceof Error) InsidiousError.handle(err);
+                            });
                     };
                 };
             };
@@ -219,14 +180,49 @@ class Plunder extends TWFarm {
         };
     };
 
+    private static prepareAttack(villageID: string, resources: ExpectedResources) {
+        return new Promise<void>((resolve, reject) => {
+            if (Utils.isThereCaptcha()) {
+                TWFarm.togglePlunder();
+                reject(new InsidiousError('Não é possível saquear enquanto há um captcha ativo.'));
+                return;
+            };
+
+            const attackCtrl = new AbortController();
+            const attackTimeout = setTimeout(() => {
+                this.sendAttack(villageID, resources.model)
+                    .then(() => this.updatePlunderedAmount(resources))
+                    .then(() => resolve())
+                    .catch((err: unknown) => reject(err))
+                    .finally(() => attackCtrl.abort());
+
+            // O jogo possui um limite de cinco ações por segundo.
+            }, Utils.generateIntegerBetween(200, 300));
+
+            Plunder.eventTarget.addEventListener('stopplundering', () => {
+                clearTimeout(attackTimeout);
+                attackCtrl.abort();
+                reject();
+            }, { signal: attackCtrl.signal });
+
+            // É preciso também ter um evento no botão.
+            // Do contrário, existe a possibilidade do Plunder continuar atacando.
+            document.querySelector('#insidious_plunderButton')?.addEventListener('click', () => {
+                clearTimeout(attackTimeout);
+                attackCtrl.abort();
+                reject();
+            }, { signal: attackCtrl.signal });
+        });
+    };
+
     /**
-     * O plunder cumpre sua tarefa bem mais rápido que o servidor consegue responder.
+     * O Plunder cumpre sua tarefa bem mais rápido que o servidor consegue responder.
      * No entanto, como ele depende do número de tropas ditado pelo jogo, é necessário esperar o valor ser atualizado.
-     * @param village Linha relacionada à aldeia na tabela.
-     * @param bestRatio Referência ao modelo escolhido como melhor candidato ao ataque.
+     * @param villageID ID da aldeia.
+     * @param model Modelo escolhido para o ataque.
      */
-    private static handleAttack(village: Element, bestRatio: AB) {
-        return new Promise<void>((resolve) => {
+    private static sendAttack(villageID: string, model: ABC) {
+        return new Promise<void>((resolve, reject) => {
             const observerTimeout = setTimeout(handleTimeout, 5000);
             const observeTroops = new MutationObserver(() => {
                 clearTimeout(observerTimeout);
@@ -237,23 +233,19 @@ class Plunder extends TWFarm {
             // Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro.
             function handleTimeout() {
                 observeTroops.disconnect();
-                InsidiousError.handle(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (handleAttack).'));
+                reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (sendAttack).'));
             };
 
             const unitTable = document.querySelector('tr[insidious-available-unit-table="true"]');
             if (!unitTable) throw new InsidiousError('DOM: tr[insidious-available-unit-table]');
             observeTroops.observe(unitTable, { subtree: true, childList: true });
-            
-            const targetVillageID = village.getAttribute('insidious-village');
-            if (!targetVillageID) throw new InsidiousError('Não foi possível obter o ID da aldeia alvo.');
 
             // Como a promise superior está esperando a resolução dessa, o plunder só irá continuar após isso acontecer.
-            const attackButton = document.querySelector(
-                `a[insidious-farm-btn^="${bestRatio}" i][insidious-farm-btn$="${targetVillageID}"]`
-            );
+            const selector = `a[insidious-farm-btn^="${model}" i][insidious-farm-btn$="${villageID}"]`;
+            const attackButton = document.querySelector(selector) as HTMLAnchorElement | null;
+            if (!attackButton) throw new InsidiousError(`O botão ${model.toUpperCase()} não foi encontrado.`);
 
-            if (!attackButton) throw new InsidiousError(`O botão ${bestRatio.toUpperCase()} não foi encontrado.`);
-            attackButton.dispatchEvent(new Event('click')); 
+            attackButton.click();
         });
     };
 
@@ -428,36 +420,15 @@ class Plunder extends TWFarm {
 
             this.plundered = await Store.get(Keys.totalPlundered) as TotalPlundered | undefined;
             if (!this.plundered) this.plundered = { wood: 0, stone: 0, iron: 0, attack_amount: 0 };
-            const { wood = 0, stone = 0, iron = 0 } = this.plundered;
 
-            const spanContainer = new Manatsu('span', {
-                class: 'nowrap',
-                ['insidious-custom']: 'true'
-            }, actionArea).create();
+            const container = new Manatsu('span', actionArea, { class: 'nowrap', ['insidious-custom']: 'true' }).create();
 
-            // MADEIRA
-            new Manatsu('span', spanContainer, { class: 'icon header wood' }).create();
-            new Manatsu('span', spanContainer, {
-                class: 'res',
-                id: 'insidious_plundered_wood',
-                text: String(wood)
-            }).create();
-
-            // ARGILA
-            new Manatsu('span', spanContainer, { class: 'icon header stone' }).create();
-            new Manatsu('span', spanContainer, {
-                class: 'res',
-                id: 'insidious_plundered_stone',
-                text: String(stone)
-            }).create();
-
-            // FERRO
-            new Manatsu('span', spanContainer, { class: 'icon header iron' }).create();
-            new Manatsu('span', spanContainer, {
-                class: 'res',
-                id: 'insidious_plundered_iron',
-                text: String(iron)
-            }).create();
+            for (const [key, value] of Object.entries(this.plundered)) {
+                if (key !== 'attack_amount') {
+                    new Manatsu('span', container, { class: `icon header ${key}` }).create();
+                    new Manatsu('span', container, { class: 'res', id: `insidious_plundered_${key}`, text: String(value) }).create();
+                };
+            };
 
         } catch (err) {
             if (err instanceof Error) InsidiousError.handle(err);
@@ -471,13 +442,10 @@ class Plunder extends TWFarm {
 
         try {
             if (this.plundered) {
-                this.plundered = new PlunderedAmount(resources, false);
-                await Store.set({ [Keys.totalPlundered]: this.plundered });
-                
+                this.plundered = new PlunderedAmount(resources, false);          
             } else {
                 // Caso ainda não exista, entende que o ataque atual é o primeiro.
-                this.plundered = new PlunderedAmount(resources, true);
-                await Store.set({ [Keys.totalPlundered]: this.plundered });
+                this.plundered = new PlunderedAmount(resources, true);           
             };
 
             if (woodLabel && stoneLabel && ironLabel) {
@@ -485,6 +453,9 @@ class Plunder extends TWFarm {
                 stoneLabel.textContent = String(this.plundered.stone);
                 ironLabel.textContent = String(this.plundered.iron);
             };
+
+            // Salva os valores no banco de dados.
+            await Store.set({ [Keys.totalPlundered]: this.plundered });
 
         } catch (err) {
             if (err instanceof Error) InsidiousError.handle(err);
@@ -530,12 +501,12 @@ class Plunder extends TWFarm {
 
     /**
      * A promise retornada por #destroyWall() resolve com um boolean.
-     * Se o resultado for true, o ataque foi enviado e #sendAttack() deve pular para a próxima aldeia.
-     * Se for false, #sendAttack() deve continuar a execução atual.
-     * @param village Linha relacionada à aldeia na tabela.
+     * Se o resultado for true, o ataque foi enviado e handleAttack() deve pular para a próxima aldeia.
+     * Se for false, handleAttack() deve continuar a execução atual.
+     * @param villageID ID da aldeia.
      * @param wallLevel Nível da muralha.
      */
-    private static destroyWall(village: HTMLElement, wallLevel: WallLevel) {
+    private static destroyWall(villageID: string, wallLevel: WallLevel) {
         return new Promise<boolean>(async (resolve, reject) => {
             // Quantidade de bárbaros.
             const axeField = document.querySelector('td[insidious-available-units="axe"]');
@@ -575,7 +546,7 @@ class Plunder extends TWFarm {
 
             try {
                 // Abre a janela de comando e obtém a quantidade de aríetes.
-                this.ram = await this.openPlace(village);
+                this.ram = await this.openPlace(villageID);
 
                 const closeButton = document.querySelector('#popup_box_popup_command a.popup_box_close') as HTMLElement | null;
                 if (!closeButton) throw new InsidiousError('Não foi possível encontrar o botão para fechar a janela de comando.');
@@ -697,16 +668,12 @@ class Plunder extends TWFarm {
 
     /**
      * Abre a janela para envio de comandos.
-     * @param village Linha relacionada à aldeia na tabela.
+     * @param villageID ID da aldeia.
      * @returns A quantidade de aríetes disponíveis.
      */
-    private static openPlace(village: HTMLElement) {
+    private static openPlace(villageID: string) {
         return new Promise<number>((resolve) => {
-            let villageID: string | null = village.getAttribute('id');
-            if (!villageID) throw new InsidiousError('Não foi possível obter o id da aldeia.');
-            villageID = villageID.replace(/\D/g, '');
-
-            const placeButton = village.querySelector(`td a[insidious-place-btn="place_${villageID}"]`) as HTMLElement | null;
+            const placeButton = document.querySelector(`td a[insidious-place-btn="place_${villageID}"]`) as HTMLElement | null;
             if (!placeButton) throw new InsidiousError(`Não foi possível encontrar o botão da praça de reunião ${villageID}.`);
 
             // Observa até detectar a abertura da janela de comando.
@@ -794,6 +761,19 @@ class Plunder extends TWFarm {
                 resolve(false);
             };
         });
+    };
+
+    static getCModelCarryCapacity(village: HTMLElement): number {
+        const cFarmBtn = village.querySelector('td a[class*="farm_icon_c" i][data-units-forecast]');
+        if (!cFarmBtn) throw new InsidiousError('Não foi possível encontrar o botão C.');
+
+        const modelJSON = cFarmBtn.getAttribute('data-units-forecast');
+        if (!modelJSON) throw new InsidiousError('Não foi possível determinar a quantia de recursos para o modelo C.');
+
+        const cmodel = JSON.parse(modelJSON) as AvailableFarmUnits;
+        const capacityC = new CarryCapacity(cmodel).c;
+
+        return capacityC;
     };
 
     static get amount() {return this.plundered};

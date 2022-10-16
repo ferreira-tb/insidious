@@ -40,32 +40,35 @@ type UnitListWithArchers =
     | OtherUnits;
 
 /** URLs permitidas em browser.tabs.create() */
-type WebExtTabURLs = 'https://github.com/ferreira-tb/insidious';
+type WebExtTabURLs =
+    | 'https://github.com/ferreira-tb'
+    | 'https://github.com/ferreira-tb/insidious';
+
 /** URLs permitidas em browser.windows.create() */
 type WebExtWindowURLs = '../config/config.html';
 
 type WindowMessageDirection = 'from-insidious' | 'from-tribalwars';
 type WindowMessageReason = 'get-game-data';
 interface WindowMessage {
-    direction: WindowMessageDirection,
-    reason?: WindowMessageReason
+    direction: WindowMessageDirection;
+    reason?: WindowMessageReason;
 }
 
 interface WindowMessageFromPage extends WindowMessage {
-    game_data?: TribalWarsGameData,
-    premium?: boolean
+    game_data?: TribalWarsGameData;
+    premium?: boolean;
 }
 
 /** Histórico de navegação entre páginas do jogo. */
 type NavigationHistory = {
     /** URL da página em que o usuário estava antes da navegação ser feita. */
-    previous: string,
+    previous: string;
     /** URL para qual o usuário foi redirecionado pelo Insidious. */
-    target: string,
+    target: string;
     /** Hora na qual a navegação foi feita. */
-    date: number,
+    date: number;
     /** Indica se o Insidious deve ou não redirecionar o usuário de volta para a página na qual estava. */
-    go_back: boolean
+    go_back: boolean;
 };
 
 /** Quantia de recursos. */
@@ -90,28 +93,30 @@ type UnitDetails = {
 
 ////// MENSAGEM
 type StandardMessage = {
-    type: 'start'
+    type: 'start';
 };
 
 type ErrorMessage = {
-    type: 'error'
-    error: Error
+    type: 'error';
+    error: Error;
 };
 
-type AllMessageTypes = StandardMessage | ErrorMessage;
+type AllMessageTypes = 
+    | StandardMessage
+    | ErrorMessage;
 
 type FetchURLs = {
-    village: string
+    village: string;
 };
 
 ////// ASSETS
 type AssetsList = {
-    all_units: UnitList[]
-    all_units_archer: UnitListWithArchers[]
-    farm_units: FarmUnits[]
-    farm_units_archer: FarmUnitsWithArchers[]
+    all_units: UnitList[];
+    all_units_archer: UnitListWithArchers[];
+    farm_units: FarmUnits[];
+    farm_units_archer: FarmUnitsWithArchers[];
 
-    resources: ResourceList[]
+    resources: ResourceList[];
 };
 
 ////// UTILS
@@ -125,19 +130,21 @@ type XMLTags =
 ////// PLUNDER
 type AB = 'a' | 'b';
 type ABNull = AB | null;
+type ABC = AB | 'c';
+type OnOff = 'on' | 'off';
 
 /** Quantidade de unidades disponíveis para uso nos modelos do assistente de saque. */
 type AvailableFarmUnits = {
-    spear: number,
-    sword: number,
-    axe: number,
-    spy: number,
-    light: number,
-    heavy: number,
-    knight: number,
+    spear: number;
+    sword: number;
+    axe: number;
+    spy: number;
+    light: number;
+    heavy: number;
+    knight: number;
 
-    archer?: number,
-    marcher?: number
+    archer?: number;
+    marcher?: number;
 };
 
 /** Quantia de recursos saqueados e ataques enviados pelo Plunder. */
@@ -148,11 +155,15 @@ type TotalPlunderedEntries = [ResourceList | 'attack_amount', number][];
 /** Status das diferentes opções do plunder. */
 type PlunderOptions = {
     /** Determina se o Plunder deve atacar aldeias com muralha. */
-    ignore_wall: boolean,
+    ignore_wall: boolean;
     /** Determina se o Plunder deve demolir a muralha das aldeias. */
-    destroy_wall: boolean,
+    destroy_wall: boolean;
     /** Determina se o Plunder deve utilizar o grupo Insidious ao atacar. */
-    group_attack: boolean
+    group_attack: boolean;
+    /** Determina se o Plunder deve atacar usando o modelo C. */
+    use_c: boolean;
+    /** Se ativado, o Plunder enviará vários ataques simultaneamente. */
+    rush_mode: boolean;
 };
 
 ////// SHIELD

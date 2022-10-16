@@ -52,30 +52,34 @@ class ModelUnitAmount {
 class CarryCapacity {
     readonly a: number;
     readonly b: number;
+    readonly c: number = Infinity;
 
     /** Cria um objeto com a capacidade total de carga de cada modelo. */
-    constructor() {
+    constructor(cmodel?: AvailableFarmUnits) {
         const calcEachCarryCapacity = (unitModel: AvailableFarmUnits) => {
             let result = 0;
             for (const [key, value] of Object.entries(unitModel)) {
-                // Ignora o explorador, já que ele não pode carregar recursos.
-                if (key !== 'spy') {
+                if (!Number.isInteger(value)) throw new InsidiousError(`A carga para ${key} é inválida (${value}).`);
+                // Ignora a milícia, que aparece quando o modelo é do tipo C.
+                if (key !== 'militia') {
                     result += value * Game.unitInfo[key as FarmUnitsWithArchers].carry;
                 };
             };
 
-            if (!Number.isInteger(result)) {
-                throw new InsidiousError('O valor calculado para a capacidade de carga é inválido.');
-            };
+            if (!Number.isInteger(result)) throw new InsidiousError('O valor calculado para a capacidade de carga é inválido.');
 
             return result;
+        };
+
+        if (cmodel) {
+            const capacityC = calcEachCarryCapacity(cmodel);
+            if (capacityC > 0) this.c = capacityC;
         };
 
         const capacityA = calcEachCarryCapacity(Plunder.amodel);
         const capacityB = calcEachCarryCapacity(Plunder.bmodel);
 
-        // Caso o valor seja zero, surge uma divisão por zero no cálculo da razão.
-        // Qualquer valor dividido por Infinity se torna zero, o que o torna a melhor opção lá.
+        // Atribuir Infinity impede divisões por zero.
         this.a = capacityA === 0 ? Infinity : capacityA;
         this.b = capacityB === 0 ? Infinity : capacityB;
     };
@@ -133,41 +137,44 @@ class ModelRatio {
     };
 };
 
-class ExpectedResources implements ResourceAmount {
+class ExpectedResources {
+    /** Modelo usado no ataque. */
+    readonly model: ABC;
+    /** Quantidade de madeira esperada no saque. */
     wood: number;
+    /** Quantidade de argila esperada no saque. */
     stone: number;
+    /** Quantidade de ferro esperada no saque. */
     iron: number;
 
     /**
-     * Calcula a quantidade recursos esperada no saque (sempre pressupondo carga total).
+     * Calcula a quantidade recursos esperada no saque.
+     * Sempre presume carga total.
      * @param village - Elemento representando a aldeia atual.
-     * @param carry - Capacidade de carga do modelo escolhido pelo Plunder.
+     * @param model - Modelo usado no ataque.
      */
-    constructor(village: HTMLElement, carry: number) {
-        const woodAmount: string | null = village.getAttribute('insidious-wood');
-        const stoneAmount: string | null = village.getAttribute('insidious-stone');
-        const ironAmount: string | null = village.getAttribute('insidious-iron');
-
-        if (!woodAmount || !stoneAmount || !ironAmount) {
-            throw new InsidiousError('O atributo que informa a quantidade de recursos está ausente.');
-        };
+    constructor(village: HTMLElement, model: ABC) {
+        // Um erro será emitido posteriormente caso os valores não sejam strings.
+        const woodAmount = village.getAttribute('insidious-wood') as string;
+        const stoneAmount = village.getAttribute('insidious-stone') as string;
+        const ironAmount = village.getAttribute('insidious-iron') as string;
 
         this.wood = Number.parseInt(woodAmount, 10);
         this.stone = Number.parseInt(stoneAmount, 10);
         this.iron = Number.parseInt(ironAmount, 10);
 
-        /** 
-         * Caso a soma resulte em zero, "totalAmount = Infinity" garante que não surja uma divisão por zero mais adiante.
-         * Qualquer valor dividido por Infinity é igual a zero.
-         */
+        // Atribuir Infinity impede divisões por zero.
         let totalAmount = this.wood + this.stone + this.iron;
         if (totalAmount === 0) totalAmount = Infinity;
 
-        [this.wood, this.stone, this.iron].forEach((amount: number, index) => {
-            if (Number.isNaN(amount)) throw new InsidiousError('O valor dos recursos não é válido.');
+        this.model = model;
+        // Se a capacidade de carga for zero, o valor de carry será Infinity.
+        const carry = (model !== 'c') ? Plunder.carry[model] : Plunder.getCModelCarryCapacity(village);
 
+        [this.wood, this.stone, this.iron].forEach((amount, index) => {
             // Se houver mais recursos do que a carga suporta, calcula quanto de cada recurso deve ser saqueado.
             if (totalAmount > carry) amount = Math.floor((amount / totalAmount) * carry);
+            if (!Number.isInteger(amount)) throw new InsidiousError('A quantia de recursos não é válida.');
 
             switch (index) {
                 case 0: this.wood = amount;
@@ -321,5 +328,39 @@ class PlunderPageURL {
                 throw new InsidiousError('A página atual é inválida (PlunderPageURL).');
             };
         };
+    };
+};
+
+class PlunderAttack {
+    /** ID da aldeia atual. */
+    readonly id: string;
+    /** Quantidade total de recursos disponíveis na aldeia alvo. */
+    readonly resources: number;
+    /** Nível da muralha. */
+    readonly wall_level: number;
+    /** Estado do botão C. */
+    readonly c_button: OnOff;
+
+    /**
+     * Cria um objeto com informações sobre o ataque a ser enviado.
+     * @param village Elemento correspondente à linha na qual a aldeia se encontra na tabela.
+     */
+    constructor(village: HTMLElement) {
+        const villageID = village.getAttribute('insidious-village');
+        if (!villageID) throw new InsidiousError('Não foi possível obter o id da aldeia.');
+        this.id = villageID;
+
+        const cFarmBtnStatus = village.getAttribute('insidious-c-btn') as OnOff | null;
+        if (!cFarmBtnStatus) throw new InsidiousError('Não foi possível determinar o estado do botão C.');
+        this.c_button = cFarmBtnStatus;
+
+        const resourceAmount = Number.parseInt(village.getAttribute('insidious-resources') as string, 10);
+        if (Number.isNaN(resourceAmount)) throw new InsidiousError('Não foi possível obter a quantidade de recursos da aldeia.');
+        this.resources = resourceAmount;
+
+        const wallLevel = village.getAttribute('insidious-wall');
+        if (!wallLevel) throw new InsidiousError('Não foi possível determinar o nível da muralha.');
+        this.wall_level = Number.parseInt(wallLevel, 10);
+        if (Number.isNaN(this.wall_level)) throw new InsidiousError('O nível da muralha é inválido.');
     };
 };
