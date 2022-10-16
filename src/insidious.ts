@@ -12,7 +12,7 @@ class Insidious {
 
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
             switch (Game.screen) {
-                case 'am_farm': await TWFarm.open();
+                case 'am_farm': await Farm.open();
                     break;
                 case 'overview': await this.setAsActiveWorld();
                     break;
@@ -33,7 +33,7 @@ class Insidious {
             };
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -116,7 +116,7 @@ class Insidious {
 
         } catch (err) {
             await Store.remove(Keys.worldConfig);
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -130,13 +130,13 @@ class Insidious {
             await Store.set({ [Keys.lastWorld]: Game.world });
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
     private static warnAboutPremiumStatus() {
-        Utils.modal('Insidious');
-        const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
+        Utils.createModal('Insidious', true);
+        const modalWindow = document.querySelector('#insidious_modal');
         if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
         const warningMessage = 'Não é possível utilizar o Insidious sem uma conta premium ativada.';
@@ -144,9 +144,7 @@ class Insidious {
 
         const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
         new Manatsu('button', { class: 'insidious_modalButton', text: 'OK' }, modalButtonArea).create()
-            .addEventListener('click', () => {
-                document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
-            });
+            .addEventListener('click', Utils.closeModal);
     };
 
     /** Dados, ainda sem tratamento, obtidos diretamente do jogo. */

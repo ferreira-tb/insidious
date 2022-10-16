@@ -1,3 +1,29 @@
+class PlunderButtons {
+    /** Seções do menu do Plunder. */
+    readonly section: SHTMLObject = { };
+    /** Botões do Plunder. */
+    readonly button: SHTMLObject = { };
+
+    constructor() {
+        const plunderFilters = document.querySelector('#plunder_list_filters');
+        if (!plunderFilters) throw new InsidiousError('DOM: #plunder_list_filters');
+
+        // Elementos da extensão.
+        this.section.main = new Manatsu({ id: 'insidious_farmMenuArea' }).createBefore(plunderFilters.nextElementSibling);
+        this.section.button = new Manatsu({ id: 'insidious_farmButtonArea' }, this.section.main).create();
+        this.section.action = new Manatsu({ id: 'insidious_farmActionArea' }, this.section.main).create();
+
+        this.button.plunder = new Manatsu('button', { class: 'insidious_farmAreaBtn', id: 'insidious_plunderButton' }).create();
+        this.button.options = new Manatsu('button', { class: 'insidious_farmAreaBtn', text: 'Opções' }).create();
+        this.button.info = new Manatsu('button', { class: 'insidious_farmAreaBtn', text: 'Informações' }).create();
+
+        ////// EVENTOS
+        this.button.plunder.addEventListener('click', Farm.togglePlunder);
+        this.button.options.addEventListener('click', () => Farm.toggleOptions());
+        this.button.info.addEventListener('click', () => Farm.toggleInfo());
+    };
+};
+
 class ModelUnitAmount {
     readonly a: AvailableFarmUnits = {
         spear: 0,

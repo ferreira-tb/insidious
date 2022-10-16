@@ -35,7 +35,7 @@ class GroupAttack {
             if (alreadyExists) return;
 
             // Caso o grupo não exista, emite uma mensagem solicitando sua criação.
-            Utils.modal('Insidious');
+            Utils.createModal('Insidious', false);
             const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
             if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
@@ -65,16 +65,14 @@ class GroupAttack {
 
                     Store.set({ [Keys.plunderOptions]: Plunder.options })
                         .then(() => setTimeout(() => window.location.reload(), Utils.responseTime))
-                        .catch((err: unknown) => {
-                            if (err instanceof Error) InsidiousError.handle(err);
-                        });
+                        .catch((err: unknown) => InsidiousError.handle(err));
                         
                 }, { signal: messageModalCtrl.signal });
 
             new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Fechar' }, modalButtonArea).create()
                 .addEventListener('click', () => {
                     messageModalCtrl.abort();
-                    document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
+                    Utils.closeModal();
                 }, { signal: messageModalCtrl.signal });
         };
     };
@@ -146,7 +144,7 @@ class GroupAttack {
             location.assign(targetLocation);
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 

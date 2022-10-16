@@ -39,7 +39,7 @@ class TWShield {
             };
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -101,7 +101,7 @@ class TWShield {
                 };
 
             } catch (err) {
-                if (err instanceof Error) InsidiousError.handle(err);
+                InsidiousError.handle(err);
             };
         };
     };
@@ -199,7 +199,7 @@ class TWShield {
                 return;
             };
 
-            Utils.modal('Ataque a caminho!', 'tw_shield');
+            Utils.createModal('Ataque a caminho!', false, { caller: 'tw_shield' });
             const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
             if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
@@ -229,22 +229,17 @@ class TWShield {
                     clearTimeout(warningTimeout);
                     messageModalCtrl.abort();
                     await TWShield.resetShieldStatus();
-                    document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
+                    Utils.closeModal();
                 }, { signal: messageModalCtrl.signal });
 
             new Manatsu('button', { class: 'insidious_modalButton', text: 'Desativar' }, modalButtonArea).create()
-                .addEventListener('click', async () => {
+                .addEventListener('click', () => {
                     clearTimeout(warningTimeout);
                     messageModalCtrl.abort();
-                    try {
-                        await Store.set({ [Keys.shield]: false });
-                        await TWShield.resetShieldStatus();
-                    } catch (err) {
-                        if (err instanceof Error) InsidiousError.handle(err);
-                    } finally {
-                        document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
-                    };
-
+                    Store.set({ [Keys.shield]: false })
+                        .then(() => TWShield.resetShieldStatus())
+                        .catch((err: unknown) => InsidiousError.handle(err))
+                        .finally(() => Utils.closeModal());
                 }, { signal: messageModalCtrl.signal });
 
             /** Redireciona para a janela de ataques a caminho. */
@@ -263,7 +258,7 @@ class TWShield {
             };
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -275,15 +270,10 @@ class TWShield {
      private static modalAlreadyExists(): boolean {
         const modalWindow = document.querySelector('#insidious_modal');
         if (!modalWindow) return false;
-
-        const modalCaller = modalWindow.getAttribute('insidious-modal-caller');
-        if (modalCaller === 'tw_shield') {
-            return true;
-
-        } else {
-            document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
-            return false;
-        };
+        if (modalWindow.getAttribute('caller') === 'tw_shield') return true;
+    
+        Utils.closeModal();
+        return false;
     };
 
     /** Verifica se todos os ataques a caminho foram renomeados. */
@@ -329,7 +319,7 @@ class TWShield {
             return;
         };
 
-        Utils.modal('Insidious');
+        Utils.createModal('Insidious', false);
         const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
         if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
@@ -356,7 +346,7 @@ class TWShield {
             .addEventListener('click', () => {
                 clearTimeout(warningTimeout);
                 messageModalCtrl.abort();
-                document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
+                Utils.closeModal();
             }, { signal: messageModalCtrl.signal });
 
         async function goBack() {

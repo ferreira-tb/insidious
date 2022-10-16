@@ -29,6 +29,8 @@ class Keys {
     static readonly plunderPage = `plunderPage_${Game.world}`;
     /** CHAVE: recursos saqueados e ataques enviados pelo processo atual do Plunder (totalPlundered). */
     static readonly totalPlundered = `totalPlundered_${Game.world}`;
+    /** CHAVE: registro do último valor em `totalPlundered` (lastPlundered). */
+    static readonly lastPlundered = `lastPlundered_${Game.world}`;
     /** CHAVE: soma dos recursos saqueados e ataques enviados desde a primeira execução do Plunder (globalPlundered). */
     static readonly globalPlundered = `globalPlundered_${Game.world}`;
     /** CHAVE: lista de aldeias já atacadas pelo Plunder (alreadyPlunderedVillages). */

@@ -1,4 +1,4 @@
-class Plunder extends TWFarm {
+class Plunder extends Farm {
     /** Modelo A do assistente de saque. */
     static amodel: AvailableFarmUnits;
     /** Modelo B do assistente de saque. */
@@ -68,12 +68,11 @@ class Plunder extends TWFarm {
 
             // Após vários minutos, recarrega a página.
             // Como isPlunderActive === true, o plunder voltará a atacar automaticamente.
-            this.setPlunderTimeout().catch((err: unknown) => {
-                if (err instanceof Error) InsidiousError.handle(err);
-            });
+            this.setPlunderTimeout()
+                .catch((err: unknown) => InsidiousError.handle(err));
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -84,7 +83,7 @@ class Plunder extends TWFarm {
             // O usuário poderá ou desativá-la ou encerrar o Plunder.
             const areThereVillagesUnderAttack = await this.areThereVillagesUnderAttack();
             if (areThereVillagesUnderAttack) {
-                TWFarm.togglePlunder();
+                Farm.togglePlunder();
                 return;
             };
             
@@ -138,24 +137,21 @@ class Plunder extends TWFarm {
                     return this.prepareAttack(attack.id, expectedResources)
                         .then(() => Manatsu.remove(village))
                         .then(() => this.handleAttack())
-                        .catch((err: unknown) => {
-                            if (err instanceof Error) InsidiousError.handle(err);
-                        });
+                        .catch((err: unknown) => InsidiousError.handle(err));
                 };
 
                 let { ratioIsOk, bestRatio, otherRatio } = new ModelRatio(attack.resources);
                 // Verifica o modelo mais adequado e em seguida se há tropas disponíveis.
                 if (ratioIsOk) {
                     if (!bestRatio) throw new InsidiousError('Não foi possível determinar qual modelo utilizar.');
+ 
+                    // Modelo escolhido pela função verifyRatio.
+                    const bestModel = this[`${bestRatio}model`] as AvailableFarmUnits;
 
                     // Retorna uma função, que então é guardada em checkAvailability.
                     // Essa nova função guarda o escopo de this.getAvailableTroops.
                     const checkAvailability = this.getAvailableTroops();
-                    
-                    // Modelo escolhido pela função verifyRatio.
-                    const bestModel = this[`${bestRatio}model`] as AvailableFarmUnits;
-
-                    // Esse boolean determina se o ataque é enviado ou não.
+                    // Esse boolean determina se o ataque pode ser enviado ou não.
                     let attackIsPossible: boolean = checkAvailability(bestModel);
 
                     // Caso não hajam tropas disponíveis, verifica se um ataque usando o outro modelo seria aceitável.
@@ -175,9 +171,7 @@ class Plunder extends TWFarm {
                         return this.prepareAttack(attack.id, expectedResources)
                             .then(() => Manatsu.remove(village))
                             .then(() => this.handleAttack())
-                            .catch((err: unknown) => {
-                                if (err instanceof Error) InsidiousError.handle(err);
-                            });
+                            .catch((err: unknown) => InsidiousError.handle(err));
                     };
                 };
             };
@@ -188,14 +182,14 @@ class Plunder extends TWFarm {
             setTimeout(() => this.navigateToNextPlunderPage(), Utils.generateIntegerBetween(1000, 2000));
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
     private static prepareAttack(villageID: string, resources: ExpectedResources) {
         return new Promise<void>((resolve, reject) => {
             if (Utils.isThereCaptcha()) {
-                TWFarm.togglePlunder();
+                Farm.togglePlunder();
                 reject(new InsidiousError('Não é possível saquear enquanto há um captcha ativo.'));
                 return;
             };
@@ -219,7 +213,7 @@ class Plunder extends TWFarm {
 
             // É preciso também ter um evento no botão.
             // Do contrário, existe a possibilidade do Plunder continuar atacando.
-            document.querySelector('#insidious_plunderButton')?.addEventListener('click', () => {
+            Farm.menu.button.plunder.addEventListener('click', () => {
                 clearTimeout(attackTimeout);
                 attackCtrl.abort();
                 reject();
@@ -300,9 +294,8 @@ class Plunder extends TWFarm {
     /** Retorna uma função que permite verificar a quantidade de tropas disponíveis. */
     private static getAvailableTroops() {
         if (!Game.worldInfo.game) {
-            Store.remove(Keys.worldConfig).catch((err: unknown) => {
-                if (err instanceof Error) InsidiousError.handle(err);
-            });
+            Store.remove(Keys.worldConfig)
+                .catch((err: unknown) => InsidiousError.handle(err));
 
             throw new InsidiousError('Não foi possível obter as configurações do mundo.');
         };
@@ -398,7 +391,7 @@ class Plunder extends TWFarm {
             };
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -459,20 +452,19 @@ class Plunder extends TWFarm {
             };
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
     private static async showPlunderedAmount() {
         try {
-            const actionArea = document.querySelector('#insidious_farmActionArea');
-            if (!actionArea) throw new InsidiousError('DOM: #insidious_farmActionArea');
-            Manatsu.removeChildren(actionArea);
+            Manatsu.removeChildren(Farm.menu.section.action);
 
             this.plundered = await Store.get(Keys.totalPlundered) as TotalPlundered | undefined;
             if (!this.plundered) this.plundered = { wood: 0, stone: 0, iron: 0, attack_amount: 0 };
 
-            const container = new Manatsu('span', actionArea, { class: 'nowrap', ['insidious-custom']: 'true' }).create();
+            const options = { class: 'nowrap', ['insidious-custom']: 'true' };
+            const container = new Manatsu('span', Farm.menu.section.action, options).create();
 
             for (const [key, value] of Object.entries(this.plundered)) {
                 if (key !== 'attack_amount') {
@@ -482,7 +474,7 @@ class Plunder extends TWFarm {
             };
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -509,7 +501,7 @@ class Plunder extends TWFarm {
             await Store.set({ [Keys.totalPlundered]: this.plundered });
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -773,7 +765,7 @@ class Plunder extends TWFarm {
 
         return new Promise<boolean>((resolve) => {
             if (includeVillagesUnderAttack.checked === true) {
-                Utils.modal('Insidious');
+                Utils.createModal('Insidious', false);
                 const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
                 if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
@@ -804,7 +796,7 @@ class Plunder extends TWFarm {
                 new Manatsu('button', { class: 'insidious_modalButton', text: 'Não' }, modalButtonArea).create()
                     .addEventListener('click', () => {
                         messageModalCtrl.abort();
-                        document.querySelector('#insidious_blurBG')?.dispatchEvent(new Event('closemodal'));
+                        Utils.closeModal();
                         resolve(true);
                     }, { signal: messageModalCtrl.signal });
 

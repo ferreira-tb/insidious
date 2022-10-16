@@ -47,9 +47,7 @@ class Utils {
 
         if (botCheck || hcaptcha || hcaptchaFrame) {
             Store.set({ lastCaptcha: Date.now() })
-                .catch((err : unknown) => {
-                    if (err instanceof Error) InsidiousError.handle(err);
-                });
+                .catch((err: unknown) => InsidiousError.handle(err));
 
             return true;
         };
@@ -69,22 +67,46 @@ class Utils {
     /**
      * Cria uma janela modal.
      * @param modalTitle - Título do modal.
-     * @param caller - Referência à classe que invocou o modal.
+     * @param clickOutside - Se `true`, um clique fora do modal o fechará.
+     * @param options - Atributos para se adicionar à janela modal.
      */
-    static modal(modalTitle: string, caller?: string) {
+    static createModal(modalTitle: string, clickOutside: boolean = true, options?: Option) {
         const blurBG = new Manatsu({ id: 'insidious_blurBG' }, document.body).create();
-        const modalWindow = new Manatsu({ id: 'insidious_modal' }, document.body).create();
-        if (caller && typeof caller === 'string') modalWindow.setAttribute('insidious-modal-caller', caller);
+        let modalWindow: HTMLElement;
+
+        if (options) {
+            const beforeCreating = new Manatsu(options, document.body);
+            modalWindow = beforeCreating.addOptions({ id: 'insidious_modal' }, true).create();
+        } else {
+            modalWindow = new Manatsu({ id: 'insidious_modal' }, document.body).create();
+        };
 
         const modalCtrl = new AbortController();
-        blurBG.addEventListener('closemodal', () => {
+        const closeIt = () => {
             modalCtrl.abort();
-            document.body.removeChild(modalWindow);
-            document.body.removeChild(blurBG);
-        }, {signal: modalCtrl.signal});
+            Manatsu.remove([blurBG, modalWindow]);
+        };
+
+        blurBG.addEventListener('closemodal', closeIt, {signal: modalCtrl.signal});
+        if (clickOutside === true) blurBG.addEventListener('click', closeIt, {signal: modalCtrl.signal});
 
         const titleContainer = new Manatsu(modalWindow).create();
         new Manatsu('h1', { id: 'insidious_modal_h1', text: modalTitle }, titleContainer).create();
+    };
+    
+    /**
+     * Fecha qualquer modal que tenha sido aberto pela Manatsu.
+     * @returns Retorna `true` caso o modal tenha sido fechado, do contrário, retorna `false`.
+     */
+    static closeModal(): boolean {
+        const blurBG = document.querySelector('#insidious_blurBG');
+        if (!blurBG) return false;
+
+        blurBG.dispatchEvent(new Event('closemodal'));
+
+        // Verifica se o elemento ainda existe.
+        if (document.querySelector('#insidious_blurBG')) return false;
+        return true;
     };
 
     static queryXMLTags(configXML: XMLDocument) {

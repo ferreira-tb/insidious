@@ -1,5 +1,6 @@
 // Global
 type SNObject = { [index: string]: number };
+type SHTMLObject  = { [index: string]: HTMLElement };
 
 /** Os três recursos do jogo: madeira, argila e ferro. */
 type ResourceList = 

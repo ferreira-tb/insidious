@@ -65,7 +65,7 @@ class Manatsu {
 
     /**
      * Cria um elemento a partir do objeto Manatsu.
-     * @returns O elemento criado.
+     * @returns Elemento criado.
      */
     create(): HTMLElement {
         const newElement = this.createElement();
@@ -76,7 +76,7 @@ class Manatsu {
 
     /** 
      * Cria um elemento a partir do objeto Manatsu e o insere antes do elemento indicado como referência.
-     * Se o elemento de referência for null, createBefore() tem o mesmo efeito de create().
+     * Se o elemento de referência for `null`, o método tem o mesmo efeito de `create()`.
      * Além disso, se o objeto Manatsu possuir um pai, ele é trocado pelo pai do elemento de referência.
      * @param referenceNode Elemento antes do qual o novo será inserido.
      * @returns O elemento criado a partir do objeto Manatsu.
@@ -101,12 +101,12 @@ class Manatsu {
 
     /** 
      * Cria um elemento e o envelopa com outro elemento. 
-     * Esse outro elemento será criado com base nos argumentos fornecidos à createInside().
-     * @returns O elemento criado a partir do objeto Manatsu.
+     * Esse outro elemento será criado com base nos argumentos fornecidos à `createInside()`.
+     * @returns O objeto Manatsu original, agora como elemento.
      */
     createInside(...args: ConstructorArgs): HTMLElement {
         const newParent = new Manatsu(...args);
-        if (!this.#parent && !newParent.parent) throw new ManatsuError('Não foi especificado um elemento pai para o container.');
+        if (!this.#parent && !newParent.parent) throw new ManatsuError('Não foi especificado onde posicionar o elemento.');
         if (this.#parent && !newParent.parent) newParent.parent = this.#parent;
 
         this.#parent = newParent.create();
@@ -116,19 +116,68 @@ class Manatsu {
     ////// MANATSU
     /** 
      * Cria vários elementos de uma só vez, a partir de uma array de objetos Manatsu. 
-     * É equivalente a usar create() separadamente em cada um dos objetos. 
+     * É equivalente a usar `create()` separadamente em cada um dos objetos. 
      * @param manatsu - Array de objetos Manatsu.
      * @returns Array com os elementos criados.
      */
     static createAll(manatsu: Manatsu[]): HTMLElement[] {
         if (!Array.isArray(manatsu)) throw new ManatsuError('O valor fornecido não é uma array.');
-        if (manatsu.length === 0) throw new ManatsuError('A array não pode estar vazia.');
 
         const collection: HTMLElement[] = [];
         for (const mana of manatsu) {
             if (mana instanceof Manatsu) {
                 const newElement = mana.create();
                 collection.push(newElement);
+            };
+        };
+
+        return collection;
+    };
+
+    /**
+     * Cria vários elementos, envelopando todos com outros elementos.
+     * Esses outros elementos serão criados com base no conteúdo da array `parentArgs`.
+     * @param manatsu Array contendo os objetos Manatsu a serem criados.
+     * @param step Número indicando a cada quantos objetos Manatsu um novo envelope deve ser criado.
+     * @param parentArgs Array contendo informações sobre os elementos que serão usados como envelope.
+     * @returns Array com os elementos criados a partir dos objetos Manatsu originais.
+     */
+    static createAllInside(manatsu: Manatsu[], step: number = 1, parentArgs: AcceptableProperty[] = []): HTMLElement[] {
+        if (!Array.isArray(manatsu)) throw new ManatsuError('O valor fornecido não é uma array.');
+        if (!Number.isFinite(step) || Math.sign(step) !== 1) throw new ManatsuError('A quantidade de passos é inválida.');
+        if (!Number.isInteger(step)) step = Math.trunc(step);
+
+        const collection: HTMLElement[] = [];
+        if (step !== 1) {
+            let progress = 0;
+            let newElement: HTMLElement;
+            manatsu.forEach((mana) => {
+                if (!(mana instanceof Manatsu)) return;
+                // Não se deve usar o índice do item na array em vez de "progress".
+                const ratio = progress / step;
+
+                // O elemento criado a partir do objeto Manatsu.
+                let currentManatsu: HTMLElement;
+
+                if (Number.isInteger(ratio)) {
+                    currentManatsu = mana.createInside(...parentArgs);
+                    newElement = mana.parent as HTMLElement;
+
+                } else {
+                    mana.parent = newElement;
+                    currentManatsu = mana.create();
+                };
+        
+                progress++;
+                collection.push(currentManatsu);
+            });
+
+        } else {
+            for (const mana of manatsu) {
+                if (mana instanceof Manatsu) {
+                    const currentManatsu = mana.createInside(...parentArgs);
+                    collection.push(currentManatsu);
+                };
             };
         };
 
@@ -199,11 +248,11 @@ class Manatsu {
 
     /** 
      * Cria vários objetos Manatsu a partir dos parâmetros especificados. 
-     * É possível designar vários tipos diferentes para os elementos, mas apenas um parent e um objeto options. 
+     * É possível designar vários tipos diferentes para os elementos, mas apenas um `parent` e um objeto `options`. 
      * 
-     * Caso vários tipos sejam fornecidos, repeat() os atribuirá em ordem. 
+     * Caso vários tipos sejam fornecidos, `repeat()` os atribuirá em ordem. 
      * Se a quantidade de cópias desejada for maior que a quantidade de tipos fornecidos, 
-     * repeat() fará normalmente a atribuição em ordem para esses fornecidos e atribuirá div ao restante.
+     * `repeat()` fará normalmente a atribuição em ordem para esses fornecidos e atribuirá `div` ao restante.
      */
      static repeat(...args: RepeatConstructor): Manatsu[] | HTMLElement[] {
         const manatsu: Manatsu[] = [];
@@ -312,13 +361,13 @@ class Manatsu {
     };
 
     /** 
-     * Adiciona o atributo 'disabled' a todos os filhos do elemento indicado. 
+     * Adiciona o atributo `disabled` a todos os filhos do elemento indicado. 
      * Caso um seletor CSS seja fornecido, adiciona somente aos filhos que o satisfaçam.
      * @param parentElement
      * @param recursive Indica se o método deve atuar recursivamente.
      * @param selector Seletor CSS identificando quais elementos-filho serão alvo.
      */
-     static disableChildren(parentElement: Element, recursive: boolean = false, selector?: string) {
+    static disableChildren(parentElement: Element, recursive: boolean = false, selector?: string) {
         if (!(parentElement instanceof Element)) throw new ManatsuError('O elemento fornecido é inválido.');
 
         if (typeof selector === 'string') {
@@ -347,13 +396,13 @@ class Manatsu {
     };
 
     /** 
-     * Remove o atributo 'disabled' de todos os filhos do elemento indicado. 
+     * Remove o atributo `disabled` de todos os filhos do elemento indicado. 
      * Caso um seletor CSS seja fornecido, remove somente dos filhos que o satisfaçam.
      * @param parentElement
      * @param recursive Indica se o método deve atuar recursivamente.
      * @param selector - Seletor CSS identificando quais elementos-filho serão alvo.
      */
-     static enableChildren(parentElement: Element, recursive: boolean = false, selector?: string) {
+    static enableChildren(parentElement: Element, recursive: boolean = false, selector?: string) {
         if (!(parentElement instanceof Element)) throw new ManatsuError('O elemento fornecido é inválido.');
 
         if (typeof selector === 'string') {
@@ -387,7 +436,7 @@ class Manatsu {
 
     /**
      * Remove um ou mais elementos do documento.
-     * Ao contrário de Node.removeChild(), não é necessário especificar o pai.
+     * Ao contrário de `Node.removeChild()`, não é necessário especificar o pai.
      * Além disso, quando mais de um elemento é fornecido, não é necessário que todos tenham o mesmo pai.
      * @param elementsToRemove Elemento(s) que se deseja remover do documento.
      */
@@ -435,6 +484,10 @@ class Manatsu {
             while (parentElement.firstChild) parentElement.removeChild(parentElement.firstChild);
         };
     };
+
+    get element() {return this.#element};
+    get parent() {return this.#parent};
+    get options() {return this.#options};
 
     set element(name: string) {
         if (typeof name === 'string' && Validation.isValidElementName(name)) {

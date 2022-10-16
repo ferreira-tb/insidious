@@ -1,32 +1,20 @@
-class TWFarm {
-    /** Opções do Plunder. */
-    private static readonly optionsCheckboxes: Manatsu[] = [];
+class Farm {
+    /** Botões do Plunder. */
+    static menu: PlunderButtons;
+    /** Mapa com os elementos que constituem o menu de configurações do Plunder. */
+    private static readonly config: Map<string, Manatsu[]> = new Map();
 
     static async open() {
-        // Elementos originais.
-        const plunderFilters = document.querySelector('#plunder_list_filters');
-        if (!plunderFilters) throw new InsidiousError('DOM: #plunder_list_filters');
-
-        const farmModels = document.querySelector('#content_value div.vis div form table.vis tbody');
-        if (!farmModels) throw new InsidiousError('DOM: #content_value div.vis div form table.vis tbody');
-
-        // Elementos da extensão.
-        const menuArea = new Manatsu({ id: 'insidious_farmMenuArea' }).createBefore(plunderFilters.nextElementSibling);
-        const buttonArea = new Manatsu({ id: 'insidious_farmButtonArea' }, menuArea).create();
-        new Manatsu({ id: 'insidious_farmOptionsArea' }, menuArea).create();
-        new Manatsu({ id: 'insidious_farmActionArea' }, menuArea).create();
-
-        ////// BOTÕES
         // Os botões são adicionados à página após o Insidious terminar de verificar o status do Plunder.
-        const buttonClass = 'insidious_farmButtonArea_Btn';
-        const plunderButton = new Manatsu('button', { class: buttonClass, id: 'insidious_plunderButton' }).create();
-        const optionsButton = new Manatsu('button', { class: buttonClass, id: 'insidious_optionsButton', text: 'Opções' }).create();
-
-        ////// OPÇÕES
-        this.createOptions();
+        // O construtor também adiciona os eventos.
+        this.menu = new PlunderButtons();
 
         ////// DADOS
         await this.info();
+
+        // Área com os modelos do assistente de saque.
+        const farmModels = document.querySelector('#content_value div.vis div form table.vis tbody');
+        if (!farmModels) throw new InsidiousError('DOM: #content_value div.vis div form table.vis tbody');
 
         // Recolhe dados sobre os modelos salvos.
         // farmModels.firstElementChild é a linha com os ícones acima da área de input do modelo A.
@@ -46,60 +34,48 @@ class TWFarm {
 
         // Salva os modelos no banco de dados.
         Store.set({ [Keys.plunderA]: eachModelUnitAmount.a, [Keys.plunderB]: eachModelUnitAmount.b })
-            .catch((err: unknown) => {
-                if (err instanceof Error) InsidiousError.handle(err);
-            });
+            .catch((err: unknown) => InsidiousError.handle(err));
 
-        ////// EVENTOS
-        plunderButton.addEventListener('click', TWFarm.togglePlunder);
-        optionsButton.addEventListener('click', () => this.toggleOptions());
-
+    
         // Configura o botão de saque de acordo com o status do plunder.
-        // Além disso, se o plunder já estiver marcado como ativo, chama Plunder.start() automaticamente.
+        // Se o plunder já estiver marcado como ativo, ele iniciará automaticamente.
         Store.get(Keys.plunder)
-            .then((result: boolean | undefined) => {
-                buttonArea.appendChild(plunderButton);
-                buttonArea.appendChild(optionsButton);
+            .then((result: boolean | undefined) => this.appendButtons(result))
+            .catch((err: unknown) => InsidiousError.handle(err));
+    };
 
-                if (result === true) {
-                    plunderButton.textContent = 'Parar';
-                    Plunder.start();
+    private static async appendButtons(plunderStatus: boolean | undefined) {
+        for (const value of Object.values(Farm.menu.button)) {
+            this.menu.section.button.appendChild(value);
+        };
 
-                } else if (result === false) {
-                    // Caso não esteja ativo, também apaga o histórico de recursos saqueados.
-                    plunderButton.textContent = 'Saquear';
-                    Store.remove(Keys.totalPlundered);
-
-                } else if (result === undefined) {
-                    plunderButton.textContent = 'Saquear';
-                    Store.set({ [Keys.plunder]: false });
-                };
-
-            }).catch((err: unknown) => {
-                if (err instanceof Error) InsidiousError.handle(err);
-            });
+        switch (plunderStatus) {
+            case true:
+                this.menu.button.plunder.textContent = 'Parar';
+                return Plunder.start();
+            case false:
+                this.menu.button.plunder.textContent = 'Saquear';
+                return Store.remove(Keys.totalPlundered);
+            default:
+                this.menu.button.plunder.textContent = 'Saquear';
+                return Store.set({ [Keys.plunder]: false });
+        };
     };
     
     /** Inicia ou para o plunder. */
-    protected static async togglePlunder() {
+    static async togglePlunder() {
         try {
-            const plunderButton = document.querySelector('#insidious_plunderButton');
-            if (!plunderButton) throw new InsidiousError('DOM: insidious_plunderButton');
-
-            const actionArea = document.querySelector('#insidious_farmActionArea');
-            if (!actionArea) throw new InsidiousError('DOM: insidious_farmActionArea');
-
-            plunderButton.removeEventListener('click', TWFarm.togglePlunder);
-            Manatsu.removeChildren(actionArea);
+            Farm.menu.button.plunder.removeEventListener('click', Farm.togglePlunder);
+            Manatsu.removeChildren(Farm.menu.section.action);
 
             const plunderStatus = await Store.get(Keys.plunder) as boolean | undefined;
             // Se estiver ativo, desativa-o e troca o texto do botão.
             // Além disso, salva a quantia saqueada no histórico global e remove o histórico de navegação.
             if (plunderStatus === true) {
-                await TWFarm.setGlobalPlundered();
+                await Farm.setGlobalPlundered();
                 await Store.remove(Keys.plunderNavigation);
                 await Store.set({ [Keys.plunder]: false });
-                plunderButton.textContent = 'Saquear';
+                Farm.menu.button.plunder.textContent = 'Saquear';
 
                 // Mapa contendo os modelos C salvos durante a execução do Plunder.
                 Plunder.cmodel.clear();
@@ -115,35 +91,36 @@ class TWFarm {
             } else if (plunderStatus === false) {
                 await Store.remove(Keys.totalPlundered);
                 await Store.set({ [Keys.plunder]: true });
-                plunderButton.textContent = 'Parar';
+                Farm.menu.button.plunder.textContent = 'Parar';
                 Plunder.start();
             };
 
-            plunderButton.addEventListener('click', TWFarm.togglePlunder);
+            Farm.menu.button.plunder.addEventListener('click', Farm.togglePlunder);
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
-    private static async toggleOptions() {
+    /** Abre um modal que exibe as opções do Plunder. */
+    static async toggleOptions() {
         // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options será undefined.
         if (!Plunder.options) Plunder.options = await Store.get(Keys.plunderOptions) as PlunderOptions ?? {};
 
-        const optionsArea = document.querySelector('#insidious_farmOptionsArea');
-        if (!optionsArea) throw new InsidiousError('DOM: #insidious_farmOptionsArea');
-
-        const optionsButton = document.querySelector('#insidious_optionsButton');
-        if (!optionsButton) throw new InsidiousError('DOM: #insidious_optionsButton');
+        // Abre a janela modal.
+        Utils.createModal('Opções', true, { caller: 'plunder_options' });
+        const modalWindow = document.querySelector('#insidious_modal');
+        if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
         // Adiciona as opções disponíveis.
-        Manatsu.createAll(this.optionsCheckboxes);
-        optionsButton.setAttribute('disabled', '');
+        if (this.config.size === 0) this.createOptions();
+        const styleList = { style: 'text-align: left;' };
+        this.config.forEach((option) => Manatsu.createAllInside(option, 2, [modalWindow, styleList]));
 
         const optionsCtrl = new AbortController();
 
         // Ataca de múltiplas aldeias.
-        const groupAttack = optionsArea.querySelector('#insidious_group_attack_checkbox') as HTMLInputElement;
+        const groupAttack = modalWindow.querySelector('#insidious_group_attack_checkbox') as HTMLInputElement;
         if (Plunder.options.group_attack === true) groupAttack.checked = true;
         groupAttack.addEventListener('change', async (e) => {
             optionsCtrl.abort();
@@ -152,39 +129,43 @@ class TWFarm {
         }, { signal: optionsCtrl.signal });
 
         // Ignora aldeias com muralha.
-        const ignoreWall = optionsArea.querySelector('#insidious_ignore_wall_checkbox') as HTMLInputElement;
+        const ignoreWall = modalWindow.querySelector('#insidious_ignore_wall_checkbox') as HTMLInputElement;
         if (Plunder.options.ignore_wall === true) ignoreWall.checked = true;
         ignoreWall.addEventListener('change', (e) => {
             this.saveOptions(e.target, 'ignore_wall');
         }, { signal: optionsCtrl.signal });
 
         // Destrói muralhas.
-        const destroyWall = optionsArea.querySelector('#insidious_destroy_wall_checkbox') as HTMLInputElement;
+        const destroyWall = modalWindow.querySelector('#insidious_destroy_wall_checkbox') as HTMLInputElement;
         if (Plunder.options.destroy_wall === true) destroyWall.checked = true;
         destroyWall.addEventListener('change', (e) => {
             this.saveOptions(e.target, 'destroy_wall');
         }, { signal: optionsCtrl.signal });
 
         // Usa o modelo C para atacar.
-        const useCModel = optionsArea.querySelector('#insidious_use_c_model') as HTMLInputElement;
+        const useCModel = modalWindow.querySelector('#insidious_use_c') as HTMLInputElement;
         if (Plunder.options.use_c === true) useCModel.checked = true;
         useCModel.addEventListener('change', (e) => {
             this.saveOptions(e.target, 'use_c');
         }, { signal: optionsCtrl.signal });
 
         // Ataca rapidamente, enviando vários ataques simultaneamente.
-        const rushMode = optionsArea.querySelector('#insidious_rush_mode') as HTMLInputElement;
+        const rushMode = modalWindow.querySelector('#insidious_rush_mode') as HTMLInputElement;
         if (Plunder.options.rush_mode === true) rushMode.checked = true;
         rushMode.addEventListener('change', (e) => {
             this.saveOptions(e.target, 'rush_mode');
         }, { signal: optionsCtrl.signal });
 
-        new Manatsu('button', optionsArea, { text: 'Fechar' }).createInside('div')
+        // Fecha a janela modal.
+        new Manatsu('button', modalWindow, { class: 'insidious_modalButton', text: 'Fechar' }).createInside('div')
             .addEventListener('click', () => {
                 optionsCtrl.abort();
-                Manatsu.removeChildren(optionsArea);
-                optionsButton.removeAttribute('disabled');
+                Utils.closeModal();
             }, { signal: optionsCtrl.signal });
+    };
+
+    static async toggleInfo() {
+
     };
 
     /**
@@ -205,7 +186,7 @@ class TWFarm {
             await Store.set({ [Keys.plunderOptions]: Plunder.options });
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
@@ -408,13 +389,11 @@ class TWFarm {
                     // Se novas aldeias foram encontradas, salva-as no banco de dados.
                     if (alreadyPlunderedVillages.size > attackHistory.length) {
                         Store.set({ [Keys.alreadyPlundered]: Array.from(alreadyPlunderedVillages) })
-                            .catch((err: unknown) => {
-                                if (err instanceof Error) InsidiousError.handle(err);
-                            });
+                            .catch((err: unknown) => InsidiousError.handle(err));
                     };
 
                 } catch (err) {
-                    if (err instanceof Error) InsidiousError.handle(err);
+                    InsidiousError.handle(err);
                 };
     
                 ////// CONTROLE DE EVENTOS
@@ -437,45 +416,42 @@ class TWFarm {
             await addInfo();
 
         } catch (err) {
-            if (err instanceof Error) InsidiousError.handle(err);
+            InsidiousError.handle(err);
         };
     };
 
     private static createOptions() {
-        const optionsArea = document.querySelector('#insidious_farmOptionsArea');
-        if (!optionsArea) throw new InsidiousError('A área de opções não existe.');
-
         // Ataca de múltiplas aldeias usando um grupo como referência.
         // O nome do grupo obrigatoriamente precisa ser Insidious.
-        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
+        this.config.set('group_attack', Manatsu.createCheckbox({
             id: 'insidious_group_attack_checkbox',
             label: 'Usar grupo'
-        }, false, optionsArea) as Manatsu[]);
+        }, false) as Manatsu[]);
 
         // Não ataca aldeias que tenham muralha.
-        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
+        this.config.set('ignore_wall', Manatsu.createCheckbox({
             id: 'insidious_ignore_wall_checkbox',
             label: 'Ignorar muralha'
-        }, false, optionsArea) as Manatsu[]);
+        }, false) as Manatsu[]);
 
         // Envia ataques com aríetes em aldeias com muralha.
         // Independe de como "ignorar muralha" está configurado.
-        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
+        this.config.set('destroy_wall', Manatsu.createCheckbox({
             id: 'insidious_destroy_wall_checkbox',
             label: 'Demolir muralha'
-        }, false, optionsArea) as Manatsu[]);
+        }, false) as Manatsu[]);
 
         // Ataca usando o modelo C.
-        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
-            id: 'insidious_use_c_model',
+        this.config.set('use_c', Manatsu.createCheckbox({
+            id: 'insidious_use_c',
             label: 'Usar C'
-        }, false, optionsArea) as Manatsu[]);
+        }, false) as Manatsu[]);
 
         // Rush Mode
-        this.optionsCheckboxes.push(...Manatsu.createCheckbox({
+        this.config.set('rush_mode', Manatsu.createCheckbox({
             id: 'insidious_rush_mode',
             label: 'Atacar rapidamente'
-        }, false, optionsArea) as Manatsu[]);
+        }, false) as Manatsu[]);
     };
 
     /**
@@ -541,8 +517,6 @@ class TWFarm {
         };
 
         Store.set({ [Keys.globalPlundered]: globalPlundered })
-            .catch((err: unknown) => {
-                if (err instanceof Error) InsidiousError.handle(err);
-            });
+            .catch((err: unknown) => InsidiousError.handle(err));
     };
 };

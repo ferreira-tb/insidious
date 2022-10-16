@@ -15,12 +15,10 @@ new MutationObserver((mutationList, observer) => {
 
                     Insidious.updateGameData()
                         .then(() => Insidious.start())
-                        .catch((err: unknown) => {
-                            if (err instanceof Error) InsidiousError.handle(err);
-                        });
+                        .catch((err: unknown) => InsidiousError.handle(err));
                 };
 
-                break;
+                return;
             };
         };
     });
