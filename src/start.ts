@@ -11,7 +11,7 @@ new MutationObserver((mutationList, observer) => {
                 /** Determina se o Insidious está ativado. */
                 const insidiousStatus = await Store.get('insidiousStatus') as boolean | undefined;
                 if (insidiousStatus !== false) {
-                    TWAssets.freeze();
+                    Assets.freeze();
 
                     Insidious.updateGameData()
                         .then(() => Insidious.start())

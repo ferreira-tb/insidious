@@ -115,6 +115,7 @@ type AssetsList = {
     all_units_archer: UnitListWithArchers[];
     farm_units: FarmUnits[];
     farm_units_archer: FarmUnitsWithArchers[];
+    other_units: (OtherUnits | 'militia')[];
 
     resources: ResourceList[];
 };

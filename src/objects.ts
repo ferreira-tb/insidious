@@ -31,7 +31,7 @@ class UnitInfo {
     constructor(configXML: XMLDocument) {
         const getValue = Utils.queryXMLTags(configXML);
 
-        for (const unit of TWAssets.list.all_units_archer) {
+        for (const unit of Assets.list.all_units_archer) {
             this[unit] = {
                 speed: getValue(`${unit} speed`),
                 carry: getValue(`${unit} carry`) 

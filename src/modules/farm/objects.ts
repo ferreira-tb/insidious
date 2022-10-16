@@ -58,8 +58,11 @@ class CarryCapacity {
     constructor(cmodel?: AvailableFarmUnits) {
         const calcEachCarryCapacity = (unitModel: AvailableFarmUnits) => {
             let result = 0;
-            for (const [key, value] of Object.entries(unitModel)) {
+            for (let [key, value] of Object.entries(unitModel)) {
+                // O JSON do modelo C aleatoriamente envia strings.
+                if (typeof value !== 'number') value = Number.parseInt(value, 10);
                 if (!Number.isInteger(value)) throw new InsidiousError(`A carga para ${key} é inválida (${value}).`);
+
                 // Ignora a milícia, que aparece quando o modelo é do tipo C.
                 if (key !== 'militia') {
                     result += value * Game.unitInfo[key as FarmUnitsWithArchers].carry;
@@ -240,9 +243,7 @@ class PlunderAvailableTroops {
             };
 
             const amount = Number.parseInt(unitElem.textContent, 10);
-            if (Number.isNaN(amount)) {
-                throw new InsidiousError(`A quantidade de unidades obtida é inválida ${unit}.`);
-            };
+            if (Number.isNaN(amount)) throw new InsidiousError(`A quantidade de unidades obtida é inválida ${unit}.`);
 
             this[unit] = amount;
             

@@ -101,6 +101,9 @@ class TWFarm {
                 await Store.set({ [Keys.plunder]: false });
                 plunderButton.textContent = 'Saquear';
 
+                // Mapa contendo os modelos C salvos durante a execução do Plunder.
+                Plunder.cmodel.clear();
+
                 Plunder.eventTarget.dispatchEvent(new Event('stopplundering'));
                 Plunder.eventTarget.dispatchEvent(new Event('cancelautoreload'));
 
@@ -225,9 +228,9 @@ class TWFarm {
             /** Retorna uma array com as tropas disponíveis no mundo atual (aquelas que podem saquear). */
             const getFarmUnits = () => {
                 switch (Game.worldInfo.game.archer) {
-                    case 0: return TWAssets.list.farm_units;
-                    case 1: return TWAssets.list.farm_units_archer;
-                    default: return TWAssets.list.farm_units;
+                    case 0: return Assets.list.farm_units;
+                    case 1: return Assets.list.farm_units_archer;
+                    default: return Assets.list.farm_units;
                 };
             };
     
@@ -321,7 +324,7 @@ class TWFarm {
 
                                         // A coerção é possível pois a existência já foi verificada ao usar querySelector com o seletor "+".
                                         let resType = resField.previousElementSibling!.getAttribute('class') as string;
-                                        const resName = TWAssets.list.resources.some((name) => {
+                                        const resName = Assets.list.resources.some((name) => {
                                             if (resType.includes(name)) {
                                                 resType = name;
                                                 return true;

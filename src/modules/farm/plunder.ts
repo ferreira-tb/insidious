@@ -3,6 +3,8 @@ class Plunder extends TWFarm {
     static amodel: AvailableFarmUnits;
     /** Modelo B do assistente de saque. */
     static bmodel: AvailableFarmUnits;
+    /** Modelo C do assistente de saque. */
+    static readonly cmodel: Map<string, AvailableFarmUnits> = new Map();
     /** Capacidade de carga de cada modelo. */
     static carry: CarryCapacity;
     /** Quantia saqueada durante o processo atual do Plunder. */
@@ -122,7 +124,17 @@ class Plunder extends TWFarm {
                 // Em caso positivo, também verifica se o botão está ativado.
                 if (this.options.use_c === true) {
                     if (attack.c_button === 'off') continue;
+                    // ExpectedResources chama getCModelCarryCapacity() para descobrir quanto o modelo C pode carregar.
+                    // É durante a execução dessa função que o modelo C é salvo no mapa.
+                    // Sendo assim, ExpectedResources obrigatoriamente precisa estar no início do IF.
                     const expectedResources = new ExpectedResources(village, 'c');
+
+                    const cmodel = this.cmodel.get(attack.id);
+                    if (!cmodel) throw new InsidiousError('Não foi possível obter o modelo C armazenado no mapa.');
+
+                    const checkAvailability = this.getAvailableTroops();
+                    if (!checkAvailability(cmodel)) continue;
+
                     return this.prepareAttack(attack.id, expectedResources)
                         .then(() => Manatsu.remove(village))
                         .then(() => this.handleAttack())
@@ -222,6 +234,9 @@ class Plunder extends TWFarm {
      * @param model Modelo escolhido para o ataque.
      */
     private static sendAttack(villageID: string, model: ABC) {
+        // Se for o modelo C, o MutationObserver precisa ser bastante diferente.
+        if (model === 'c') return this.sendAttackUsingC(villageID);
+
         return new Promise<void>((resolve, reject) => {
             const observerTimeout = setTimeout(handleTimeout, 5000);
             const observeTroops = new MutationObserver(() => {
@@ -240,10 +255,43 @@ class Plunder extends TWFarm {
             if (!unitTable) throw new InsidiousError('DOM: tr[insidious-available-unit-table]');
             observeTroops.observe(unitTable, { subtree: true, childList: true });
 
-            // Como a promise superior está esperando a resolução dessa, o plunder só irá continuar após isso acontecer.
             const selector = `a[insidious-farm-btn^="${model}" i][insidious-farm-btn$="${villageID}"]`;
             const attackButton = document.querySelector(selector) as HTMLAnchorElement | null;
             if (!attackButton) throw new InsidiousError(`O botão ${model.toUpperCase()} não foi encontrado.`);
+
+            attackButton.click();
+        });
+    };
+
+    private static sendAttackUsingC(villageID: string) {
+        return new Promise<void>((resolve, reject) => {
+            const observerTimeout = setTimeout(handleTimeout, 5000);
+            const observeTroops = new MutationObserver((mutationList) => {
+                for (const mutation of mutationList) {
+                    for (const node of Array.from(mutation.addedNodes)) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const nodeClass = (node as Element).getAttribute('class')?.toLowerCase();
+                            if (!nodeClass || !(nodeClass.includes('autohidebox'))) continue;
+
+                            clearTimeout(observerTimeout);
+                            observeTroops.disconnect();
+                            resolve();
+                            return;
+                        };
+                    };
+                };
+            });
+
+            function handleTimeout() {
+                observeTroops.disconnect();
+                reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (sendAttackUsingC).'));
+            };
+
+            observeTroops.observe(document.body, { subtree: true, childList: true });
+
+            const selector = `a[insidious-farm-btn^="c" i][insidious-farm-btn$="${villageID}"]`;
+            const attackButton = document.querySelector(selector) as HTMLAnchorElement | null;
+            if (!attackButton) throw new InsidiousError('O botão C não foi encontrado.');
 
             attackButton.click();
         });
@@ -260,18 +308,21 @@ class Plunder extends TWFarm {
         };
 
         /** Lista das tropas disponíveis. */
-        let availableTroops: AvailableFarmUnits;
+        let available: AvailableFarmUnits;
 
         // Caso o mundo tenha arqueiros, adiciona-os à lista.
-        if (Game.worldInfo.game.archer === 1) {
-            availableTroops = new PlunderAvailableTroops(TWAssets.list.farm_units_archer) as AvailableFarmUnits;
-
-        } else {
-            availableTroops = new PlunderAvailableTroops(TWAssets.list.farm_units) as AvailableFarmUnits;
+        switch (Game.worldInfo.game.archer) {
+            case 1:
+                available = new PlunderAvailableTroops(Assets.list.farm_units_archer) as AvailableFarmUnits;
+                break;
+                
+            default:
+                available = new PlunderAvailableTroops(Assets.list.farm_units) as AvailableFarmUnits;
+                break;
         };
 
         return function(model: AvailableFarmUnits): boolean {
-            for (const [key, value] of Object.entries(availableTroops)) {
+            for (const [key, value] of Object.entries(available)) {
                 // Se houver menos tropas do que consta no modelo, a função deve ser interrompida.
                 if (value < model[key as FarmUnits]) return false;
             };
@@ -535,7 +586,7 @@ class Plunder extends TWFarm {
             };
 
             /** Tropas necessárias para cada nível possível da muralha. */
-            const neededUnits = TWAssets.unitsToDestroyWall[wallLevel] as [number, number];
+            const neededUnits = Assets.unitsToDestroyWall[wallLevel] as [number, number];
 
             // Caso a quantidade de aríetes já esteja salva, verifica se há tropas suficientes.
             // Em caso negativo, resolve a promise.
@@ -767,13 +818,16 @@ class Plunder extends TWFarm {
         const cFarmBtn = village.querySelector('td a[class*="farm_icon_c" i][data-units-forecast]');
         if (!cFarmBtn) throw new InsidiousError('Não foi possível encontrar o botão C.');
 
+        const villageID = village.getAttribute('insidious-village');
+        if (!villageID) throw new InsidiousError('Não foi possível obter o id da aldeia.');
+
         const modelJSON = cFarmBtn.getAttribute('data-units-forecast');
         if (!modelJSON) throw new InsidiousError('Não foi possível determinar a quantia de recursos para o modelo C.');
 
         const cmodel = JSON.parse(modelJSON) as AvailableFarmUnits;
-        const capacityC = new CarryCapacity(cmodel).c;
+        this.cmodel.set(villageID, cmodel);
 
-        return capacityC;
+        return new CarryCapacity(cmodel).c;
     };
 
     static get amount() {return this.plundered};

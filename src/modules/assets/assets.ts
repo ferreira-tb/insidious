@@ -1,4 +1,4 @@
-class TWAssets {
+class Assets {
     static readonly info = {
         get_config: location.origin + '/interface.php?func=get_config',
         get_building_info: location.origin + '/interface.php?func=get_building_info',
@@ -11,9 +11,10 @@ class TWAssets {
         all_units_archer: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob'],
         farm_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'knight'],
         farm_units_archer: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'knight'],
+        other_units: ['ram', 'catapult', 'snob', 'militia'],
 
         // Outros
-        resources: ['wood', 'stone', 'iron']
+        resources: ['wood', 'stone', 'iron'],  
     };
 
     /** Aríetes e bárbaros, respectivamente. */

@@ -75,8 +75,8 @@ class Insidious {
             const worldConfigStatus = await Store.get(Keys.worldConfig);
             if (!worldConfigStatus) {
                 const configSources = [
-                    { name: Keys.config, url: TWAssets.info.get_config },
-                    { name: Keys.unit, url: TWAssets.info.get_unit_info }
+                    { name: Keys.config, url: Assets.info.get_config },
+                    { name: Keys.unit, url: Assets.info.get_unit_info }
                 ];
 
                 const worldConfigData = await Promise.all(configSources.map((source) => {
