@@ -72,7 +72,7 @@ class Farm {
             // Se estiver ativo, desativa-o e troca o texto do botão.
             // Além disso, salva a quantia saqueada no histórico global e remove o histórico de navegação.
             if (plunderStatus === true) {
-                await Farm.setGlobalPlundered();
+                await Farm.setGlobalAndLastPlundered();
                 await Store.remove(Keys.plunderNavigation);
                 await Store.set({ [Keys.plunder]: false });
                 Farm.menu.button.plunder.textContent = 'Saquear';
@@ -83,7 +83,7 @@ class Farm {
                 Plunder.eventTarget.dispatchEvent(new Event('stopplundering'));
                 Plunder.eventTarget.dispatchEvent(new Event('cancelautoreload'));
 
-                /** Horário do próximo recarregamento automático da página. */
+                // Horário do próximo recarregamento automático da página.
                 const nextAutoReloadDate = document.querySelector('#insidious_nextAutoReloadDate');
                 if (nextAutoReloadDate) Manatsu.remove(nextAutoReloadDate);
 
@@ -165,7 +165,28 @@ class Farm {
     };
 
     static async toggleInfo() {
+        let lastPlundered = await Store.get(Keys.lastPlundered) as TotalPlundered | undefined;
+        if (!lastPlundered) lastPlundered = new NothingPlundered();
 
+        let globalPlundered = await Store.get(Keys.globalPlundered) as TotalPlundered | undefined;
+        if (!globalPlundered) globalPlundered = new NothingPlundered();
+
+        // Abre a janela modal.
+        Utils.createModal('Informações', true);
+        const modalWindow = document.querySelector('#insidious_modal');
+        if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
+
+        const containers = Manatsu.repeat(2, modalWindow, false, { class: 'nowrap' }) as Manatsu[];
+
+        new Manatsu('h2', modalWindow, { text: 'Último saque' }).create();
+        Utils.showResourceIcons(lastPlundered, containers[0].create(), true);
+
+        new Manatsu('h2', modalWindow, { text: 'Total saqueado' }).create();
+        Utils.showResourceIcons(globalPlundered, containers[1].create(), true);
+        
+        // Fecha a janela modal.
+        new Manatsu('button', modalWindow, { class: 'insidious_modalButton', text: 'Fechar' }).createInside('div')
+            .addEventListener('click', () => Utils.closeModal());
     };
 
     /**
@@ -505,18 +526,20 @@ class Farm {
     };
 
     /** Atualiza a quantia total de recursos saqueados e ataques enviados pelo Plunder no mundo atual. */
-    protected static async setGlobalPlundered() {
+    protected static async setGlobalAndLastPlundered() {
         const totalPlundered = await Store.get(Keys.totalPlundered) as TotalPlundered | undefined;
         if (!totalPlundered) return;
         let globalPlundered = await Store.get(Keys.globalPlundered) as TotalPlundered | undefined;
-        if (!globalPlundered) globalPlundered = { wood: 0, stone: 0, iron: 0, attack_amount: 0 };
+        if (!globalPlundered) globalPlundered = new NothingPlundered();
 
         for (const [key, value] of Object.entries(totalPlundered) as TotalPlunderedEntries) {
             if (!Number.isInteger(value)) continue;
             globalPlundered[key] = globalPlundered[key] + totalPlundered[key];
         };
 
+        const lastPlundered = new LastPlundered(totalPlundered);
         Store.set({ [Keys.globalPlundered]: globalPlundered })
+            .then(() => Store.set({ [Keys.lastPlundered]: lastPlundered }))
             .catch((err: unknown) => InsidiousError.handle(err));
     };
 };

@@ -81,16 +81,14 @@ class GroupAttack {
     private static async checkIfGroupAlreadyExists(): Promise<boolean> {
         if (!document.querySelector('div.popup_helper #group_popup')) {
             // Caso a janela de grupos não esteja aberta (mesmo que oculta), abre e a oculta logo em seguida.
-            await new Promise<void>((resolve) => {
+            await new Promise<void>(async (resolve) => {
                 const openGroupsButton = document.querySelector('tr#menu_row2 td a#open_groups') as HTMLAnchorElement | null;
                 if (!openGroupsButton) throw new InsidiousError('DOM: tr#menu_row2 td a#open_groups');
         
-                const observerTimeout = setTimeout(handleTimeout, 5000);
                 const observeHelper = new MutationObserver((mutationList) => {
                     for (const mutation of mutationList) {
                         for (const node of Array.from(mutation.addedNodes)) {
                             if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('class')?.includes('popup_helper')) {
-                                clearTimeout(observerTimeout);
                                 observeHelper.disconnect();
 
                                 const closeGroupPopupButton = document.querySelector('a#closelink_group_popup') as HTMLAnchorElement | null;
@@ -104,14 +102,12 @@ class GroupAttack {
                     };
                 });
         
-                // Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro.
-                function handleTimeout() {
-                    observeHelper.disconnect();
-                    InsidiousError.handle(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (checkIfGroupAlreadyExists).'));
-                };
-        
                 observeHelper.observe(document.body, { subtree: true, childList: true });
                 openGroupsButton.click();
+
+                await Utils.wait(3000);
+                observeHelper.disconnect();
+                throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder (checkIfGroupAlreadyExists).');
             });
         };
 

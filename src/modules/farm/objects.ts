@@ -218,11 +218,20 @@ class ExpectedResources {
     };
 };
 
-class PlunderedAmount implements TotalPlundered {
-    readonly wood: number;
-    readonly stone: number;
-    readonly iron: number;
-    readonly attack_amount: number;
+class NothingPlundered implements TotalPlundered {
+    readonly wood: number = 0;
+    readonly stone: number = 0;
+    readonly iron: number = 0;
+    readonly total: number = 0;
+    readonly attack_amount: number = 0;
+};
+
+class PlunderedAmount extends NothingPlundered {
+    override readonly wood: number;
+    override readonly stone: number;
+    override readonly iron: number;
+    override readonly total: number;
+    override readonly attack_amount: number;
 
     /**
      * Cria um objeto representando a quantidade de recursos saqueados pelo processo atual do Plunder.
@@ -230,6 +239,7 @@ class PlunderedAmount implements TotalPlundered {
      * @param firstAttack - Indica se esse é ou não o primeiro ataque;
      */
     constructor(expected: ExpectedResources, firstAttack: boolean) {
+        super()
         if (firstAttack === false) {
             const plundered = Plunder.amount as TotalPlundered;
             this.wood = plundered.wood + expected.wood;
@@ -243,6 +253,30 @@ class PlunderedAmount implements TotalPlundered {
             this.iron = expected.iron;
             this.attack_amount = 1;
         };
+
+        this.total = this.wood + this.stone + this.iron;
+    };
+};
+
+class LastPlundered extends NothingPlundered {
+    override readonly wood: number;
+    override readonly stone: number;
+    override readonly iron: number;
+    override readonly total: number;
+    override readonly attack_amount: number;
+    readonly date = Date.now();
+    
+    /**
+     * Cria um objeto representando a quantidade de recursos saqueada durante a última execução do Plunder.
+     * @param plunderedAmount Um objeto `PlunderedAmount`.
+     */
+    constructor(plunderedAmount: PlunderedAmount) {
+        super();
+        this.wood = plunderedAmount.wood;
+        this.stone = plunderedAmount.stone;
+        this.iron = plunderedAmount.iron;
+        this.total = this.wood + this.stone + this.iron;
+        this.attack_amount = plunderedAmount.attack_amount;  
     };
 };
 
@@ -323,10 +357,13 @@ class PlunderPageURL {
     
     /**
      * Cria um objeto contendo as URLs para navegação entre páginas do Plunder.
-     * @param plunderListNav Linha da tabela com os números das páginas.
      * @param currentPage Numeração da página atual.
      */
-    constructor(plunderListNav: Element, currentPage?: number) {
+    constructor(currentPage?: number) {
+        // Linha da tabela com os números das páginas.
+        const plunderListNav = document.querySelector('#plunder_list_nav table tbody tr td');
+        if (!plunderListNav) throw new InsidiousError('DOM: #plunder_list_nav table tbody tr td');
+
         // Seleciona um link arbitrário para servir como referência para a construção do novo.
         // Exemplo de link: "/game.php?village=23215&screen=am_farm&order=distance&dir=asc&Farm_page=1".
         const plunderPageArbitraryLink = plunderListNav.querySelector('a.paged-nav-item');
@@ -345,7 +382,7 @@ class PlunderPageURL {
         // Ou seja, no link, a página 2 é representada por "Farm_page=1", e a página 5 por "Farm_page=4".
         this.first = pageURL.replace(`Farm_page=${arbitraryPage}`, 'Farm_page=0');
 
-        if (currentPage !== undefined) {
+        if (typeof currentPage === 'number') {
             // Para navegar para a próxima página, é preciso usar currentPage ao atribuir o link.
             // Isso porquê currentPage é a numeração na lista (começa no indíce 1), mas o link em si começa no índice zero.
             // Logo, se a página atual é a 3, seu link é "Farm_page=2", com o link da próxima sendo "Farm_page=3".

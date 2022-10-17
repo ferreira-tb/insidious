@@ -54,20 +54,18 @@ class InsidiousConfig {
     private static async showWorldInfo(world: string) {
         try {
             let globalPlundered = await Store.get(`globalPlundered_${world}`) as TotalPlundered | undefined;
-            if (!globalPlundered) globalPlundered = { wood: 0, stone: 0, iron: 0, attack_amount: 0 };
+            if (!globalPlundered) globalPlundered = { wood: 0, stone: 0, iron: 0, total: 0, attack_amount: 0 };
 
             /** Recursos saqueados. */
             const resourcesDiv = document.querySelector('#global-plunder-resources') as HTMLDivElement;
             Manatsu.removeChildren(resourcesDiv);
 
-            let totalAmount: number = 0;
             for (const [key, value] of Object.entries(globalPlundered) as TotalPlunderedEntries) {
                 if (!Number.isInteger(value)) throw new InsidiousError('O valor em \"globalPlundered\" é inválido.');
                 const amount = value.toLocaleString('pt-br');
                 if (key === 'attack_amount') {
                     document.querySelector('#global-plunder-attack')!.textContent = `Ataques enviados: ${amount}`;
-                } else {
-                    totalAmount += value;
+                } else if (key !== 'total') {
                     if (!resourcesDiv.firstElementChild) new Manatsu('span', resourcesDiv, { text: 'Recursos saqueados: ' }).create();
                     new Manatsu('span', resourcesDiv, { class: `icon ${key}` }).create();
                     new Manatsu('span', resourcesDiv, { text: amount, style: 'margin-right: 5px;' }).create();
@@ -75,7 +73,7 @@ class InsidiousConfig {
             };
 
             new Manatsu('span', resourcesDiv, { class: 'icon storage' }).create();
-            new Manatsu('span', resourcesDiv, { text: totalAmount.toLocaleString('pt-br') }).create();
+            new Manatsu('span', resourcesDiv, { text: globalPlundered.total.toLocaleString('pt-br') }).create();
 
             const wallDiv = document.querySelector('#global-plunder-wall') as HTMLDivElement;
             Manatsu.removeChildren(wallDiv);

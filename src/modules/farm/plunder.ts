@@ -11,6 +11,8 @@ class Plunder extends Farm {
     private static plundered: TotalPlundered | undefined;
     /** Quantidade de aríetes disponível na aldeia. */
     private static ram: number | null = null;
+    /** Impede que o método sendAttackUsingC() seja chamado mais de uma vez. */
+    private static waitingC: boolean = false;
 
     /** Opções de configuração do Plunder. */
     static options: PlunderOptions;
@@ -23,7 +25,7 @@ class Plunder extends Farm {
     static async start() {
         try {
             const isFirstPage = await this.checkIfIsFirstPage();
-            if (isFirstPage === false) this.goBackToFirstPage();
+            if (isFirstPage === false) location.assign(new PlunderPageURL().first);
 
             // Exibe a quantidade de recursos saqueado durante o período em que o plunder estiver ativo.
             // A função updatePlunderedAmount() atualiza essa informação após cada ataque feito.
@@ -134,10 +136,12 @@ class Plunder extends Farm {
                     const checkAvailability = this.getAvailableTroops();
                     if (!checkAvailability(cmodel)) continue;
 
+                    this.waitingC = true;
                     return this.prepareAttack(attack.id, expectedResources)
                         .then(() => Manatsu.remove(village))
                         .then(() => this.handleAttack())
-                        .catch((err: unknown) => InsidiousError.handle(err));
+                        .catch((err: unknown) => InsidiousError.handle(err))
+                        .finally(() => this.waitingC = false);
                 };
 
                 let { ratioIsOk, bestRatio, otherRatio } = new ModelRatio(attack.resources);
@@ -229,21 +233,15 @@ class Plunder extends Farm {
      */
     private static sendAttack(villageID: string, model: ABC) {
         // Se for o modelo C, o MutationObserver precisa ser bastante diferente.
-        if (model === 'c') return this.sendAttackUsingC(villageID);
+        // Além disso, a natureza recursiva de sendAttackUsingC() torna necessário
+        // impedir que a função seja executada mais de uma vez.
+        if (model === 'c' && this.waitingC === false) return this.sendAttackUsingC(villageID);
 
-        return new Promise<void>((resolve, reject) => {
-            const observerTimeout = setTimeout(handleTimeout, 5000);
+        return new Promise<void>(async (resolve, reject) => {
             const observeTroops = new MutationObserver(() => {
-                clearTimeout(observerTimeout);
                 observeTroops.disconnect();
                 resolve();
             });
-
-            // Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro.
-            function handleTimeout() {
-                observeTroops.disconnect();
-                reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (sendAttack).'));
-            };
 
             const unitTable = document.querySelector('tr[insidious-available-unit-table="true"]');
             if (!unitTable) throw new InsidiousError('DOM: tr[insidious-available-unit-table]');
@@ -254,41 +252,42 @@ class Plunder extends Farm {
             if (!attackButton) throw new InsidiousError(`O botão ${model.toUpperCase()} não foi encontrado.`);
 
             attackButton.click();
+
+            // Caso o observer não perceber mudanças mesmo após três segundos, emite um erro.
+            await Utils.wait(3000);
+            observeTroops.disconnect();
+            reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (sendAttack).'));
         });
     };
 
-    private static sendAttackUsingC(villageID: string) {
-        return new Promise<void>((resolve, reject) => {
-            const observerTimeout = setTimeout(handleTimeout, 5000);
-            const observeTroops = new MutationObserver((mutationList) => {
-                for (const mutation of mutationList) {
-                    for (const node of Array.from(mutation.addedNodes)) {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            const nodeClass = (node as Element).getAttribute('class')?.toLowerCase();
-                            if (!nodeClass || !(nodeClass.includes('autohidebox'))) continue;
-
-                            clearTimeout(observerTimeout);
-                            observeTroops.disconnect();
-                            resolve();
-                            return;
+    private static sendAttackUsingC(villageID: string): Promise<void> {
+        const attackObservingAutoHideBox = () => {
+            return new Promise<void>(async (resolve, reject) => {
+                const observeTroops = new MutationObserver((mutationList) => {
+                    for (const mutation of mutationList) {
+                        for (const node of Array.from(mutation.addedNodes)) {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                const nodeClass = (node as Element).getAttribute('class')?.toLowerCase();
+                                if (!nodeClass || !(nodeClass.includes('autohidebox'))) continue;
+    
+                                observeTroops.disconnect();
+                                resolve();
+                                return;
+                            };
                         };
                     };
-                };
-            });
+                });
 
-            function handleTimeout() {
+                observeTroops.observe(document.body, { subtree: true, childList: true });
+
+                await Utils.wait(3000);
                 observeTroops.disconnect();
-                reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (sendAttackUsingC).'));
-            };
+                reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (sendAttackUsingC).'));     
+            });
+        };
 
-            observeTroops.observe(document.body, { subtree: true, childList: true });
-
-            const selector = `a[insidious-farm-btn^="c" i][insidious-farm-btn$="${villageID}"]`;
-            const attackButton = document.querySelector(selector) as HTMLAnchorElement | null;
-            if (!attackButton) throw new InsidiousError('O botão C não foi encontrado.');
-
-            attackButton.click();
-        });
+        // Observará dois lugares ao mesmo tempo, resolvendo no primeiro onde houver a mutação correta.
+        return Promise.any([attackObservingAutoHideBox(), this.sendAttack(villageID, 'c')]);
     };
 
     /** Retorna uma função que permite verificar a quantidade de tropas disponíveis. */
@@ -377,7 +376,7 @@ class Plunder extends Farm {
                 await Store.set({ [Keys.plunderPage]: plunderPageNavigation });
 
                 /** URL para navegação entre as páginas. */
-                const pageURL = new PlunderPageURL(plunderListNav, currentPage);
+                const pageURL = new PlunderPageURL(currentPage);
 
                 // Caso a página atual seja a última página, volta para a primeira.
                 if (currentPage === plunderPages.at(-1)) {
@@ -425,17 +424,6 @@ class Plunder extends Farm {
         return true;
     };
 
-    /** Volta para a primeira página do Plunder. */
-    private static goBackToFirstPage() {
-        /** Linha da tabela com os números das páginas. */
-        const plunderListNav = document.querySelector('#plunder_list_nav table tbody tr td');
-        if (plunderListNav) {
-            /** URL para navegação entre as páginas. */
-            const pageURL = new PlunderPageURL(plunderListNav);
-            location.assign(pageURL.first);
-        };
-    };
-
     // Navega para a próxima aldeia caso this.options.group_attack === true.
     private static async navigateToNextVillage() {
         try {
@@ -461,17 +449,10 @@ class Plunder extends Farm {
             Manatsu.removeChildren(Farm.menu.section.action);
 
             this.plundered = await Store.get(Keys.totalPlundered) as TotalPlundered | undefined;
-            if (!this.plundered) this.plundered = { wood: 0, stone: 0, iron: 0, attack_amount: 0 };
+            if (!this.plundered) this.plundered = new NothingPlundered();
 
-            const options = { class: 'nowrap', ['insidious-custom']: 'true' };
-            const container = new Manatsu('span', Farm.menu.section.action, options).create();
-
-            for (const [key, value] of Object.entries(this.plundered)) {
-                if (key !== 'attack_amount') {
-                    new Manatsu('span', container, { class: `icon header ${key}` }).create();
-                    new Manatsu('span', container, { class: 'res', id: `insidious_plundered_${key}`, text: String(value) }).create();
-                };
-            };
+            const container = new Manatsu('span', Farm.menu.section.action, { class: 'nowrap' }).create();
+            Utils.showResourceIcons(this.plundered, container, true);
 
         } catch (err) {
             InsidiousError.handle(err);
@@ -482,6 +463,7 @@ class Plunder extends Farm {
         const woodLabel = document.querySelector('#insidious_plundered_wood');
         const stoneLabel = document.querySelector('#insidious_plundered_stone');
         const ironLabel = document.querySelector('#insidious_plundered_iron');
+        const totalLabel = document.querySelector('#insidious_plundered_total');
 
         try {
             if (this.plundered) {
@@ -491,10 +473,11 @@ class Plunder extends Farm {
                 this.plundered = new PlunderedAmount(resources, true);           
             };
 
-            if (woodLabel && stoneLabel && ironLabel) {
+            if (woodLabel && stoneLabel && ironLabel && totalLabel) {
                 woodLabel.textContent = String(this.plundered.wood);
                 stoneLabel.textContent = String(this.plundered.stone);
                 ironLabel.textContent = String(this.plundered.iron);
+                totalLabel.textContent = String(this.plundered.total);
             };
 
             // Salva os valores no banco de dados.
@@ -620,12 +603,11 @@ class Plunder extends Farm {
                     spyInputField.value = '1';
 
                     // Observa até aparecer a janela de confirmação de ataque.
-                    const observerTimeout = setTimeout(handleTimeout, 5000);
                     const observeCommandForm = new MutationObserver(async (mutationList) => {
                         for (const mutation of mutationList) {
                             for (const node of Array.from(mutation.addedNodes)) {
-                                if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('id') === 'command-data-form') {
-                                    clearTimeout(observerTimeout);
+                                if (node.nodeType === Node.ELEMENT_NODE) {
+                                    if ((node as Element).getAttribute('id') !== 'command-data-form') continue;
                                     observeCommandForm.disconnect();
 
                                     const submitAttack = (node as Element).querySelector('#troop_confirm_submit') as HTMLInputElement | null;
@@ -678,12 +660,6 @@ class Plunder extends Farm {
                         };
                     })
 
-                    /** Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro. */
-                    function handleTimeout() {
-                        observeCommandForm.disconnect();
-                        InsidiousError.handle(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (destroyWall).'));
-                    };
-
                     observeCommandForm.observe(document.body, { subtree: true, childList: true });
                     
                     const formAttackButton = commandForm.querySelector('#target_attack') as HTMLInputElement | null;
@@ -693,6 +669,11 @@ class Plunder extends Farm {
                     // Do contrário, o servidor não tem tempo suficiente para processar o comando.
                     await Utils.wait();
                     formAttackButton.click();
+
+                    /** Caso o observer não perceber mudanças mesmo após três segundos, emite um erro. */
+                    await Utils.wait(3000);
+                    observeCommandForm.disconnect();
+                    throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder (destroyWall).');
 
                 } else {
                     closeButton.click();
@@ -715,17 +696,16 @@ class Plunder extends Farm {
      * @returns A quantidade de aríetes disponíveis.
      */
     private static openPlace(villageID: string) {
-        return new Promise<number>((resolve) => {
+        return new Promise<number>(async (resolve) => {
             const placeButton = document.querySelector(`td a[insidious-place-btn="place_${villageID}"]`) as HTMLElement | null;
             if (!placeButton) throw new InsidiousError(`Não foi possível encontrar o botão da praça de reunião ${villageID}.`);
 
             // Observa até detectar a abertura da janela de comando.
-            const observerTimeout = setTimeout(handleTimeout, 5000);
             const observeRams = new MutationObserver((mutationList) => {
                 for (const mutation of mutationList) {
                     for (const node of Array.from(mutation.addedNodes)) {
-                        if (node.nodeType === Node.ELEMENT_NODE && (node as Element).getAttribute('id') === 'command-data-form') {
-                            clearTimeout(observerTimeout);
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if ((node as Element).getAttribute('id') !== 'command-data-form') continue;
                             observeRams.disconnect();
 
                             const ramField = (node as Element).querySelector('#units_entry_all_ram');
@@ -744,14 +724,12 @@ class Plunder extends Farm {
                 };
             });
 
-            /** Caso o observer não perceber mudanças mesmo após cinco segundos, emite um erro. */
-            function handleTimeout() {
-                observeRams.disconnect();
-                InsidiousError.handle(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (openPlace).'));
-            };
-
             observeRams.observe(document.body, { subtree: true, childList: true });
             placeButton.click();
+
+            await Utils.wait(3000);
+            observeRams.disconnect();
+            throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder (openPlace).');
         });
     };
 

@@ -150,9 +150,9 @@ type AvailableFarmUnits = {
 };
 
 /** Quantia de recursos saqueados e ataques enviados pelo Plunder. */
-type TotalPlundered = { [index in ResourceList | 'attack_amount']: number };
+type TotalPlundered = { [index in ResourceList | 'total' | 'attack_amount']: number };
 /** Pares [key, value] obtidos ao usar Object.entries(). */
-type TotalPlunderedEntries = [ResourceList | 'attack_amount', number][];
+type TotalPlunderedEntries = [ResourceList | 'total' | 'attack_amount', number][];
 
 /** Status das diferentes opções do plunder. */
 type PlunderOptions = {

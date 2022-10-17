@@ -24,6 +24,7 @@ declare namespace browser.storage {
     | UnitInfo
     | ShieldStatus
     | ShieldNavigation
+    | NothingPlundered
 
     interface StorageArray extends Array<StorageValue> {}
 

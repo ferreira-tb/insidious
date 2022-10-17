@@ -91,7 +91,7 @@ class Utils {
         if (clickOutside === true) blurBG.addEventListener('click', closeIt, {signal: modalCtrl.signal});
 
         const titleContainer = new Manatsu(modalWindow).create();
-        new Manatsu('h1', { id: 'insidious_modal_h1', text: modalTitle }, titleContainer).create();
+        new Manatsu('h1', { text: modalTitle }, titleContainer).create();
     };
     
     /**
@@ -125,6 +125,26 @@ class Utils {
             const result = Number.parseFloat(valueField.textContent);
             if (Number.isNaN(result)) throw new InsidiousError(`O valor de \"${tag}\" obtido no documento XML é inválido.`);
             return result;
+        };
+    };
+
+    /**
+     * @param resources Objeto contendo a quantidade de recursos.
+     * @param parent Local onde os elementos serão criados.
+     * @param total Determina se a quantia total deve ser incluída.
+     */
+    static showResourceIcons(resources: TotalPlundered, parent: HTMLElement, total: boolean = false) {
+        for (const [key, value] of Object.entries(resources)) {
+            if (Assets.list.resources.includes(key as ResourceList)) {
+                new Manatsu('span', parent, { class: `icon ins_${key}` }).create();
+                new Manatsu('span', parent, { class: 'res', id: `insidious_plundered_${key}`, text: String(value) }).create();
+            };
+        };
+
+        if (total === true) {
+            const totalAmount = String(resources.total);
+            new Manatsu('span', parent, { class: 'icon ins_storage' }).create();
+            new Manatsu('span', parent, { class: 'res', id: 'insidious_plundered_total', text: totalAmount }).create();
         };
     };
 };

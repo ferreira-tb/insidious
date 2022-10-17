@@ -3,7 +3,7 @@ class Assets {
         get_config: location.origin + '/interface.php?func=get_config',
         get_building_info: location.origin + '/interface.php?func=get_building_info',
         get_unit_info: location.origin + '/interface.php?func=get_unit_info',
-    };
+    } as const;
 
     static readonly list: AssetsList = {
         // Unidades
@@ -18,7 +18,7 @@ class Assets {
     };
 
     /** Aríetes e bárbaros, respectivamente. */
-    static readonly unitsToDestroyWall: { [index in WallLevel]: [number, number]} = {
+    static readonly unitsToDestroyWall = {
         1: [3, 50],
         2: [5, 50],
         3: [8, 50],
@@ -39,12 +39,5 @@ class Assets {
         18: [200, 1100],
         19: [200, 1100],
         20: [200, 1300]
-    };
-
-    static freeze() {
-        Object.freeze(this.info);
-        Object.freeze(this.list);
-
-        Object.freeze(this.unitsToDestroyWall);
-    };
+    } as const;
 };

@@ -1,5 +1,4 @@
 // Precisa sempre ser o último arquivo na lista do manifesto.
-// Todo código que não estiver contido numa classe deve vir aqui.
 new MutationObserver((mutationList, observer) => {
     mutationList.forEach(async (mutation) => {
         for (const node of Array.from(mutation.addedNodes)) {
@@ -11,8 +10,6 @@ new MutationObserver((mutationList, observer) => {
                 /** Determina se o Insidious está ativado. */
                 const insidiousStatus = await Store.get('insidiousStatus') as boolean | undefined;
                 if (insidiousStatus !== false) {
-                    Assets.freeze();
-
                     Insidious.updateGameData()
                         .then(() => Insidious.start())
                         .catch((err: unknown) => InsidiousError.handle(err));
