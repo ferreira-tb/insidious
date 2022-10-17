@@ -166,6 +166,8 @@ type PlunderOptions = {
     use_c: boolean;
     /** Se ativado, o Plunder enviará vários ataques simultaneamente. */
     rush_mode: boolean;
+    /** Se ativado, o Plunder criará estimativas de saque mais conservadoras. */
+    realistic_mode: boolean;
 };
 
 ////// SHIELD

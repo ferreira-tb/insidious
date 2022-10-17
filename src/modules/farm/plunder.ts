@@ -11,8 +11,11 @@ class Plunder extends Farm {
     private static plundered: TotalPlundered | undefined;
     /** Quantidade de aríetes disponível na aldeia. */
     private static ram: number | null = null;
+
     /** Impede que o método sendAttackUsingC() seja chamado mais de uma vez. */
     private static waitingC: boolean = false;
+    /** Atrasa o envio do ataque caso seja o primeiro. */
+    private static firstAttack: boolean = true;
 
     /** Opções de configuração do Plunder. */
     static options: PlunderOptions;
@@ -25,7 +28,7 @@ class Plunder extends Farm {
     static async start() {
         try {
             const isFirstPage = await this.checkIfIsFirstPage();
-            if (isFirstPage === false) location.assign(new PlunderPageURL().first);
+            if (isFirstPage === false) return location.assign(new PlunderPageURL().first);
 
             // Exibe a quantidade de recursos saqueado durante o período em que o plunder estiver ativo.
             // A função updatePlunderedAmount() atualiza essa informação após cada ataque feito.
@@ -84,10 +87,7 @@ class Plunder extends Farm {
             // Se a opção de exibir aldeias sob ataque estiver ativa, exibe um aviso.
             // O usuário poderá ou desativá-la ou encerrar o Plunder.
             const areThereVillagesUnderAttack = await this.areThereVillagesUnderAttack();
-            if (areThereVillagesUnderAttack) {
-                Farm.togglePlunder();
-                return;
-            };
+            if (areThereVillagesUnderAttack) return Farm.togglePlunder();
             
             /** Array com todas as linhas da tabela. */
             const villageRows = Array.from(document.querySelectorAll('tr[insidious-tr-farm="true"]')) as HTMLElement[];
@@ -139,9 +139,9 @@ class Plunder extends Farm {
                     this.waitingC = true;
                     return this.prepareAttack(attack.id, expectedResources)
                         .then(() => Manatsu.remove(village))
+                        .then(() => this.waitingC = false)
                         .then(() => this.handleAttack())
-                        .catch((err: unknown) => InsidiousError.handle(err))
-                        .finally(() => this.waitingC = false);
+                        .catch((err: unknown) => InsidiousError.handle(err));
                 };
 
                 let { ratioIsOk, bestRatio, otherRatio } = new ModelRatio(attack.resources);
@@ -190,7 +190,13 @@ class Plunder extends Farm {
         };
     };
 
-    private static prepareAttack(villageID: string, resources: ExpectedResources) {
+    private static async prepareAttack(villageID: string, resources: ExpectedResources) {
+        // Atrasa o envio do ataque caso seja o primeiro.
+        if (this.firstAttack === true) {
+            await Utils.wait();
+            this.firstAttack = false;
+        };
+
         return new Promise<void>((resolve, reject) => {
             if (Utils.isThereCaptcha()) {
                 Farm.togglePlunder();
@@ -237,7 +243,7 @@ class Plunder extends Farm {
         // impedir que a função seja executada mais de uma vez.
         if (model === 'c' && this.waitingC === false) return this.sendAttackUsingC(villageID);
 
-        return new Promise<void>(async (resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             const observeTroops = new MutationObserver(() => {
                 observeTroops.disconnect();
                 resolve();
@@ -254,40 +260,42 @@ class Plunder extends Farm {
             attackButton.click();
 
             // Caso o observer não perceber mudanças mesmo após três segundos, emite um erro.
-            await Utils.wait(3000);
-            observeTroops.disconnect();
-            reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (sendAttack).'));
+            Utils.wait(3000)
+                .then(() => observeTroops.disconnect())
+                .then(() => reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.')));
         });
     };
 
     private static sendAttackUsingC(villageID: string): Promise<void> {
-        const attackObservingAutoHideBox = () => {
-            return new Promise<void>(async (resolve, reject) => {
-                const observeTroops = new MutationObserver((mutationList) => {
-                    for (const mutation of mutationList) {
-                        for (const node of Array.from(mutation.addedNodes)) {
-                            if (node.nodeType === Node.ELEMENT_NODE) {
-                                const nodeClass = (node as Element).getAttribute('class')?.toLowerCase();
-                                if (!nodeClass || !(nodeClass.includes('autohidebox'))) continue;
-    
-                                observeTroops.disconnect();
-                                resolve();
-                                return;
-                            };
+        // Resolverá onde primeiro houver a mutação correta.
+        return Promise.any([
+            this.attackObservingAutoHideBox(),
+            this.sendAttack(villageID, 'c')
+        ]);
+    };
+
+    private static attackObservingAutoHideBox() {
+        return new Promise<void>((resolve, reject) => {
+            const observeTroops = new MutationObserver((mutationList) => {
+                for (const mutation of mutationList) {
+                    for (const node of Array.from(mutation.addedNodes)) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const nodeClass = (node as Element).getAttribute('class')?.toLowerCase();
+                            if (!nodeClass || !(nodeClass.includes('autohidebox'))) continue;
+
+                            observeTroops.disconnect();
+                            return resolve();
                         };
                     };
-                });
-
-                observeTroops.observe(document.body, { subtree: true, childList: true });
-
-                await Utils.wait(3000);
-                observeTroops.disconnect();
-                reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder (sendAttackUsingC).'));     
+                };
             });
-        };
 
-        // Observará dois lugares ao mesmo tempo, resolvendo no primeiro onde houver a mutação correta.
-        return Promise.any([attackObservingAutoHideBox(), this.sendAttack(villageID, 'c')]);
+            observeTroops.observe(document.body, { subtree: true, childList: true });
+
+            Utils.wait(3000)
+                .then(() => observeTroops.disconnect())
+                .then(() => reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.')));
+        });
     };
 
     /** Retorna uma função que permite verificar a quantidade de tropas disponíveis. */
@@ -307,15 +315,14 @@ class Plunder extends Farm {
             case 1:
                 available = new PlunderAvailableTroops(Assets.list.farm_units_archer) as AvailableFarmUnits;
                 break;
-                
             default:
                 available = new PlunderAvailableTroops(Assets.list.farm_units) as AvailableFarmUnits;
                 break;
         };
 
         return function(model: AvailableFarmUnits): boolean {
+            // Se houver menos tropas do que consta no modelo, a função deve ser interrompida.
             for (const [key, value] of Object.entries(available)) {
-                // Se houver menos tropas do que consta no modelo, a função deve ser interrompida.
                 if (value < model[key as FarmUnits]) return false;
             };
             
@@ -379,13 +386,11 @@ class Plunder extends Farm {
                 const pageURL = new PlunderPageURL(currentPage);
 
                 // Caso a página atual seja a última página, volta para a primeira.
-                if (currentPage === plunderPages.at(-1)) {
-                    location.assign(pageURL.first);
-
-                // Do contrário, vai para a próxima.
-                } else {
-                    if (!pageURL.next) throw new InsidiousError('Não foi possível determinar a URL da próxima página.')
-                    location.assign(pageURL.next);
+                switch (currentPage === plunderPages.at(-1)) {
+                    case true: return location.assign(pageURL.first);
+                    case false:
+                        if (!pageURL.next) throw new InsidiousError('Não foi possível determinar a URL da próxima página.');
+                        return location.assign(pageURL.next);
                 };
             };
 
@@ -430,13 +435,13 @@ class Plunder extends Farm {
             const groupID = await Store.get(Keys.farmGroup) as string | undefined;
             if (Game.group !== groupID) return;
 
-            const rightArrow = document.querySelector('a#village_switch_right span.groupRight') as HTMLSpanElement | null;
+            const rightArrow = document.querySelector('a#village_switch_right span.groupRight');
             if (rightArrow) {
                 // Antes de mudar de aldeia, salva a atual como última aldeia atacante.
                 this.navigation = new PlunderGroupNavigation('attack');
                 await Store.set({ [Keys.plunderNavigation]: this.navigation });
-
-                rightArrow.click();
+                
+                (rightArrow as HTMLSpanElement).click();
             };
 
         } catch (err) {
@@ -474,10 +479,10 @@ class Plunder extends Farm {
             };
 
             if (woodLabel && stoneLabel && ironLabel && totalLabel) {
-                woodLabel.textContent = String(this.plundered.wood);
-                stoneLabel.textContent = String(this.plundered.stone);
-                ironLabel.textContent = String(this.plundered.iron);
-                totalLabel.textContent = String(this.plundered.total);
+                woodLabel.textContent = this.plundered.wood.toLocaleString('pt-br');
+                stoneLabel.textContent = this.plundered.stone.toLocaleString('pt-br');
+                ironLabel.textContent = this.plundered.iron.toLocaleString('pt-br');
+                totalLabel.textContent = this.plundered.total.toLocaleString('pt-br');
             };
 
             // Salva os valores no banco de dados.
@@ -530,38 +535,33 @@ class Plunder extends Farm {
      * Se o resultado for true, o ataque foi enviado e handleAttack() deve pular para a próxima aldeia.
      * Se for false, handleAttack() deve continuar a execução atual.
      * @param villageID ID da aldeia.
-     * @param wallLevel Nível da muralha.
+     * @param wall Nível da muralha.
      */
-    private static destroyWall(villageID: string, wallLevel: WallLevel) {
+    private static destroyWall(villageID: string, wall: WallLevel) {
         return new Promise<boolean>(async (resolve, reject) => {
             // Quantidade de bárbaros.
             const axeField = document.querySelector('td[insidious-available-units="axe"]');
-            if (!axeField || !axeField.textContent) {
-                throw new InsidiousError('Não foi possível determinar a quantidade de bárbaros disponíveis.')
-            };
+            if (!axeField) throw new InsidiousError('Não foi possível determinar a quantidade de bárbaros disponíveis.');
 
-            const axeAmount = Number.parseInt(axeField.textContent, 10);
+            const axeAmount = Number.parseInt(axeField.textContent as string, 10);
             if (Number.isNaN(axeAmount)) throw new InsidiousError('A quantidade de bárbaros obtida é inválida.');
 
             // Quantidade de exploradores.
             const spyField = document.querySelector('td[insidious-available-units="spy"]');
-            if (!spyField || !spyField.textContent) {
-                throw new InsidiousError('Não foi possível determinar a quantidade de exploradores disponíveis.')
-            };
+            if (!spyField) throw new InsidiousError('Não foi possível determinar a quantidade de exploradores disponíveis.')
 
-            const spyAmount = Number.parseInt(spyField.textContent, 10);
+            const spyAmount = Number.parseInt(spyField.textContent as string, 10);
             if (Number.isNaN(spyAmount)) throw new InsidiousError('A quantidade de exploradores obtida é inválida.');
 
             /** Verifica se há tropas disponíveis para destruir a muralha. */
             const canDestroy = (neededRams: number, neededAxes: number): boolean => {
-                if (neededRams > (this.ram as number) || neededAxes > axeAmount || spyAmount < 1) {
-                    return false;
-                };
+                if (this.ram === null) throw new InsidiousError('A quantidade de aríetes não está determinada.');
+                if (neededRams > this.ram || neededAxes > axeAmount || spyAmount < 1) return false;
                 return true;
             };
 
             /** Tropas necessárias para cada nível possível da muralha. */
-            const neededUnits = Assets.unitsToDestroyWall[wallLevel] as [number, number];
+            const neededUnits = Assets.unitsToDestroyWall[wall] as [number, number];
 
             // Caso a quantidade de aríetes já esteja salva, verifica se há tropas suficientes.
             // Em caso negativo, resolve a promise.
@@ -607,58 +607,17 @@ class Plunder extends Farm {
                         for (const mutation of mutationList) {
                             for (const node of Array.from(mutation.addedNodes)) {
                                 if (node.nodeType === Node.ELEMENT_NODE) {
-                                    if ((node as Element).getAttribute('id') !== 'command-data-form') continue;
+                                    const form = node as Element;
+                                    if (form.getAttribute('id') !== 'command-data-form') continue;
+
                                     observeCommandForm.disconnect();
-
-                                    const submitAttack = (node as Element).querySelector('#troop_confirm_submit') as HTMLInputElement | null;
-                                    if (!submitAttack) throw new InsidiousError('DOM: #troop_confirm_submit');
-
-                                    // Obtém informações a respeito das tropas que estão sendo enviadas.
-                                    const confirmRamField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-ram');
-                                    if (!confirmRamField || !confirmRamField.textContent) {
-                                        throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-ram')
-                                    };
-                                    
-                                    const confirmAxeField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-axe');
-                                    if (!confirmAxeField || !confirmAxeField.textContent) {
-                                        throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-axe')
-                                    };
-                                    
-                                    const confirmSpyField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-spy');
-                                    if (!confirmSpyField || !confirmSpyField.textContent) {
-                                        throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-spy')
-                                    };
-
-                                    const confirmRamAmount = confirmRamField.textContent.replace(/\D/g, '');
-                                    const confirmAxeAmount = confirmAxeField.textContent.replace(/\D/g, '');
-                                    const confirmSpyAmount = confirmSpyField.textContent.replace(/\D/g, '');
-
-                                    // E então verifica se a quantidade de tropas está correta.
-                                    if (confirmRamAmount !== neededRams) {
-                                        throw new InsidiousError(`A quantidade de aríetes (${confirmRamAmount}) não condiz com o necessário(${neededRams}).`);
-                                    } else if (confirmAxeAmount !== neededAxes) {
-                                        throw new InsidiousError(`A quantidade de bárbaros (${confirmAxeAmount}) não condiz com o necessário(${neededAxes}).`);
-                                    } else if (confirmSpyAmount !== '1') {
-                                        throw new InsidiousError(`A quantidade de exploradores (${confirmSpyAmount}) é diferente de 1.`);
-
-                                    // Se estiver tudo certo, envia o ataque.
-                                    } else {
-                                        submitAttack.click();
-                                        const destroyedWalls = await Store.get(Keys.plunderWalls) as number | undefined;
-                                        if (typeof destroyedWalls !== 'number') {
-                                            await Store.set({ [Keys.plunderWalls]: wallLevel });
-                                        } else {
-                                            await Store.set({ [Keys.plunderWalls]: destroyedWalls + wallLevel });
-                                        };
-
-                                        await Utils.wait();
-                                        resolve(true);
-                                        return;
-                                    };
+                                    await this.sendRamAttack(neededRams, neededAxes, wall);
+                                    resolve(true);
+                                    return;
                                 };
                             };
                         };
-                    })
+                    });
 
                     observeCommandForm.observe(document.body, { subtree: true, childList: true });
                     
@@ -671,9 +630,9 @@ class Plunder extends Farm {
                     formAttackButton.click();
 
                     /** Caso o observer não perceber mudanças mesmo após três segundos, emite um erro. */
-                    await Utils.wait(3000);
-                    observeCommandForm.disconnect();
-                    throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder (destroyWall).');
+                    Utils.wait(3000)
+                        .then(() => observeCommandForm.disconnect())
+                        .then(() => reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.')));
 
                 } else {
                     closeButton.click();
@@ -681,10 +640,8 @@ class Plunder extends Farm {
                 };
 
             } catch (err) {
-                const closeButton = document.querySelector('#popup_box_popup_command a.popup_box_close') as HTMLElement | null;
-                if (!closeButton) throw new InsidiousError('Não foi possível encontrar o botão para fechar a janela de comando.');
-
-                closeButton.click();
+                const closeButton = document.querySelector('#popup_box_popup_command a.popup_box_close');
+                if (closeButton) (closeButton as HTMLElement).click();
                 reject(err);
             };
         });
@@ -696,7 +653,7 @@ class Plunder extends Farm {
      * @returns A quantidade de aríetes disponíveis.
      */
     private static openPlace(villageID: string) {
-        return new Promise<number>(async (resolve) => {
+        return new Promise<number>((resolve, reject) => {
             const placeButton = document.querySelector(`td a[insidious-place-btn="place_${villageID}"]`) as HTMLElement | null;
             if (!placeButton) throw new InsidiousError(`Não foi possível encontrar o botão da praça de reunião ${villageID}.`);
 
@@ -727,10 +684,49 @@ class Plunder extends Farm {
             observeRams.observe(document.body, { subtree: true, childList: true });
             placeButton.click();
 
-            await Utils.wait(3000);
-            observeRams.disconnect();
-            throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder (openPlace).');
+            Utils.wait(3000)
+                .then(() => observeRams.disconnect())
+                .then(() => reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.')))
         });
+    };
+
+    private static async sendRamAttack(rams: string, axes: string, wall: number) {
+        const submitAttack = document.querySelector('#troop_confirm_submit[class*="troop_confirm_go" i]');
+        if (!submitAttack) throw new InsidiousError('DOM: #troop_confirm_submit[class*="troop_confirm_go" i]');
+
+        // Obtém informações a respeito das tropas que estão sendo enviadas.
+        const confirmRamField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-ram');
+        if (!confirmRamField) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-ram');
+        
+        const confirmAxeField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-axe');
+        if (!confirmAxeField) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-axe');
+        
+        const confirmSpyField = document.querySelector('#place_confirm_units tbody tr.units-row td.unit-item-spy');
+        if (!confirmSpyField) throw new InsidiousError('DOM: #place_confirm_units tbody tr.units-row td.unit-item-spy');
+
+        const ramAmount = confirmRamField.textContent?.replace(/\D/g, '');
+        const axeAmount = confirmAxeField.textContent?.replace(/\D/g, '');
+        const spyAmount = confirmSpyField.textContent?.replace(/\D/g, '');
+
+        // E então verifica se a quantidade de tropas está correta.
+        if (ramAmount !== rams) {
+            throw new InsidiousError(`A quantidade de aríetes (${ramAmount}) não condiz com o necessário(${rams}).`);
+        } else if (axeAmount !== axes) {
+            throw new InsidiousError(`A quantidade de bárbaros (${axeAmount}) não condiz com o necessário(${axes}).`);
+        } else if (spyAmount !== '1') {
+            throw new InsidiousError(`A quantidade de exploradores (${spyAmount}) é diferente de 1.`);
+        };
+
+        // Se estiver tudo certo, envia o ataque.
+        (submitAttack as HTMLInputElement).click();
+        const destroyedWalls = await Store.get(Keys.plunderWalls);
+        if (!Number.isInteger(destroyedWalls)) {
+            await Store.set({ [Keys.plunderWalls]: wall });
+        } else {
+            await Store.set({ [Keys.plunderWalls]: (destroyedWalls as number) + wall});
+        };
+
+        await Utils.wait();
     };
 
     /**

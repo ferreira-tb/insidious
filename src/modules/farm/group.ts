@@ -13,12 +13,11 @@ class GroupAttack {
             const groupJumpButton = document.querySelector('span.groupJump a.jump_link img') as HTMLImageElement | null;
 
             if (Game.group !== groupID) {
-                if (location.href.includes('group=')) {
-                    location.assign(location.href.replace(`&group=${Game.group}`, `&group=${groupID}`));
-                } else {
-                    location.assign(location.href + `&group=${groupID}`);
+                switch (location.href.includes('group=')) {
+                    case true: return location.assign(location.href.replace(`&group=${Game.group}`, `&group=${groupID}`));
+                    case false: return location.assign(location.href + `&group=${groupID}`);
                 };
-                
+            
             } else if (groupJumpButton && Plunder.navigation.last_group_jump !== Game.village) {
                 // A aldeia atual permanece a mesma após a navegação para o grupo correto.
                 // Caso essa aldeia não pertença ao grupo, a navegação entre as aldeias do grupo se torna impossível.
@@ -81,7 +80,7 @@ class GroupAttack {
     private static async checkIfGroupAlreadyExists(): Promise<boolean> {
         if (!document.querySelector('div.popup_helper #group_popup')) {
             // Caso a janela de grupos não esteja aberta (mesmo que oculta), abre e a oculta logo em seguida.
-            await new Promise<void>(async (resolve) => {
+            await new Promise<void>((resolve, reject) => {
                 const openGroupsButton = document.querySelector('tr#menu_row2 td a#open_groups') as HTMLAnchorElement | null;
                 if (!openGroupsButton) throw new InsidiousError('DOM: tr#menu_row2 td a#open_groups');
         
@@ -95,8 +94,7 @@ class GroupAttack {
                                 if (!closeGroupPopupButton) throw new InsidiousError('DOM: a#closelink_group_popup');
                                 closeGroupPopupButton.click();
 
-                                resolve();
-                                return;
+                                return resolve();
                             };
                         };
                     };
@@ -105,9 +103,9 @@ class GroupAttack {
                 observeHelper.observe(document.body, { subtree: true, childList: true });
                 openGroupsButton.click();
 
-                await Utils.wait(3000);
-                observeHelper.disconnect();
-                throw new InsidiousError('TIMEOUT: O servidor demorou demais para responder (checkIfGroupAlreadyExists).');
+                Utils.wait(3000)
+                    .then(() => observeHelper.disconnect())
+                    .then(() => reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.')));
             });
         };
 
@@ -131,17 +129,13 @@ class GroupAttack {
         return false;
     };
 
-    private static async navigateToGroupCreationScreen() {
+    private static navigateToGroupCreationScreen() {
         const currentVillageLocation = `${location.origin}\/game.php\?village=${Game.village}\&`;
         const targetLocation = currentVillageLocation + this.groupCreationScreen;
 
-        try {
-            await Store.set({ [Keys.farmGroupCreation]: true });
-            location.assign(targetLocation);
-
-        } catch (err) {
-            InsidiousError.handle(err);
-        };
+        Store.set({ [Keys.farmGroupCreation]: true })
+            .then(() => location.assign(targetLocation))
+            .catch((err: unknown) => InsidiousError.handle(err));
     };
 
     static async createDynamicGroup() {

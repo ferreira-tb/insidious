@@ -254,7 +254,7 @@ class TWShield {
                 shieldStatus = new ShieldStatus('redirect', 'group');
                 await Store.set({ [Keys.shieldStatus]: shieldStatus });
 
-                location.assign(link);
+                return location.assign(link);
             };
 
         } catch (err) {
@@ -352,7 +352,7 @@ class TWShield {
         async function goBack() {
             messageModalCtrl.abort();
             await Store.remove(Keys.shieldNavigation);
-            location.assign(navigationHistory.previous);
+            return location.assign(navigationHistory.previous);
         };
 
         await TWShield.resetShieldStatus();
@@ -367,10 +367,9 @@ class TWShield {
         await Store.set({ [Keys.shieldStatus]: shieldStatus });
 
         if (Game.group !== '0') {
-            if (location.href.includes('group=')) {
-                location.assign(location.href.replace(`&group=${Game.group}`, '&group=0'));
-            } else {
-                location.assign(`${location.href}&group=0`);
+            switch (location.href.includes('group=')) {
+                case true: return location.assign(location.href.replace(`&group=${Game.group}`, '&group=0'));
+                case false: return location.assign(`${location.href}&group=0`);
             };
 
         } else {

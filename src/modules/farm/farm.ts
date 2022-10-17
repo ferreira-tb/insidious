@@ -156,6 +156,13 @@ class Farm {
             this.saveOptions(e.target, 'rush_mode');
         }, { signal: optionsCtrl.signal });
 
+        // Cria estimativas de saque mais conservadoras.
+        const realisticMode = modalWindow.querySelector('#insidious_realistic_mode') as HTMLInputElement;
+        if (Plunder.options.realistic_mode === true) realisticMode.checked = true;
+        realisticMode.addEventListener('change', (e) => {
+            this.saveOptions(e.target, 'realistic_mode');
+        }, { signal: optionsCtrl.signal });
+
         // Fecha a janela modal.
         new Manatsu('button', modalWindow, { class: 'insidious_modalButton', text: 'Fechar' }).createInside('div')
             .addEventListener('click', () => {
@@ -197,10 +204,10 @@ class Farm {
     private static async saveOptions(target: EventTarget | null, name: keyof PlunderOptions) {
         try {
             if (target instanceof HTMLInputElement) {
-                if (target.checked === true) {
-                    Plunder.options[name] = true;
-                } else {
-                    Plunder.options[name] = false;
+                switch (target.checked) {
+                    case true: Plunder.options[name] = true;
+                        break;
+                    default: Plunder.options[name] = false;
                 };
             };
 
@@ -472,6 +479,12 @@ class Farm {
         this.config.set('rush_mode', Manatsu.createCheckbox({
             id: 'insidious_rush_mode',
             label: 'Atacar rapidamente'
+        }, false) as Manatsu[]);
+
+        // Cria estimativas de saque mais conservadoras.
+        this.config.set('realistic_mode', Manatsu.createCheckbox({
+            id: 'insidious_realistic_mode',
+            label: 'Estimativa realista'
         }, false) as Manatsu[]);
     };
 

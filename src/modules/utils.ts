@@ -136,14 +136,15 @@ class Utils {
     static showResourceIcons(resources: TotalPlundered, parent: HTMLElement, total: boolean = false) {
         for (const [key, value] of Object.entries(resources)) {
             if (Assets.list.resources.includes(key as ResourceList)) {
-                new Manatsu('span', parent, { class: `icon ins_${key}` }).create();
-                new Manatsu('span', parent, { class: 'res', id: `insidious_plundered_${key}`, text: String(value) }).create();
+                const amount = value.toLocaleString('pt-br')
+                new Manatsu('span', parent, { class: `ins_icon ins_${key}` }).create();
+                new Manatsu('span', parent, { class: 'res', id: `insidious_plundered_${key}`, text: amount }).create();
             };
         };
 
         if (total === true) {
-            const totalAmount = String(resources.total);
-            new Manatsu('span', parent, { class: 'icon ins_storage' }).create();
+            const totalAmount = resources.total.toLocaleString('pt-br');
+            new Manatsu('span', parent, { class: 'ins_icon ins_storage' }).create();
             new Manatsu('span', parent, { class: 'res', id: 'insidious_plundered_total', text: totalAmount }).create();
         };
     };
