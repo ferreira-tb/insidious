@@ -13,9 +13,10 @@ class PlunderButtons {
         this.section.button = new Manatsu({ id: 'insidious_farmButtonArea' }, this.section.main).create();
         this.section.action = new Manatsu({ id: 'insidious_farmActionArea' }, this.section.main).create();
 
-        this.button.plunder = new Manatsu('button', { class: 'insidious_farmAreaBtn', id: 'insidious_plunderButton' }).create();
-        this.button.options = new Manatsu('button', { class: 'insidious_farmAreaBtn', text: 'Opções' }).create();
-        this.button.info = new Manatsu('button', { class: 'insidious_farmAreaBtn', text: 'Informações' }).create();
+        const buttonClass = 'insidious_farmAreaBtn';
+        this.button.plunder = new Manatsu('button', { class: buttonClass, id: 'insidious_plunderButton' }).create();
+        this.button.options = new Manatsu('button', { class: buttonClass, text: 'Opções' }).create();
+        this.button.info = new Manatsu('button', { class: buttonClass, text: 'Informações' }).create();
 
         ////// EVENTOS
         this.button.plunder.addEventListener('click', TWFarm.togglePlunder);
