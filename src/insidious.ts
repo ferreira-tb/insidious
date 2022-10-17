@@ -8,11 +8,11 @@ class Insidious {
             // Faz download dos dados necessários para executar a extensão.
             await this.fetchWorldConfig();
             // Armazena as informações obtidas em propriedades da classe Game.
-            await Game.setWorldInfo();
+            await Game.setWorldConfig();
 
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
             switch (Game.screen) {
-                case 'am_farm': await Farm.open();
+                case 'am_farm': await TWFarm.open();
                     break;
                 case 'overview': await this.setAsActiveWorld();
                     break;
@@ -31,6 +31,10 @@ class Insidious {
                 await Store.set({ [Keys.shield]: true });
                 TWShield.start();
             };
+
+            // Exibe informações sobre os status do Plunder e do Shield no rodapé da página.
+            this.showServerInfo(shieldStatus)
+                .catch((err: unknown) => InsidiousError.handle(err));
 
         } catch (err) {
             InsidiousError.handle(err);
@@ -84,9 +88,9 @@ class Insidious {
                         const request = new XMLHttpRequest();
                         request.timeout = 2000;
 
-                        request.addEventListener("error", () => reject(request.status));
-                        request.addEventListener("timeout", () => reject(request.status));
-                        request.addEventListener("load", () => {
+                        request.addEventListener('error', () => reject(request.status));
+                        request.addEventListener('timeout', () => reject(request.status));
+                        request.addEventListener('load', () => {
                             if (request.responseXML) {
                                 const configXML = request.responseXML;
                                 switch (source.name) {
@@ -118,6 +122,35 @@ class Insidious {
             await Store.remove(Keys.worldConfig);
             InsidiousError.handle(err);
         };
+    };
+
+    /** Exibe informações sobre os status do Plunder e do Shield no rodapé da página. */
+    private static async showServerInfo(shieldStatus: boolean | undefined) {
+        const plunderStatus = await Store.get(Keys.plunder) as boolean | undefined;
+
+        // O estado padrão deles, quando undefined, difere.
+        // Para o Shield é 'ativo', já para o Plunder é 'inativo'.
+        const eachStatus = [shieldStatus, plunderStatus].map((status, index) => {
+            if (status === false) return 'inativo';
+            if (status === undefined) {
+                switch (index) {
+                    case 0: return 'ativo';
+                    case 1: return 'inativo';
+                };
+            };
+
+            return 'ativo';
+        });
+
+        const shieldInfo = `Shield: ${eachStatus[0]}`;
+        const plunderInfo = `Plunder: ${eachStatus[1]}`;
+        const responseTime = `Tempo de resposta: ${Utils.responseTime.toLocaleString('pt-br')}ms`;
+
+        const serverInfo = document.querySelector('td.maincell > p.server_info');
+        if (!serverInfo) throw new InsidiousError('DOM: td.maincell > p.server_info');
+
+        const spanText = { text: `${shieldInfo} \| ${plunderInfo} \| ${responseTime} \| ` };
+        new Manatsu('span', spanText).createBefore(serverInfo.firstChild);
     };
 
     /** Define o mundo atual como ativo e o registra como sendo o último acessado. */

@@ -1,4 +1,4 @@
-class Farm {
+class TWFarm {
     /** Botões do Plunder. */
     static menu: PlunderButtons;
     /** Mapa com os elementos que constituem o menu de configurações do Plunder. */
@@ -45,7 +45,7 @@ class Farm {
     };
 
     private static async appendButtons(plunderStatus: boolean | undefined) {
-        for (const value of Object.values(Farm.menu.button)) {
+        for (const value of Object.values(TWFarm.menu.button)) {
             this.menu.section.button.appendChild(value);
         };
 
@@ -65,20 +65,20 @@ class Farm {
     /** Inicia ou para o plunder. */
     static async togglePlunder() {
         try {
-            Farm.menu.button.plunder.removeEventListener('click', Farm.togglePlunder);
-            Manatsu.removeChildren(Farm.menu.section.action);
+            TWFarm.menu.button.plunder.removeEventListener('click', TWFarm.togglePlunder);
+            Manatsu.removeChildren(TWFarm.menu.section.action);
 
             const plunderStatus = await Store.get(Keys.plunder) as boolean | undefined;
             // Se estiver ativo, desativa-o e troca o texto do botão.
             // Além disso, salva a quantia saqueada no histórico global e remove o histórico de navegação.
             if (plunderStatus === true) {
-                await Farm.setGlobalAndLastPlundered();
+                await TWFarm.savePlunderedAmounts();
                 await Store.remove(Keys.plunderNavigation);
                 await Store.set({ [Keys.plunder]: false });
-                Farm.menu.button.plunder.textContent = 'Saquear';
+                TWFarm.menu.button.plunder.textContent = 'Saquear';
 
-                // Mapa contendo os modelos C salvos durante a execução do Plunder.
-                Plunder.cmodel.clear();
+                // Elimina todos os registros feitos durante os ataques.
+                TWFarm.clearAllRecords();
 
                 Plunder.eventTarget.dispatchEvent(new Event('stopplundering'));
                 Plunder.eventTarget.dispatchEvent(new Event('cancelautoreload'));
@@ -91,11 +91,11 @@ class Farm {
             } else if (plunderStatus === false) {
                 await Store.remove(Keys.totalPlundered);
                 await Store.set({ [Keys.plunder]: true });
-                Farm.menu.button.plunder.textContent = 'Parar';
+                TWFarm.menu.button.plunder.textContent = 'Parar';
                 Plunder.start();
             };
 
-            Farm.menu.button.plunder.addEventListener('click', Farm.togglePlunder);
+            TWFarm.menu.button.plunder.addEventListener('click', TWFarm.togglePlunder);
 
         } catch (err) {
             InsidiousError.handle(err);
@@ -119,49 +119,23 @@ class Farm {
 
         const optionsCtrl = new AbortController();
 
-        // Ataca de múltiplas aldeias.
-        const groupAttack = modalWindow.querySelector('#insidious_group_attack_checkbox') as HTMLInputElement;
-        if (Plunder.options.group_attack === true) groupAttack.checked = true;
-        groupAttack.addEventListener('change', async (e) => {
-            optionsCtrl.abort();
-            await this.saveOptions(e.target, 'group_attack');
-            setTimeout(() => window.location.reload(), Utils.responseTime);
-        }, { signal: optionsCtrl.signal });
+        Assets.options.plunder.forEach((option) => {
+            const checkbox = modalWindow.querySelector(`#insidious_${option}`) as HTMLInputElement;
+            if (Plunder.options[option] === true) checkbox.checked = true;
 
-        // Ignora aldeias com muralha.
-        const ignoreWall = modalWindow.querySelector('#insidious_ignore_wall_checkbox') as HTMLInputElement;
-        if (Plunder.options.ignore_wall === true) ignoreWall.checked = true;
-        ignoreWall.addEventListener('change', (e) => {
-            this.saveOptions(e.target, 'ignore_wall');
-        }, { signal: optionsCtrl.signal });
+            if (option === 'group_attack') {
+                checkbox.addEventListener('change', async (e) => {
+                    optionsCtrl.abort();
+                    await this.saveOptions(e.target, option);
+                    setTimeout(() => window.location.reload(), Utils.responseTime);
+                });
 
-        // Destrói muralhas.
-        const destroyWall = modalWindow.querySelector('#insidious_destroy_wall_checkbox') as HTMLInputElement;
-        if (Plunder.options.destroy_wall === true) destroyWall.checked = true;
-        destroyWall.addEventListener('change', (e) => {
-            this.saveOptions(e.target, 'destroy_wall');
-        }, { signal: optionsCtrl.signal });
-
-        // Usa o modelo C para atacar.
-        const useCModel = modalWindow.querySelector('#insidious_use_c') as HTMLInputElement;
-        if (Plunder.options.use_c === true) useCModel.checked = true;
-        useCModel.addEventListener('change', (e) => {
-            this.saveOptions(e.target, 'use_c');
-        }, { signal: optionsCtrl.signal });
-
-        // Ataca rapidamente, enviando vários ataques simultaneamente.
-        const rushMode = modalWindow.querySelector('#insidious_rush_mode') as HTMLInputElement;
-        if (Plunder.options.rush_mode === true) rushMode.checked = true;
-        rushMode.addEventListener('change', (e) => {
-            this.saveOptions(e.target, 'rush_mode');
-        }, { signal: optionsCtrl.signal });
-
-        // Cria estimativas de saque mais conservadoras.
-        const realisticMode = modalWindow.querySelector('#insidious_realistic_mode') as HTMLInputElement;
-        if (Plunder.options.realistic_mode === true) realisticMode.checked = true;
-        realisticMode.addEventListener('change', (e) => {
-            this.saveOptions(e.target, 'realistic_mode');
-        }, { signal: optionsCtrl.signal });
+            } else {
+                checkbox.addEventListener('change', (e) => {
+                    this.saveOptions(e.target, option);
+                }, { signal: optionsCtrl.signal });
+            };
+        }, this);
 
         // Fecha a janela modal.
         new Manatsu('button', modalWindow, { class: 'insidious_modalButton', text: 'Fechar' }).createInside('div')
@@ -449,43 +423,23 @@ class Farm {
     };
 
     private static createOptions() {
-        // Ataca de múltiplas aldeias usando um grupo como referência.
-        // O nome do grupo obrigatoriamente precisa ser Insidious.
-        this.config.set('group_attack', Manatsu.createCheckbox({
-            id: 'insidious_group_attack_checkbox',
-            label: 'Usar grupo'
-        }, false) as Manatsu[]);
+        Assets.options.plunder.forEach((option) => {
+            let label: string;
+            switch (option) {
+                case 'group_attack': label = 'Usar grupo';
+                    break;
+                case 'ignore_wall': label = 'Ignorar muralha';
+                    break;
+                case 'destroy_wall': label = 'Destruir muralha';
+                    break;
+                case 'use_c': label = 'Usar modelo C';
+                    break;
+                case 'no_delay': label = 'Ignorar delay';
+            };
 
-        // Não ataca aldeias que tenham muralha.
-        this.config.set('ignore_wall', Manatsu.createCheckbox({
-            id: 'insidious_ignore_wall_checkbox',
-            label: 'Ignorar muralha'
-        }, false) as Manatsu[]);
-
-        // Envia ataques com aríetes em aldeias com muralha.
-        // Independe de como "ignorar muralha" está configurado.
-        this.config.set('destroy_wall', Manatsu.createCheckbox({
-            id: 'insidious_destroy_wall_checkbox',
-            label: 'Demolir muralha'
-        }, false) as Manatsu[]);
-
-        // Ataca usando o modelo C.
-        this.config.set('use_c', Manatsu.createCheckbox({
-            id: 'insidious_use_c',
-            label: 'Usar C'
-        }, false) as Manatsu[]);
-
-        // Rush Mode
-        this.config.set('rush_mode', Manatsu.createCheckbox({
-            id: 'insidious_rush_mode',
-            label: 'Atacar rapidamente'
-        }, false) as Manatsu[]);
-
-        // Cria estimativas de saque mais conservadoras.
-        this.config.set('realistic_mode', Manatsu.createCheckbox({
-            id: 'insidious_realistic_mode',
-            label: 'Estimativa realista'
-        }, false) as Manatsu[]);
+            const attributes = { id: `insidious_${option}`, label: label };
+            this.config.set(option, Manatsu.createCheckbox(attributes, false) as Manatsu[]);
+        });
     };
 
     /**
@@ -539,9 +493,12 @@ class Farm {
     };
 
     /** Atualiza a quantia total de recursos saqueados e ataques enviados pelo Plunder no mundo atual. */
-    protected static async setGlobalAndLastPlundered() {
+    private static async savePlunderedAmounts() {
+        // Total saqueado na última execução do Plunder.
         const totalPlundered = await Store.get(Keys.totalPlundered) as TotalPlundered | undefined;
         if (!totalPlundered) return;
+
+        // Soma dos recursos saqueados em todas as execuções do Plunder.
         let globalPlundered = await Store.get(Keys.globalPlundered) as TotalPlundered | undefined;
         if (!globalPlundered) globalPlundered = new NothingPlundered();
 
@@ -554,5 +511,12 @@ class Farm {
         Store.set({ [Keys.globalPlundered]: globalPlundered })
             .then(() => Store.set({ [Keys.lastPlundered]: lastPlundered }))
             .catch((err: unknown) => InsidiousError.handle(err));
+    };
+
+    private static clearAllRecords() {
+        // Mapa contendo os modelos C salvos durante a execução do Plunder.
+        Plunder.cmodel.clear();
+        // Set contendo as aldeias aguardando ataques pelo modelo C.
+        Plunder.waitingC.clear();
     };
 };

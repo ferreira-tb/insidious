@@ -66,7 +66,7 @@ class Game {
     };
 
     /** Armazena as configurações do mundo para que as outras classes tenham acesso. */
-    static async setWorldInfo() {
+    static async setWorldConfig() {
         this.#worldInfo = await Store.get(Keys.config) as WorldInfo;
         this.#unitInfo = await Store.get(Keys.unit) as UnitInfo;
         if (!this.#worldInfo || !this.#unitInfo) await Store.remove(Keys.worldConfig);

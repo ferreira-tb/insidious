@@ -434,6 +434,27 @@ class Manatsu {
         };
     };
 
+    static queryParentElement(element: Element, step: number = 1) {
+        if (!(element instanceof Element)) throw new ManatsuError('O elemento é inválido.');
+        if (step === 0) return element;
+        if (step && (!Number.isInteger(step) || Math.sign(step) !== 1)) {
+            throw new ManatsuError('O número de passos é inválido.');
+        };
+
+        let progress = 0;
+        let parent: Element | null
+        const getParentElement = (el: Element): Element | null => {
+            parent = el.parentElement;
+            if (!parent) return null;
+
+            progress++;
+            if (progress < step) return getParentElement(parent);
+            return parent;
+        };
+
+        return getParentElement(element);
+    };
+
     /**
      * Remove um ou mais elementos do documento.
      * Ao contrário de `Node.removeChild()`, não é necessário especificar o pai.

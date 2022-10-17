@@ -18,9 +18,9 @@ class PlunderButtons {
         this.button.info = new Manatsu('button', { class: 'insidious_farmAreaBtn', text: 'Informações' }).create();
 
         ////// EVENTOS
-        this.button.plunder.addEventListener('click', Farm.togglePlunder);
-        this.button.options.addEventListener('click', () => Farm.toggleOptions());
-        this.button.info.addEventListener('click', () => Farm.toggleInfo());
+        this.button.plunder.addEventListener('click', TWFarm.togglePlunder);
+        this.button.options.addEventListener('click', () => TWFarm.toggleOptions());
+        this.button.info.addEventListener('click', () => TWFarm.toggleInfo());
     };
 };
 

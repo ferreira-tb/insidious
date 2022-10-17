@@ -1,4 +1,4 @@
-class Plunder extends Farm {
+class Plunder {
     /** Modelo A do assistente de saque. */
     static amodel: AvailableFarmUnits;
     /** Modelo B do assistente de saque. */
@@ -12,8 +12,6 @@ class Plunder extends Farm {
     /** Quantidade de aríetes disponível na aldeia. */
     private static ram: number | null = null;
 
-    /** Impede que o método sendAttackUsingC() seja chamado mais de uma vez. */
-    private static waitingC: boolean = false;
     /** Atrasa o envio do ataque caso seja o primeiro. */
     private static firstAttack: boolean = true;
 
@@ -21,6 +19,9 @@ class Plunder extends Farm {
     static options: PlunderOptions;
     /** Registra o histórico de navegação entre aldeias quando se está atacando com um grupo. */
     static navigation = new PlunderGroupNavigation();
+
+    /** Controla a recursividade do método `sendAttackUsingC()`. */
+    static readonly waitingC: Set<string> = new Set();
     
     /** Ajuda a controlar o estado das promises. */
     static readonly eventTarget = new EventTarget();
@@ -87,7 +88,7 @@ class Plunder extends Farm {
             // Se a opção de exibir aldeias sob ataque estiver ativa, exibe um aviso.
             // O usuário poderá ou desativá-la ou encerrar o Plunder.
             const areThereVillagesUnderAttack = await this.areThereVillagesUnderAttack();
-            if (areThereVillagesUnderAttack) return Farm.togglePlunder();
+            if (areThereVillagesUnderAttack) return TWFarm.togglePlunder();
             
             /** Array com todas as linhas da tabela. */
             const villageRows = Array.from(document.querySelectorAll('tr[insidious-tr-farm="true"]')) as HTMLElement[];
@@ -128,7 +129,7 @@ class Plunder extends Farm {
                     // ExpectedResources chama getCModelCarryCapacity() para descobrir quanto o modelo C pode carregar.
                     // É durante a execução dessa função que o modelo C é salvo no mapa.
                     // Sendo assim, ExpectedResources obrigatoriamente precisa estar no início do IF.
-                    const expectedResources = new ExpectedResources(village, 'c');
+                    const expectedResourcesC = new ExpectedResources(village, 'c');
 
                     const cmodel = this.cmodel.get(attack.id);
                     if (!cmodel) throw new InsidiousError('Não foi possível obter o modelo C armazenado no mapa.');
@@ -136,10 +137,11 @@ class Plunder extends Farm {
                     const checkAvailability = this.getAvailableTroops();
                     if (!checkAvailability(cmodel)) continue;
 
-                    this.waitingC = true;
-                    return this.prepareAttack(attack.id, expectedResources)
+                    // Adiciona o ID da aldeia atual ao Set que controla os ataques usando o modelo C.
+                    this.waitingC.add(attack.id);
+
+                    return this.prepareAttack(attack.id, expectedResourcesC)
                         .then(() => Manatsu.remove(village))
-                        .then(() => this.waitingC = false)
                         .then(() => this.handleAttack())
                         .catch((err: unknown) => InsidiousError.handle(err));
                 };
@@ -179,7 +181,7 @@ class Plunder extends Farm {
                     };
                 };
             };
-
+            
             // Caso, em toda tabela, não haja aldeia adequada para envio do ataque, verifica se há mais páginas.
             // Em caso positivo, navega para a próxima após um breve delay.
             // Se não houverem outras páginas ou tropas disponíveis, navega para a próxima aldeia caso options.group_attack === true.
@@ -199,21 +201,21 @@ class Plunder extends Farm {
 
         return new Promise<void>((resolve, reject) => {
             if (Utils.isThereCaptcha()) {
-                Farm.togglePlunder();
+                TWFarm.togglePlunder();
                 reject(new InsidiousError('Não é possível saquear enquanto há um captcha ativo.'));
                 return;
             };
 
             const attackCtrl = new AbortController();
+            const delay = Plunder.options.no_delay === true ? 0 : Utils.generateIntegerBetween(200, 300);
             const attackTimeout = setTimeout(() => {
                 this.sendAttack(villageID, resources.model)
                     .then(() => this.updatePlunderedAmount(resources))
                     .then(() => resolve())
                     .catch((err: unknown) => reject(err))
                     .finally(() => attackCtrl.abort());
-
             // O jogo possui um limite de cinco ações por segundo.
-            }, Utils.generateIntegerBetween(200, 300));
+            }, delay);
 
             Plunder.eventTarget.addEventListener('stopplundering', () => {
                 clearTimeout(attackTimeout);
@@ -223,7 +225,7 @@ class Plunder extends Farm {
 
             // É preciso também ter um evento no botão.
             // Do contrário, existe a possibilidade do Plunder continuar atacando.
-            Farm.menu.button.plunder.addEventListener('click', () => {
+            TWFarm.menu.button.plunder.addEventListener('click', () => {
                 clearTimeout(attackTimeout);
                 attackCtrl.abort();
                 reject();
@@ -241,7 +243,7 @@ class Plunder extends Farm {
         // Se for o modelo C, o MutationObserver precisa ser bastante diferente.
         // Além disso, a natureza recursiva de sendAttackUsingC() torna necessário
         // impedir que a função seja executada mais de uma vez.
-        if (model === 'c' && this.waitingC === false) return this.sendAttackUsingC(villageID);
+        if (model === 'c' && this.waitingC.has(villageID)) return this.sendAttackUsingC(villageID);
 
         return new Promise<void>((resolve, reject) => {
             const observeTroops = new MutationObserver(() => {
@@ -267,6 +269,9 @@ class Plunder extends Farm {
     };
 
     private static sendAttackUsingC(villageID: string): Promise<void> {
+        // Remove a aldeia da lista de espera.
+        this.waitingC.delete(villageID);
+
         // Resolverá onde primeiro houver a mutação correta.
         return Promise.any([
             this.attackObservingAutoHideBox(),
@@ -451,12 +456,12 @@ class Plunder extends Farm {
 
     private static async showPlunderedAmount() {
         try {
-            Manatsu.removeChildren(Farm.menu.section.action);
+            Manatsu.removeChildren(TWFarm.menu.section.action);
 
             this.plundered = await Store.get(Keys.totalPlundered) as TotalPlundered | undefined;
             if (!this.plundered) this.plundered = new NothingPlundered();
 
-            const container = new Manatsu('span', Farm.menu.section.action, { class: 'nowrap' }).create();
+            const container = new Manatsu('span', TWFarm.menu.section.action, { class: 'nowrap' }).create();
             Utils.showResourceIcons(this.plundered, container, true);
 
         } catch (err) {
@@ -465,29 +470,22 @@ class Plunder extends Farm {
     };
 
     private static async updatePlunderedAmount(resources: ExpectedResources) {
-        const woodLabel = document.querySelector('#insidious_plundered_wood');
-        const stoneLabel = document.querySelector('#insidious_plundered_stone');
-        const ironLabel = document.querySelector('#insidious_plundered_iron');
-        const totalLabel = document.querySelector('#insidious_plundered_total');
-
         try {
-            if (this.plundered) {
-                this.plundered = new PlunderedAmount(resources, false);          
+            // Caso ainda não exista, entende que o ataque atual é o primeiro.
+            if (!this.plundered) {
+                this.plundered = new PlunderedAmount(resources, true);
             } else {
-                // Caso ainda não exista, entende que o ataque atual é o primeiro.
-                this.plundered = new PlunderedAmount(resources, true);           
+                this.plundered = new PlunderedAmount(resources, false);           
             };
 
-            if (woodLabel && stoneLabel && ironLabel && totalLabel) {
-                woodLabel.textContent = this.plundered.wood.toLocaleString('pt-br');
-                stoneLabel.textContent = this.plundered.stone.toLocaleString('pt-br');
-                ironLabel.textContent = this.plundered.iron.toLocaleString('pt-br');
-                totalLabel.textContent = this.plundered.total.toLocaleString('pt-br');
-            };
+            [...Assets.list.resources, 'total'].forEach((item: keyof TotalPlundered) => {
+                const label = document.querySelector(`#insidious_plundered_${item}`);
+                if (label) label.textContent = this.plundered![item].toLocaleString('pt-br');
+            });
 
             // Salva os valores no banco de dados.
             await Store.set({ [Keys.totalPlundered]: this.plundered });
-
+    
         } catch (err) {
             InsidiousError.handle(err);
         };
@@ -612,8 +610,7 @@ class Plunder extends Farm {
 
                                     observeCommandForm.disconnect();
                                     await this.sendRamAttack(neededRams, neededAxes, wall);
-                                    resolve(true);
-                                    return;
+                                    return resolve(true);
                                 };
                             };
                         };
@@ -731,6 +728,7 @@ class Plunder extends Farm {
 
     /**
      * Verifica se a opção que exibe aldeias sob ataque está ativada.
+     * Se estiver, solicita que o jogador desative-a.
      * @returns Boolean indicando se a opção está ativada ou não.
      */
     private static areThereVillagesUnderAttack() {

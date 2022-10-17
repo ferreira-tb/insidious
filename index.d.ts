@@ -121,6 +121,10 @@ type AssetsList = {
     resources: ResourceList[];
 };
 
+type AssetsOptions = {
+    plunder: (keyof PlunderOptions)[]
+};
+
 ////// UTILS
 type XMLTags =
     | 'speed'
@@ -164,10 +168,8 @@ type PlunderOptions = {
     group_attack: boolean;
     /** Determina se o Plunder deve atacar usando o modelo C. */
     use_c: boolean;
-    /** Se ativado, o Plunder enviará vários ataques simultaneamente. */
-    rush_mode: boolean;
-    /** Se ativado, o Plunder criará estimativas de saque mais conservadoras. */
-    realistic_mode: boolean;
+    /** Se ativado, o Plunder não terá delay entre os ataques. */
+    no_delay: boolean;
 };
 
 ////// SHIELD

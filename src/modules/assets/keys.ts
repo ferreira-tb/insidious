@@ -27,17 +27,16 @@ class Keys {
     static readonly plunderNavigation = `plunderNavigationHistory_${Game.world}`;
     /** CHAVE: detalhes sobre a última troca de página (plunderPage). */
     static readonly plunderPage = `plunderPage_${Game.world}`;
-    /** CHAVE: recursos saqueados e ataques enviados pelo processo atual do Plunder (totalPlundered). */
-    static readonly totalPlundered = `totalPlundered_${Game.world}`;
     /** CHAVE: lista de aldeias já atacadas pelo Plunder (alreadyPlunderedVillages). */
     static readonly alreadyPlundered = `alreadyPlunderedVillages_${Game.world}`;
     /** CHAVE: quantidade total de muralhas destruídas pelo Plunder (plunderDestroyedWalls). */
     static readonly plunderWalls = `plunderDestroyedWalls_${Game.world}`;
 
+
+    /** CHAVE: recursos saqueados e ataques enviados pelo processo atual do Plunder (totalPlundered). */
+    static readonly totalPlundered = `totalPlundered_${Game.world}`;
     /** CHAVE: registro do último valor em `totalPlundered` (lastPlundered). */
     static readonly lastPlundered = `lastPlundered_${Game.world}`;
-    /** CHAVE: recursos saqueados nas últimas 24 horas (dayPlundered). */
-    static readonly dayPlundered = `dayPlundered_${Game.world}`;
     /** CHAVE: soma dos recursos saqueados e ataques enviados desde a primeira execução do Plunder (globalPlundered). */
     static readonly globalPlundered = `globalPlundered_${Game.world}`;
 

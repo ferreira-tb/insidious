@@ -17,6 +17,10 @@ class Assets {
         resources: ['wood', 'stone', 'iron'],  
     };
 
+    static readonly options: AssetsOptions = {
+        plunder: ['ignore_wall', 'destroy_wall', 'group_attack', 'use_c', 'no_delay']
+    };
+
     /** Aríetes e bárbaros, respectivamente. */
     static readonly unitsToDestroyWall = {
         1: [3, 50],
