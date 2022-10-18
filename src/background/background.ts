@@ -1,24 +1,30 @@
 class Background {
-    static start() {
-        this.createListeners();
-    };
-
-    private static createListeners() {
-        browser.runtime.onMessage.addListener(Background.handleMessage);
-    };
-
-    private static async handleMessage(message: AllMessageTypes, sender: browser.runtime.MessageSender) {
+    static async handleMessage(message: AllMessageTypes, sender: browser.runtime.MessageSender) {
         switch (message.type) {
-            case 'start': return Background.loadScripts(sender.tab?.id);
+            case 'start': return Background.loadAssets(sender.tab?.id);
             case 'error': return Background.showErrorNotification(message.error);
-            default: return;
+            default: return Background.loadScripts(message.type, sender.tab?.id);
         };
     };
 
-    private static loadScripts(id: number | undefined) {
-        if (id === undefined) throw new InsidiousError('O ID da aba é inválido.');
+    private static loadAssets(id: number | undefined) {
+        if (id === undefined) return Background.showErrorNotification(new Error('O ID da aba é inválido.'));
+
         return browser.scripting.executeScript({
-            files: ['./modules/assets/game.js', './modules/assets/keys.js'],
+            files: Background.scripts.assets,
+            injectImmediately: true,
+            target: { tabId: id }
+        });
+    };
+
+    private static loadScripts(screen: GameScreen, id: number | undefined) {
+        if (id === undefined) return Background.showErrorNotification(new Error('O ID da aba é inválido.'));
+
+        const files = Background.scripts[screen];
+        if (!files || files.length === 0) return;
+
+        return browser.scripting.executeScript({
+            files: files,
             injectImmediately: true,
             target: { tabId: id }
         });
@@ -31,6 +37,14 @@ class Background {
             message: err.message
         });
     };
+
+    private static readonly scripts: ScriptList = {
+        assets: ['./modules/assets/game.js', './modules/assets/keys.js'],
+        am_farm: [],
+        overview: [],
+        overview_villages: ['./modules/overview/overview.js'],
+        report: ['./modules/report/report.js'],
+    };
 };
 
-Background.start();
+browser.runtime.onMessage.addListener(Background.handleMessage);

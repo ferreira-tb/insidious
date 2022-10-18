@@ -14,14 +14,16 @@ class TWOverview {
 
         const overviewContent = document.querySelector('div#paged_view_content');
         if (overviewContent) {
-            const groupID = await Store.get(Keys.farmGroup) as string | undefined;
-            if (!groupID) return;
+            const insidiousGroupID = await Store.get(Keys.farmGroup) as string | undefined;
+            if (!insidiousGroupID) return;
 
             const groupList = Array.from(overviewContent.querySelectorAll('.group-menu-item'));
             if (groupList.length === 0) throw new InsidiousError('Nenhum grupo foi encontrado.');
 
             for (const group of groupList) {
-                if (group.getAttribute('data-group-id') === groupID) return;
+                const groupID = group.getAttribute('data-group-id');
+                if (!groupID) throw new InsidiousError('DOM: .group-menu-item[data-group-id]');
+                if (groupID === insidiousGroupID) return;
             };
             
             await Store.remove(Keys.farmGroup);

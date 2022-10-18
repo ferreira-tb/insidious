@@ -21,6 +21,10 @@ class Assets {
         plunder: ['ignore_wall', 'destroy_wall', 'group_attack', 'use_c', 'no_delay']
     };
 
+    static readonly misc: AssetsMisc = {
+        months: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+    };
+
     /** Aríetes e bárbaros, respectivamente. */
     static readonly unitsToDestroyWall = {
         1: [3, 50],

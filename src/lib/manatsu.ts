@@ -455,6 +455,29 @@ class Manatsu {
         return getParentElement(element);
     };
 
+    // Manatsu.prototype.createWithChildren() ?
+    static getElementByTextContent(text: string, selector: string, sensitive: boolean = false, exact: boolean = true): Element | null {
+        if (!text || typeof text !== 'string') throw new ManatsuError('O texto fornecido é inválido.');
+        if (!selector || typeof selector !== 'string') throw new ManatsuError('O seletor fornecido não é inválido');
+
+        if (sensitive === false) text = text.toLowerCase();
+        const elements = Array.from(document.querySelectorAll(selector));
+        for (const element of elements) {
+            let textContent = element.textContent;
+            if (!textContent) continue;
+            if (sensitive === false) textContent = textContent.toLowerCase();
+
+            switch (exact) {
+                case true: if (textContent === text) return element;
+                    break;
+                case false: if (textContent.includes(text)) return element;
+                    break;
+            };
+        };
+
+        return null;
+    };
+
     /**
      * Remove um ou mais elementos do documento.
      * Ao contrário de `Node.removeChild()`, não é necessário especificar o pai.

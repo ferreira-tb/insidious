@@ -10,7 +10,7 @@ type TribalWarsGameData = {
     mode: string | null,
     player: Player,
     pregame: boolean,
-    screen: string,
+    screen: GameScreen,
     time_generated: number,
     units: string[],
     version: string,

@@ -1,7 +1,6 @@
 class InsidiousError extends Error {
     constructor(message: string) {
         super();
-
         this.name = 'InsidiousError';
         this.message = message;
     };

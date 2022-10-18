@@ -40,6 +40,13 @@ type UnitListWithArchers =
     | FarmUnitsWithArchers
     | OtherUnits;
 
+/** Janelas do jogo. */
+type GameScreen =
+    | 'am_farm'
+    | 'overview'
+    | 'overview_villages'
+    | 'report';
+
 /** URLs permitidas em browser.tabs.create() */
 type WebExtTabURLs =
     | 'https://github.com/ferreira-tb'
@@ -81,8 +88,11 @@ type BuildingName = keyof Buildings;
 // Níveis
 type WallLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
 
+// Outros
+type Months = 'jan' | 'fev'| 'mar' | 'abr' | 'mai' | 'jun'| 'jul' | 'ago' | 'set' | 'out' | 'nov' | 'dez';
+
 ////// ERROR
-type ErrorContext = 'main' | 'action' | 'background'| 'config';
+type ErrorContext = 'main' | 'action' | 'config';
 
 ////// INSIDIOUS
 type XMLType = `config_${string}` | `unit_${string}`;
@@ -94,7 +104,7 @@ type UnitDetails = {
 
 ////// MENSAGEM
 type StandardMessage = {
-    type: 'start';
+    type: 'start' | GameScreen;
 };
 
 type ErrorMessage = {
@@ -106,8 +116,9 @@ type AllMessageTypes =
     | StandardMessage
     | ErrorMessage;
 
-type FetchURLs = {
-    village: string;
+////// BACKGROUND
+type ScriptList = {
+    [index in 'assets' | GameScreen]: string[];
 };
 
 ////// ASSETS
@@ -123,6 +134,10 @@ type AssetsList = {
 
 type AssetsOptions = {
     plunder: (keyof PlunderOptions)[]
+};
+
+type AssetsMisc = {
+    months: Months[];
 };
 
 ////// UTILS

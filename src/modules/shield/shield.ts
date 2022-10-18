@@ -178,8 +178,9 @@ class TWShield {
         if (isSomethingChecked === true) {
             await Utils.wait();
 
-            const renameAttacksButton = incomingsTable.querySelector('input.btn[type="submit" i][value*="Etiqueta" i]') as HTMLInputElement | null;
-            if (!renameAttacksButton) throw new InsidiousError('DOM: input.btn[type="submit" i][value*="Etiqueta" i]');
+            const selector = 'input.btn[type="submit" i][value*="Etiqueta" i]';
+            const renameAttacksButton = incomingsTable.querySelector(selector) as HTMLInputElement | null;
+            if (!renameAttacksButton) throw new InsidiousError(`DOM: ${selector}`);
             renameAttacksButton.click();
         };
     };

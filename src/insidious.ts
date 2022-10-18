@@ -16,8 +16,7 @@ class Insidious {
                     break;
                 case 'overview': await this.setAsActiveWorld();
                     break;
-                case 'overview_villages': await TWOverview.open();
-                    break;
+                default: await this.requestScript(Game.screen);
             };
 
             // Executa operações que estejam pendentes.
@@ -78,37 +77,8 @@ class Insidious {
             // Em caso negativo, faz download dos arquivos XML.
             const worldConfigStatus = await Store.get(Keys.worldConfig);
             if (!worldConfigStatus) {
-                const configSources = [
-                    { name: Keys.config, url: Assets.info.get_config },
-                    { name: Keys.unit, url: Assets.info.get_unit_info }
-                ];
-
-                const worldConfigData = await Promise.all(configSources.map((source) => {
-                    return new Promise<WorldInfo | UnitInfo>((resolve, reject) => {
-                        const request = new XMLHttpRequest();
-                        request.timeout = 2000;
-
-                        request.addEventListener('error', () => reject(request.status));
-                        request.addEventListener('timeout', () => reject(request.status));
-                        request.addEventListener('load', () => {
-                            if (request.responseXML) {
-                                const configXML = request.responseXML;
-                                switch (source.name) {
-                                    case Keys.config: resolve(new WorldInfo(configXML));
-                                        break;
-                                    case Keys.unit: resolve(new UnitInfo(configXML));
-                                        break;
-                                };
-
-                            } else {
-                                reject(new InsidiousError('\"XMLHttpRequest.responseXML\" não está presente.'));
-                            };
-                        });
-
-                        request.open('GET', source.url, true);
-                        request.send();
-                    });
-                }));
+                const sources = new SourceList();
+                const worldConfigData = await this.requestConfigData(sources);
 
                 await Promise.all(worldConfigData.map((config: WorldInfo | UnitInfo) => {
                     if (config instanceof WorldInfo) return Store.set({ [Keys.config]: config }); 
@@ -121,6 +91,51 @@ class Insidious {
         } catch (err) {
             await Store.remove(Keys.worldConfig);
             InsidiousError.handle(err);
+        };
+    };
+
+    private static requestConfigData(sources: SourceList) {
+        return Promise.all(Object.keys(sources).map((key: keyof SourceList) => {
+            return new Promise<WorldInfo | UnitInfo>((resolve, reject) => {
+                const request = new XMLHttpRequest();
+                request.timeout = 2000;
+    
+                request.addEventListener('error', () => reject(request.status));
+                request.addEventListener('timeout', () => reject(request.status));
+                request.addEventListener('load', () => {
+                    if (request.responseXML) {
+                        const configXML = request.responseXML;
+                        switch (sources[key].name) {
+                            case Keys.config: return resolve(new WorldInfo(configXML));
+                            case Keys.unit: return resolve(new UnitInfo(configXML));
+                        };
+                    };
+
+                    reject(new InsidiousError('\"XMLHttpRequest.responseXML\" não está presente.'));     
+                });
+    
+                request.open('GET', sources[key].url, true);
+                request.send();
+            });
+        }));
+    };
+
+    /** Solicita os scripts correspondentes à página atual. */
+    private static requestScript(screen: GameScreen) {
+        return new Promise<void>((resolve, reject) => {
+            browser.runtime.sendMessage({ type: screen })
+                .then(() => this.loadScript(screen))
+                .then(() => resolve())
+                .catch((err: unknown) => reject(err));
+        });
+    };
+
+    /** Carrega os scripts de acordo com a janela atual. */
+    private static loadScript(screen: GameScreen): Promise<void> {
+        switch(screen) {
+            case 'overview_villages': return TWOverview.open();
+            case 'report': return TWReport.open();
+            default: return Promise.resolve();
         };
     };
 

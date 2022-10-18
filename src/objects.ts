@@ -1,3 +1,14 @@
+class SourceList {
+    readonly config = {
+        name: Keys.config,
+        url: Assets.info.get_config
+    };
+    readonly unit = {
+        name: Keys.unit,
+        url: Assets.info.get_unit_info
+    };
+};
+
 class WorldInfo {
     readonly speed: number;
     readonly unit_speed: number;

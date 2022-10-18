@@ -50,8 +50,8 @@ class Keys {
     static readonly shield = `isShieldActive_${Game.world}`;
     /** CHAVE: histórico de navegação envolvendo o Shield (shieldNavigationHistory). */
     static readonly shieldNavigation = `shieldNavigationHistory_${Game.world}`;
-    /** CHAVE: Set com os IDs dos ataques a caminho (incomingAttacksIDList). */
-    static readonly shieldIncomings = `incomingAttacksIDList_${Game.world}`;
+    /** CHAVE: Set com os IDs dos ataques a caminho (incomingAttacksList). */
+    static readonly shieldIncomings = `incomingAttacksList_${Game.world}`;
     /** CHAVE: detalhes sobre qualquer operação que o Shield esteja executando (shieldStatus). */
     static readonly shieldStatus = `shieldStatus_${Game.world}`;
 
