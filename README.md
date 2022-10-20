@@ -8,7 +8,7 @@ Sendo assim, para usá-lo, é preciso ativar manualmente o suporte ao Manifest V
 
 Em seguida, faça download da [release](https://github.com/ferreira-tb/insidious/releases) mais recente do Insidious e então instale como extensão temporária acessando `about:debugging` em seu Firefox. *Observação: no momento, ainda não há release estável disponível. A primeira versão beta será publicada em 01 de outubro de 2022.*
 
-Ao contrário de algumas outras ferramentas que existem mundo afora, o Insidious terá código aberto e será distribuído gratuitamente. A única coisa que eu, como autor, peço em troca é o envio de **feedback** sobre a extensão. Se encontrar um bug ou tiver alguma sugestão a fazer ou simplesmente estar com dúvida sobre algo, crie uma [issue](https://github.com/ferreira-tb/insidious/issues) aqui no repositório.
+Ao contrário de algumas outras ferramentas que existem mundo afora, Insidious terá código aberto e será distribuído gratuitamente. A única coisa que eu, como autor, peço em troca é o envio de **feedback** sobre a extensão. Se encontrar bugs, tiver alguma sugestão a fazer ou simplesmente estar com dúvida sobre algo, crie uma [issue](https://github.com/ferreira-tb/insidious/issues) aqui no repositório.
 
 ## Funcionalidades
 - Farm automático:
