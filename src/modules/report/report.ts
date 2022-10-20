@@ -3,15 +3,16 @@ class TWReport {
         if (location.href.includes('view=')) this.showCurrentLoyalty();
     };
 
+    /** Mostra a lealdade atual da aldeia, com base no último valor conhecido. */
     private static showCurrentLoyalty() {
         const attackResults = document.querySelector('table#attack_results tbody');
-        if (!attackResults) throw new InsidiousError('DOM: table#attack_results tbody');
+        if (!attackResults) return;
 
         const headers = Array.from(attackResults.querySelectorAll('tr th'));
         for (const header of headers) {
             const content = header.textContent?.toLowerCase();
             if (content && content.includes('lealdade')) { 
-                const reportDate = this.getReportDate();
+                const reportDate = this.parseReportDate();
                 const millisecsSince = Date.now() - reportDate;
                 
                 const loyaltyChange = header.nextElementSibling?.textContent?.trim();
@@ -37,7 +38,8 @@ class TWReport {
         };
     };
 
-    private static getReportDate() {
+    /** Obtém a data do relatório. */
+    private static parseReportDate() {
         const selector = 'td.nopad table.vis tr td:not(.maincell)';
         const dateLabel = Manatsu.getElementByTextContent('Data da batalha', selector, false, false);
         if (!dateLabel) throw new InsidiousError(`DOM: ${selector}`);

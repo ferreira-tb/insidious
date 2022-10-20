@@ -40,16 +40,19 @@ class TWFarm {
         // Configura o botão de saque de acordo com o status do plunder.
         // Se o plunder já estiver marcado como ativo, ele iniciará automaticamente.
         Store.get(Keys.plunder)
-            .then((result: boolean | undefined) => this.appendButtons(result))
+            .then((status: boolean | undefined) => this.appendButtons(status))
             .catch((err: unknown) => InsidiousError.handle(err));
     };
 
-    private static async appendButtons(plunderStatus: boolean | undefined) {
+    /** Cria os botões e salva o status atual do Plunder. */
+    private static async appendButtons(status: boolean | undefined) {
         for (const value of Object.values(TWFarm.menu.button)) {
             this.menu.section.button.appendChild(value);
         };
 
-        switch (plunderStatus) {
+        if (status !== undefined) Plunder.status.active = status;
+
+        switch (status) {
             case true:
                 this.menu.button.plunder.textContent = 'Parar';
                 return Plunder.start();
@@ -57,6 +60,7 @@ class TWFarm {
                 this.menu.button.plunder.textContent = 'Saquear';
                 return Store.remove(Keys.totalPlundered);
             default:
+                Plunder.status.active = false;
                 this.menu.button.plunder.textContent = 'Saquear';
                 return Store.set({ [Keys.plunder]: false });
         };
@@ -68,14 +72,14 @@ class TWFarm {
             TWFarm.menu.button.plunder.removeEventListener('click', TWFarm.togglePlunder);
             Manatsu.removeChildren(TWFarm.menu.section.action);
 
-            const plunderStatus = await Store.get(Keys.plunder) as boolean | undefined;
             // Se estiver ativo, desativa-o e troca o texto do botão.
             // Além disso, salva a quantia saqueada no histórico global e remove o histórico de navegação.
-            if (plunderStatus === true) {
+            if (Plunder.status.active === true) {
                 await TWFarm.savePlunderedAmounts();
                 await Store.remove(Keys.plunderNavigation);
                 await Store.set({ [Keys.plunder]: false });
                 TWFarm.menu.button.plunder.textContent = 'Saquear';
+                Plunder.status.active = false;
 
                 // Elimina todos os registros feitos durante os ataques.
                 TWFarm.clearAllRecords();
@@ -88,10 +92,11 @@ class TWFarm {
                 if (nextAutoReloadDate) Manatsu.remove(nextAutoReloadDate);
 
             // Caso contrário, ativa-o.
-            } else if (plunderStatus === false) {
+            } else if (Plunder.status.active === false) {
                 await Store.remove(Keys.totalPlundered);
                 await Store.set({ [Keys.plunder]: true });
                 TWFarm.menu.button.plunder.textContent = 'Parar';
+                Plunder.status.active = true;
                 Plunder.start();
             };
 

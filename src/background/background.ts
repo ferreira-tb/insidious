@@ -41,9 +41,11 @@ class Background {
     private static readonly scripts: ScriptList = {
         assets: ['./modules/assets/game.js', './modules/assets/keys.js'],
         am_farm: [],
+        market: ['./modules/market/market.js'],
         overview: [],
         overview_villages: ['./modules/overview/overview.js'],
-        report: ['./modules/report/report.js'],
+        place: ['./modules/sword/sword.js'],
+        report: ['./modules/report/report.js']
     };
 };
 

@@ -133,7 +133,9 @@ class Insidious {
     /** Carrega os scripts de acordo com a janela atual. */
     private static loadScript(screen: GameScreen): Promise<void> {
         switch(screen) {
+            case 'market': return TWMarket.open();
             case 'overview_villages': return TWOverview.open();
+            case 'place': return TWSword.open();
             case 'report': return TWReport.open();
             default: return Promise.resolve();
         };

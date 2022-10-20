@@ -24,4 +24,5 @@ new MutationObserver((mutationList, observer) => {
 }).observe(document.head, { childList: true });
 
 // Insere o script com acesso ao contexto da página.
-new Manatsu('script', document.head, { src: browser.runtime.getURL('./page/page.js') }).create();
+document.head.appendManatsu('script', { src: browser.runtime.getURL('./lib/manatsu.js') });
+document.head.appendManatsu('script', { src: browser.runtime.getURL('./page/page.js') });

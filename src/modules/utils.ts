@@ -70,7 +70,7 @@ class Utils {
      * @param clickOutside - Se `true`, um clique fora do modal o fechará.
      * @param options - Atributos para se adicionar à janela modal.
      */
-    static createModal(modalTitle: string, clickOutside: boolean = true, options?: Option) {
+    static createModal(modalTitle: string, clickOutside: boolean = true, options?: SSObject) {
         const blurBG = new Manatsu({ id: 'insidious_blurBG' }, document.body).create();
         let modalWindow: HTMLElement;
 
@@ -147,5 +147,11 @@ class Utils {
             new Manatsu('span', parent, { class: 'ins_icon ins_storage' }).create();
             new Manatsu('span', parent, { class: 'res', id: 'insidious_plundered_total', text: totalAmount }).create();
         };
+    };
+
+    static getDateString() {
+        const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+        const ISODate = Date.now() - timezoneOffset;
+        return new Date(ISODate).toISOString().split('Z')[0];
     };
 };

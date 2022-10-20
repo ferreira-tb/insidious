@@ -1,3 +1,16 @@
+class PlunderStatus {
+    #firstAttack: boolean = true;
+    active: boolean = false;
+
+    /** Atrasa o envio do ataque caso seja o primeiro após o carregamento da página. */
+    async waitAsFirstAttack() {
+        await Utils.wait();
+        this.#firstAttack = false;
+    };
+
+    get firstAttack() {return this.#firstAttack};
+};
+
 class PlunderButtons {
     /** Seções do menu do Plunder. */
     readonly section: SHTMLObject = { };

@@ -1,4 +1,6 @@
 class Plunder {
+    /** Status do Plunder. */
+    static readonly status = new PlunderStatus();
     /** Modelo A do assistente de saque. */
     static amodel: AvailableFarmUnits;
     /** Modelo B do assistente de saque. */
@@ -11,9 +13,6 @@ class Plunder {
     private static plundered: TotalPlundered | undefined;
     /** Quantidade de aríetes disponível na aldeia. */
     private static ram: number | null = null;
-
-    /** Atrasa o envio do ataque caso seja o primeiro. */
-    private static firstAttack: boolean = true;
 
     /** Opções de configuração do Plunder. */
     static options: PlunderOptions;
@@ -85,6 +84,9 @@ class Plunder {
     /** Envia um ataque usando os modelos A e B. */
     private static async handleAttack(): Promise<void> {
         try {
+            // Retorna caso o Plunder esteja inativo.
+            if (Plunder.status.active === false) return;
+
             // Se a opção de exibir aldeias sob ataque estiver ativa, exibe um aviso.
             // O usuário poderá ou desativá-la ou encerrar o Plunder.
             const areThereVillagesUnderAttack = await this.areThereVillagesUnderAttack();
@@ -193,11 +195,8 @@ class Plunder {
     };
 
     private static async prepareAttack(villageID: string, resources: ExpectedResources) {
-        // Atrasa o envio do ataque caso seja o primeiro.
-        if (this.firstAttack === true) {
-            await Utils.wait();
-            this.firstAttack = false;
-        };
+        // Atrasa o envio do ataque caso seja o primeiro após o carregamento da página.
+        if (Plunder.status.firstAttack === true) await Plunder.status.waitAsFirstAttack();
 
         return new Promise<void>((resolve, reject) => {
             if (Utils.isThereCaptcha()) {
@@ -218,14 +217,6 @@ class Plunder {
             }, delay);
 
             Plunder.eventTarget.addEventListener('stopplundering', () => {
-                clearTimeout(attackTimeout);
-                attackCtrl.abort();
-                reject();
-            }, { signal: attackCtrl.signal });
-
-            // É preciso também ter um evento no botão.
-            // Do contrário, existe a possibilidade do Plunder continuar atacando.
-            TWFarm.menu.button.plunder.addEventListener('click', () => {
                 clearTimeout(attackTimeout);
                 attackCtrl.abort();
                 reject();

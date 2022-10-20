@@ -1,4 +1,5 @@
 // Global
+type SSObject = { [index: string]: string };
 type SNObject = { [index: string]: number };
 type SHTMLObject  = { [index: string]: HTMLElement };
 
@@ -43,8 +44,10 @@ type UnitListWithArchers =
 /** Janelas do jogo. */
 type GameScreen =
     | 'am_farm'
+    | 'market'
     | 'overview'
     | 'overview_villages'
+    | 'place'
     | 'report';
 
 /** URLs permitidas em browser.tabs.create() */
