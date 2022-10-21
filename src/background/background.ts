@@ -44,7 +44,7 @@ class Background {
         market: ['./modules/market/market.js'],
         overview: [],
         overview_villages: ['./modules/overview/overview.js'],
-        place: ['./modules/sword/sword.js'],
+        place: ['./modules/sword/sword.js', './modules/sword/objects.js'],
         report: ['./modules/report/report.js']
     };
 };

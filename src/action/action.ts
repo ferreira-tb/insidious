@@ -41,6 +41,13 @@ class Action {
                     if (err instanceof Error) InsidiousError.handle(err, 'action');
                 });
         });
+
+        document.querySelector('#support')?.addEventListener('click', () => {
+            browser.tabs.create({ url: 'https://github.com/ferreira-tb/insidious/issues', active: true })
+                .catch((err: unknown) => {
+                    if (err instanceof Error) InsidiousError.handle(err, 'action');
+                });
+        });
     };
 
     /** Atualiza o texto do botão que controla o status do Insidious. */

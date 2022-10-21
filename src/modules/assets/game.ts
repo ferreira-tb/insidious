@@ -22,6 +22,11 @@ class Game {
     static readonly stone = Insidious.raw_game_data.village.stone;
     /** Quantidade de ferro na aldeia. */
     static readonly iron = Insidious.raw_game_data.village.iron;
+    /** Hora na qual a página foi carregada. */
+    static readonly time_generated = Insidious.raw_game_data.time_generated;
+
+    static readonly offset_from_server = Insidious.raw_game_data.offset_from_server;
+    static readonly offset_to_server = Insidious.raw_game_data.offset_to_server;
 
     /** Mundo atual. */
     readonly world: string;
@@ -43,8 +48,16 @@ class Game {
     readonly stone: number;
     /** Quantidade de ferro na aldeia. */
     readonly iron: number;
+    /** Hora na qual a página foi carregada. */
+    readonly time_generated: number;
 
-    /** Cria um objeto com informações atualizadas sobre o jogo. */
+    readonly offset_from_server: number;
+    readonly offset_to_server: number;
+
+    /**
+     * Cria um objeto com informações atualizadas sobre o jogo.
+     * O construtor só deve ser chamado após `Insidious.updateGameData()`.
+     * */
     constructor() {
         this.world = Insidious.raw_game_data.world;
         this.screen = Insidious.raw_game_data.screen;
@@ -56,6 +69,10 @@ class Game {
         this.wood = Insidious.raw_game_data.village.wood;
         this.stone = Insidious.raw_game_data.village.stone;
         this.iron = Insidious.raw_game_data.village.iron;
+        this.time_generated = Insidious.raw_game_data.time_generated;
+
+        this.offset_from_server = Insidious.raw_game_data.offset_from_server;
+        this.offset_to_server = Insidious.raw_game_data.offset_to_server;
     };
 
     /** Verifica se os dados obtidos são válidos. */

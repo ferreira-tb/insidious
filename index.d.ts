@@ -53,7 +53,8 @@ type GameScreen =
 /** URLs permitidas em browser.tabs.create() */
 type WebExtTabURLs =
     | 'https://github.com/ferreira-tb'
-    | 'https://github.com/ferreira-tb/insidious';
+    | 'https://github.com/ferreira-tb/insidious'
+    | 'https://github.com/ferreira-tb/insidious/issues';
 
 /** URLs permitidas em browser.windows.create() */
 type WebExtWindowURLs = '../config/config.html';
@@ -172,7 +173,9 @@ type AvailableFarmUnits = {
 };
 
 /** Quantia de recursos saqueados e ataques enviados pelo Plunder. */
-type TotalPlundered = { [index in ResourceList | 'total' | 'attack_amount']: number };
+type TotalPlundered = {
+    [index in ResourceList | 'total' | 'attack_amount']: number
+};
 /** Pares [key, value] obtidos ao usar Object.entries(). */
 type TotalPlunderedEntries = [ResourceList | 'total' | 'attack_amount', number][];
 
@@ -198,3 +201,8 @@ type PlunderOptions = {
  * @param go_back - O Shield redirecionará o usuário de volta para a página onde estava.
 */
 type ShieldOperations = null | 'redirect' | 'group' | 'rename' | 'go_back';
+
+////// PLACE
+type AvailableUnits = {
+    [index in UnitListWithArchers]: number
+};

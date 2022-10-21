@@ -29,8 +29,7 @@ class Utils {
     static readonly currentSubType = this.currentField('subtype');
     
     /** Calcula distância em campos entre duas coordenadas. */
-    static calcDistance(...args: number[]) {
-        const [originX, originY, destinationX, destinationY] = args;
+    static calcDistance(originX: number, originY: number, destinationX: number, destinationY: number) {
         return Math.sqrt(((destinationX - originX) ** 2) + ((destinationY - originY) ** 2));
     };
 
@@ -149,9 +148,14 @@ class Utils {
         };
     };
 
-    static getDateString() {
+    /**
+     * Obtém a data atual no formato ISO.
+     * @param extra Tempo extra a ser adicionado à data.
+     * @returns A data atual no formato YYYY-MM-DDTHH:mm:ss.sssZ.
+     */
+    static getDateString(extra: number) {
         const timezoneOffset = new Date().getTimezoneOffset() * 60000;
-        const ISODate = Date.now() - timezoneOffset;
+        const ISODate = Date.now() - timezoneOffset + extra;
         return new Date(ISODate).toISOString().split('Z')[0];
     };
 };

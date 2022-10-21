@@ -1,23 +1,3 @@
-type TribalWarsGameData = {
-    device: string,
-    features: Features,
-    group_id: string,
-    link_base: string,
-    link_base_pure: string,
-    locale: string,
-    majorVersion: string,
-    market: string,
-    mode: string | null,
-    player: Player,
-    pregame: boolean,
-    screen: GameScreen,
-    time_generated: number,
-    units: string[],
-    version: string,
-    village: Village,
-    world: string
-};
-
 type Features = {
     AccountManager: ActivePossible,
     FarmAssistent: ActivePossible,
@@ -128,3 +108,18 @@ declare const premium: boolean;
 declare const server_utc_diff: number;
 
 declare function getLocalTimeAsFloat(): number;
+
+declare namespace Timing {
+    const added_server_time: number;
+    const initial_server_time: number;
+    const is_ready: boolean;
+    const offset_from_server: number;
+    const offset_to_server: number;
+    const paused: boolean;
+    const tick_interval: number;
+
+    function getCurrentServerTime(): number;
+    function getElapsedTimeSinceData(): number;
+    function getElapsedTimeSinceLoad(): number;
+    function getReturnTimeFromServer(): number;
+}

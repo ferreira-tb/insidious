@@ -1,6 +1,6 @@
 class Store {
     static readonly get = async (key: string) => {
-        return (await browser.storage.local.get(key))[key];
+        return Reflect.get(await browser.storage.local.get(key), key);
     };
 
     static readonly set = browser.storage.local.set;

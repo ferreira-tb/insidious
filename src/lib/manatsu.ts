@@ -29,13 +29,24 @@ class Manatsu {
         return newElement;
     };
 
-    #getStylePropertiesFromOptions() {
+    #updateStylePropertiesFromOptions() {
         if (!this.#options) throw new ManatsuError('Não existem opções registradas no objeto.');
         if (!this.#options.style) throw new ManatsuError('Não existe estilo registrado no objeto.');
 
-        return this.#options.style.split(';')
+        const properties = this.#options.style.split(';')
             .map((value) => value.trim())
             .filter((value) => value);
+
+        for (const property of properties) {
+            const lastIndex = property.lastIndexOf('\:');
+            if (lastIndex === -1) throw new ManatsuError('O estilo fornecido é inválido.');
+            
+            let name = property.substring(0, lastIndex).toLowerCase().trim();
+            if (name.includes('\-')) name = name.replaceAll('\-', '\_');
+
+            const value = property.substring(lastIndex + 1).toLowerCase().trim();
+            if (value && this.style[name] !== value) Reflect.set(this.style, name, value);
+        };
     };
 
     #setProperty(value: AcceptableProperty) {
@@ -50,17 +61,7 @@ class Manatsu {
             if (this.#options === null) {
                 this.#options = value;
 
-                if (this.#options.style) {
-                    const properties = this.#getStylePropertiesFromOptions();
-                    for (const property of properties) {
-                        const lastIndex = property.lastIndexOf('\:');
-                        if (lastIndex === -1) throw new ManatsuError('O estilo fornecido é inválido.');
-                        
-                        const name = property.substring(0, lastIndex).toLowerCase().trim();
-                        const value = property.substring(lastIndex + 1).toLowerCase().trim();
-                        if (value && this.style[name] !== value) this.style[name] = value;
-                    };
-                };
+                if (this.#options.style) this.#updateStylePropertiesFromOptions();
             };
         };
     };
@@ -78,22 +79,13 @@ class Manatsu {
                 if (this.#options && overwrite === false && attribute in this.#options) continue;
                 Object.defineProperty(oldOptions, attribute, {
                     value: content,
-                    enumerable: true
+                    enumerable: true,
+                    writable: true
                 });
             };
-            this.#options = oldOptions;
 
-            if (this.#options.style) {
-                const properties = this.#getStylePropertiesFromOptions();
-                for (const property of properties) {
-                    const lastIndex = property.lastIndexOf('\:');
-                    if (lastIndex === -1) throw new ManatsuError('O estilo fornecido é inválido.');
-                    
-                    const name = property.substring(0, lastIndex).toLowerCase().trim();
-                    const value = property.substring(lastIndex + 1).toLowerCase().trim();
-                    if (value && this.style[name] !== value) this.style[name] = value;
-                };
-            };
+            this.#options = oldOptions;
+            if (this.#options.style) this.#updateStylePropertiesFromOptions();
 
             return this;
 
@@ -676,21 +668,31 @@ class Manatsu {
         };
     };
 
-    get element() {return this.#element};
-    get parent() {return this.#parent};
-    get options() {return this.#options};
+    get element() { return this.#element };
+    get parent() { return this.#parent };
+    get options() { return this.#options };
 
     get style() {
         const self = this;
         return new Proxy(this.#style, {
+            get(target, property) {
+                if (!property || typeof property !== 'string') throw new ManatsuError('O nome da propriedade é inválido.');
+
+                if (property.includes('\_')) property = property.replaceAll('\_', '\-');
+                return Reflect.get(target, property);
+            },
+
             set(target, property, value) {
                 if (!property || typeof property !== 'string') throw new ManatsuError('O nome da propriedade é inválido.');
                 if (!value || typeof value !== 'string') throw new ManatsuError('O valor da propriedade é inválido.');
 
                 if (!self.#options) self.#options = {};
 
+                if (property.includes('\_')) property = property.replaceAll('\_', '\-');
                 const styleList: string[] = [`${property}: ${value};`];
-                for (const [prop, val] of Object.entries(self.#style)) {
+
+                for (let [prop, val] of Object.entries(self.#style)) {
+                    if (prop.includes('\_')) prop = prop.replaceAll('\_', '\-');
                     styleList.push(`${prop}: ${val};`);
                 };
 
@@ -725,10 +727,10 @@ class Manatsu {
         };
     };
 
-    get createAfter() {return this.#createThere('after')};
-    get createBefore() {return this.#createThere('before')};
-    get createInsideThenAfter() {return this.#createInsideThen('after')};
-    get createInsideThenBefore() {return this.#createInsideThen('before')};
+    get createAfter() { return this.#createThere('after') };
+    get createBefore() { return this.#createThere('before') };
+    get createInsideThenAfter() { return this.#createInsideThen('after') };
+    get createInsideThenBefore() { return this.#createInsideThen('before') };
 };
 
 class Validation {
