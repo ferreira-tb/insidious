@@ -15,6 +15,8 @@ class PageScript {
         switch (reason) {
             case 'get-game-data': PageScript.postGameData()
                 break;
+            case 'get-premium-exchange': PageScript.postPremiumExchangeData()
+                break;
         };
     };
 
@@ -23,6 +25,15 @@ class PageScript {
             direction: 'from-tribalwars',
             game_data: new TribalWarsGameData(),
             premium: premium
+        };
+
+        window.postMessage(message);
+    };
+
+    private static postPremiumExchangeData() {
+        const message: WindowMessageFromPage = {
+            direction: 'from-tribalwars',
+            premium_exchange: new PremiumExchangeData(),
         };
 
         window.postMessage(message);
@@ -83,6 +94,33 @@ class TribalWarsGameData {
         this.offset_from_server = Timing.offset_from_server;
         this.offset_to_server = Timing.offset_to_server;
         this.tick_interval = Timing.tick_interval;
+    };
+};
+
+class PremiumExchangeData {
+    readonly constants = PremiumExchange.data.constants;
+    readonly rates = PremiumExchange.data.rates;
+    readonly tax = PremiumExchange.data.tax;
+
+    readonly average_wood_rate!: [number, string][];
+    readonly average_stone_rate!: [number, string][];
+    readonly average_iron_rate!: [number, string][];
+
+    constructor() {
+        for (const resource of PremiumExchange.graph.data) {
+            switch (resource.label) {
+                case 'Madeira':
+                    this.average_wood_rate = resource.data;
+                    break;
+                case 'Argila':
+                    this.average_stone_rate = resource.data;
+                    break;
+                case 'Ferro':
+                    this.average_iron_rate = resource.data;
+                    break;
+                default: throw new Error('Não foi possível obter o histórico da Troca Premium.');
+            };
+        };
     };
 };
 

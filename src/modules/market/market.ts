@@ -1,5 +1,7 @@
 class TWMarket {
+    // private static readonly status = new MarketStatus();
+
     static async open() {
-        console.log('market');
+        if (Game.mode === 'exchange') await Dealer.start();
     };
 };

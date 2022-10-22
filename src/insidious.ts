@@ -12,8 +12,6 @@ class Insidious {
 
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
             switch (Game.screen) {
-                case 'am_farm': await TWFarm.open();
-                    break;
                 case 'overview': await this.setAsActiveWorld();
                     break;
                 default: await this.requestScript(Game.screen);
@@ -43,14 +41,17 @@ class Insidious {
     /** Atualiza os dados sobre o jogo. */
     static updateGameData() {
         return new Promise<void>((resolve, reject) => {
-            const startCtrl = new AbortController();
-            window.addEventListener('message', async (e) => {
+            const request = async (e: MessageEvent<WindowMessageFromPage>) => {
                 if (e?.data?.direction === 'from-tribalwars') {
-                    startCtrl.abort();
+                    window.removeEventListener('message', request);
+                    
                     if (!e.data.game_data) throw new InsidiousError('Não foi possível iniciar o Insidious.');
 
+                    // Não continua caso o mundo esteja em fase de pré-registro.
+                    if (e.data.game_data.pregame === true) return reject();
+
+                    // Se o jogador não possuir conta premium, o Insidious é desativado.
                     if (e.data.premium === false) {
-                        // Caso o jogador não possua conta premium, o Insidious é desativado.
                         await Store.set({ insidiousStatus: false });
                         this.warnAboutPremiumStatus();
                         reject();
@@ -58,16 +59,12 @@ class Insidious {
                     } else {
                         this.#raw_game_data = e.data.game_data;
                         resolve();
-                    };  
+                    };
                 };
-            }, { signal: startCtrl.signal });
-
-            const message: WindowMessage = {
-                direction: 'from-insidious',
-                reason: 'get-game-data'
             };
 
-            window.postMessage(message);
+            window.addEventListener('message', request);
+            window.postMessage(new Bridge('get-game-data'));
         });
     };
 
@@ -133,6 +130,7 @@ class Insidious {
     /** Carrega os scripts de acordo com a janela atual. */
     private static loadScript(screen: GameScreen): Promise<void> {
         switch(screen) {
+            case 'am_farm': return TWFarm.open();
             case 'market': return TWMarket.open();
             case 'overview_villages': return TWOverview.open();
             case 'place': return TWSword.open();
@@ -184,12 +182,13 @@ class Insidious {
         };
     };
 
+    /** Avisa ao jogador que não é possível utilizar o Insidious sem uma conta premium ativa.  */
     private static warnAboutPremiumStatus() {
         Utils.createModal('Insidious', true);
         const modalWindow = document.querySelector('#insidious_modal');
         if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
-        const warningMessage = 'Não é possível utilizar o Insidious sem uma conta premium ativada.';
+        const warningMessage = 'Não é possível utilizar o Insidious sem uma conta premium ativa.';
         new Manatsu(modalWindow, { class: 'insidious_modalMessage', text: warningMessage }).create();
 
         const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();

@@ -123,3 +123,49 @@ declare namespace Timing {
     function getElapsedTimeSinceLoad(): number;
     function getReturnTimeFromServer(): number;
 }
+
+declare namespace PremiumExchange {
+    const TYPE_BUY = 'buy';
+    const TYPE_SELL = 'sell';
+
+    function init(): void;
+    function inputChanged(): void;
+    function updateUI(): void;
+}
+
+declare namespace PremiumExchange.data {
+    const capacity: ResourceAmount;
+
+    const constants: {
+        resource_base_price: number;
+        resource_price_elasticity: number;
+        stock_size_modifier: number;
+    };
+
+    const duration: number;
+    const merchants: number;
+    const rates: ResourceAmount;
+    const status_bar: string;
+    const stock: ResourceAmount;
+    
+    const tax: {
+        buy: number;
+        sell: number;
+    };
+}
+
+declare namespace PremiumExchange.graph {
+    type ResourceData = {
+        color: string;
+        data: [number, string][];
+        details: { res_type: ResourceList }[]
+        label: ResourceListPTBR;
+    };
+    
+    const data: [ResourceData, ResourceData, ResourceData];
+    const type: string;
+
+    function graph(): void;
+    function invertYAxis(): void;
+    function plot(): void;
+}

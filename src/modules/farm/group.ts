@@ -1,7 +1,4 @@
 class GroupAttack {
-    /** Parte da URL da janela de ataques a caminho. */
-    static readonly groupCreationScreen = 'screen=overview_villages&mode=groups&type=dynamic';
-
     static async start() {
         const groupID = await Store.get(Keys.farmGroup) as string | undefined;
         if (groupID) {
@@ -131,22 +128,10 @@ class GroupAttack {
 
     private static navigateToGroupCreationScreen() {
         const currentVillageLocation = `${location.origin}\/game.php\?village=${Game.village}\&`;
-        const targetLocation = currentVillageLocation + this.groupCreationScreen;
+        const targetLocation = currentVillageLocation + Assets.url.group_creation_screen;
 
         Store.set({ [Keys.farmGroupCreation]: true })
             .then(() => location.assign(targetLocation))
             .catch((err: unknown) => InsidiousError.handle(err));
-    };
-
-    static async createDynamicGroup() {
-        await Store.remove(Keys.farmGroupCreation);
-
-        const groupNameInput = document.querySelector('form input#group_name') as HTMLInputElement | null;
-        if (!groupNameInput) throw new InsidiousError('DOM: form input#group_name');
-        groupNameInput.value = 'Insidious';
-
-        const groupCreationButton = document.querySelector('form input#btn_filters_create') as HTMLInputElement | null;
-        if (!groupCreationButton) throw new InsidiousError('form input#btn_filters_create');
-        groupCreationButton.click();
     };
 };

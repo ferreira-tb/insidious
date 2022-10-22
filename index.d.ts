@@ -9,6 +9,12 @@ type ResourceList =
     | 'stone'
     | 'iron';
 
+/** Nomes em português dos recursos do jogo. */
+type ResourceListPTBR =
+    | 'Madeira'
+    | 'Argila'
+    | 'Ferro';
+
 /** Unidades que podem ser usadas no assistente de saque. */
 type FarmUnits =
     | 'spear'
@@ -59,8 +65,14 @@ type WebExtTabURLs =
 /** URLs permitidas em browser.windows.create() */
 type WebExtWindowURLs = '../config/config.html';
 
-type WindowMessageDirection = 'from-insidious' | 'from-tribalwars';
-type WindowMessageReason = 'get-game-data';
+type WindowMessageDirection =
+    | 'from-insidious' 
+    | 'from-tribalwars';
+    
+type WindowMessageReason =
+    | 'get-game-data' 
+    | 'get-premium-exchange';
+
 interface WindowMessage {
     direction: WindowMessageDirection;
     reason?: WindowMessageReason;
@@ -69,6 +81,7 @@ interface WindowMessage {
 interface WindowMessageFromPage extends WindowMessage {
     game_data?: TribalWarsGameData;
     premium?: boolean;
+    premium_exchange?: PremiumExchangeData;
 }
 
 /** Histórico de navegação entre páginas do jogo. */

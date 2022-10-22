@@ -2,10 +2,31 @@ class Game {
     static #worldInfo: WorldInfo;
     static #unitInfo: UnitInfo;
 
+    /** Obtém o valor de algum campo da URL. */
+    private static currentField(fieldName: string) {
+        return function(url: string) {
+            if (typeof url !== 'string') throw new InsidiousError('A URL fornecida é inválida.');
+
+            const urlFields = (url.replace('\?', '')).split('\&');
+            for (const field of urlFields) {
+                if (field.includes(`${fieldName}=`)) return field.replace(`${fieldName}=`, '');
+            };
+            return null;
+        };
+    };
+
+    static readonly currentScreen = this.currentField('screen');
+    static readonly currentMode = this.currentField('mode');
+    static readonly currentSubType = this.currentField('subtype');
+
     /** Mundo atual. */
     static readonly world = Insidious.raw_game_data.world;
     /** Janela atual. */
-    static readonly screen = Insidious.raw_game_data.screen;
+    static readonly screen = Insidious.raw_game_data.screen ?? this.currentScreen(location.href);
+    /** Modo da janela atual. */
+    static readonly mode = Insidious.raw_game_data.mode ?? this.currentMode(location.href);
+    /** Subtipo da janela atual. */
+    static readonly subtype = this.currentSubType(location.href);
     /** ID da aldeia atual. */
     static readonly village = String(Insidious.raw_game_data.village.id);
     /** ID do jogador. */
@@ -32,6 +53,10 @@ class Game {
     readonly world: string;
     /** Janela atual. */
     readonly screen: string;
+    /** Modo da janela atual. */
+    readonly mode: string | null;
+    /** Subtipo da janela atual. */
+    readonly subtype: string | null;
     /** ID da aldeia atual. */
     readonly village: string;
     /** ID do jogador. */
@@ -60,7 +85,9 @@ class Game {
      * */
     constructor() {
         this.world = Insidious.raw_game_data.world;
-        this.screen = Insidious.raw_game_data.screen;
+        this.screen = Insidious.raw_game_data.screen ?? Game.currentScreen(location.href);
+        this.mode =  Insidious.raw_game_data.mode ?? Game.currentMode(location.href);
+        this.subtype = Game.currentSubType(location.href);
         this.village = String(Insidious.raw_game_data.village.id);
         this.player = Insidious.raw_game_data.player.id;
         this.group = String(Insidious.raw_game_data.group_id);

@@ -299,9 +299,9 @@ class TWShield {
 
     /** Verifica se o usuário está na janela de ataques a caminho. */
     private static isOverviewIncomingsScreen(url: string): boolean {
-        if (Utils.currentScreen(url) !== 'overview_villages') return false;
-        if (Utils.currentMode(url) !== 'incomings') return false;
-        if (Utils.currentSubType(url) !== 'attacks') return false;
+        if (Game.currentScreen(url) !== 'overview_villages') return false;
+        if (Game.currentMode(url) !== 'incomings') return false;
+        if (Game.currentSubType(url) !== 'attacks') return false;
         return true;
     };
 

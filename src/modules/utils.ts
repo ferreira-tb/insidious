@@ -11,23 +11,6 @@ class Utils {
         return responseTime;
     };
 
-    /** Obtém o valor de algum campo da URL. */
-    private static currentField(fieldName: string) {
-        return function(url: string) {
-            if (typeof url !== 'string') throw new InsidiousError('A URL fornecida é inválida.');
-
-            const urlFields = (url.replace('\?', '')).split('\&');
-            for (const field of urlFields) {
-                if (field.includes(`${fieldName}=`)) return field.replace(`${fieldName}=`, '');
-            };
-            return null;
-        };
-    };
-
-    static readonly currentScreen = this.currentField('screen');
-    static readonly currentMode = this.currentField('mode');
-    static readonly currentSubType = this.currentField('subtype');
-    
     /** Calcula distância em campos entre duas coordenadas. */
     static calcDistance(originX: number, originY: number, destinationX: number, destinationY: number) {
         return Math.sqrt(((destinationX - originX) ** 2) + ((destinationY - originY) ** 2));

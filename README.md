@@ -15,17 +15,9 @@ Ao contrário de algumas outras ferramentas que existem mundo afora, Insidious t
     - Não ataca às cegas: escolhe bem os alvos.
     - Derruba muralhas.
 
-- Etiqueta ataques automaticamente.
+- Ataque e apoio:
+    - Envia ataque ou apoio para chegar no horário indicado.
+    - Etiqueta automaticamente.
+
 - Relatórios:
     - Exibe a quantidade de lealdade atual da aldeia-alvo, com base no último valor conhecido.
-    
-## Próximos passos
-- Ataque e defesa
-    - [ ] Envio de fakes.
-    - [ ] Envio de snipe e anti-snipe.
-    - [ ] Planejador de ataques.
-- Mercado
-    - [ ] Balanceamento de recursos das aldeias.
-    - [ ] Compra e venda de pontos premium no mercado, buscando maximizar o lucro com base na cotação.
-- Outros
-    - [ ] Renomeador de aldeias.

@@ -50,3 +50,12 @@ class UnitInfo {
         };
     };
 };
+
+class Bridge implements WindowMessage {
+    readonly direction = 'from-insidious';
+    readonly reason: WindowMessageReason;
+
+    constructor(reason: WindowMessageReason) {
+        this.reason = reason;
+    };
+};

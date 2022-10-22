@@ -5,6 +5,10 @@ class Assets {
         get_unit_info: location.origin + '/interface.php?func=get_unit_info',
     } as const;
 
+    static readonly url = {
+        group_creation_screen: 'screen=overview_villages&mode=groups&type=dynamic'
+    } as const;
+
     static readonly list: AssetsList = {
         // Unidades
         all_units: ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'ram', 'catapult', 'knight', 'snob'],
