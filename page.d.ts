@@ -169,3 +169,14 @@ declare namespace PremiumExchange.graph {
     function invertYAxis(): void;
     function plot(): void;
 }
+
+declare namespace Market.Data {
+    type MarketTrader = {
+        amount: number;
+        carry: number;
+        total: number; 
+    };
+
+    const Res: ResourceAmount;
+    const Trader: MarketTrader;
+}

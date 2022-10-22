@@ -121,8 +121,8 @@ class Insidious {
     private static requestScript(screen: GameScreen) {
         return new Promise<void>((resolve, reject) => {
             browser.runtime.sendMessage({ type: screen })
-                .then(() => this.loadScript(screen))
                 .then(() => resolve())
+                .then(() => this.loadScript(screen))
                 .catch((err: unknown) => reject(err));
         });
     };
@@ -158,7 +158,7 @@ class Insidious {
         });
 
         const shieldInfo = `Shield: ${eachStatus[0]}`;
-        const plunderInfo = `Plunder: ${eachStatus[1]}`;
+        const plunderInfo = `Saque: ${eachStatus[1]}`;
         const responseTime = `Tempo de resposta: ${Utils.responseTime.toLocaleString('pt-br')}ms`;
 
         const serverInfo = document.querySelector('td.maincell > p.server_info');

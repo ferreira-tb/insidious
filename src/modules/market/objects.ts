@@ -1,8 +1,19 @@
 class MarketStatus {
+    readonly merchant: MerchantAmount = {
+        available: null,
+        total: Game.trader_total,
+        carry: Game.trader_carry
+    };
 
+    constructor() {
+        const availableField = document.querySelector('#market_status_bar #market_merchant_available_count');
+        const available = availableField?.textContent?.trim();
+        if (available) this.merchant.available = Number.parseInt(available, 10);
+        if (Number.isNaN(this.merchant.available)) throw new InsidiousError('A quantidade de mercadores é inválida.');
+    };
 };
 
-class PremiumExchangeRate extends MarketStatus {
+class ExchangeRate {
     /** Taxa de troca para a madeira. */
     readonly wood_rate: number;
     /** Taxa de troca para a argila. */
@@ -13,8 +24,6 @@ class PremiumExchangeRate extends MarketStatus {
     readonly date = Date.now();
 
     constructor() {
-        super();
-
         const woodRateField = document.querySelector('td#premium_exchange_rate_wood div.premium-exchange-sep');
         if (!woodRateField) throw new InsidiousError('DOM: td#premium_exchange_rate_wood div.premium-exchange-sep');
         const woodRate = woodRateField.textContent?.replace(/\D/g, '');
@@ -41,7 +50,7 @@ class PremiumExchangeRate extends MarketStatus {
     };
 };
 
-class Transaction extends PremiumExchangeRate {
+class Transaction extends ExchangeRate {
     /** Estoque de madeira. */
     readonly wood_stock: number;
     /** Estoque de argila. */
@@ -157,7 +166,7 @@ class Transaction extends PremiumExchangeRate {
     };
 };
 
-class AveragePremiumExchangeRate {
+class AverageExchangeRate {
     readonly yesterday: ResourceAmount = {
         wood: 0,
         stone: 0,
@@ -172,22 +181,24 @@ class AveragePremiumExchangeRate {
 
     constructor(data: PremiumExchangeData) {
         Assets.list.resources.forEach((res) => {
-            // Organiza da data mais recente para a mais antiga.
-            data[`average_${res}_rate`].sort((a, b) => b[0] - a[0]);
+            const average =  data[`average_${res}_rate`];
+            if (!average) throw new InsidiousError('Não foi possível obter dados sobre o histórico da Troca Premium.');
 
-            this.yesterday[res] = Number.parseInt(data[`average_${res}_rate`][0][1], 10);
+            // Organiza da data mais recente para a mais antiga.
+            average.sort((a, b) => b[0] - a[0]);
+
+            this.yesterday[res] = Number.parseInt(average[0][1], 10);
             const errorMessage = `Não foi possível determinar a taxa média de ontem (${res}).`;
             if (Number.isNaN(this.yesterday[res])) throw new InsidiousError(errorMessage);
 
-            const array = data[`average_${res}_rate`];
-            for (const rate of array) {
+            for (const rate of average) {
                 this.total[res] += Number.parseInt(rate[1], 10);
             };
 
-            this.total[res] = Math.round(this.total[res] / array.length);
+            this.total[res] = Math.round(this.total[res] / average.length);
             if (Number.isNaN(this.total[res])) {
                 throw new InsidiousError(`Não foi possível determinar a taxa média da semana (${res}).`);
-            };      
+            };
         }, this);
     };
 };

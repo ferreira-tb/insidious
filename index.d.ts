@@ -69,9 +69,7 @@ type WindowMessageDirection =
     | 'from-insidious' 
     | 'from-tribalwars';
     
-type WindowMessageReason =
-    | 'get-game-data' 
-    | 'get-premium-exchange';
+type WindowMessageReason = 'get-game-data';
 
 interface WindowMessage {
     direction: WindowMessageDirection;
@@ -81,7 +79,6 @@ interface WindowMessage {
 interface WindowMessageFromPage extends WindowMessage {
     game_data?: TribalWarsGameData;
     premium?: boolean;
-    premium_exchange?: PremiumExchangeData;
 }
 
 /** Histórico de navegação entre páginas do jogo. */
@@ -217,5 +214,22 @@ type ShieldOperations = null | 'redirect' | 'group' | 'rename' | 'go_back';
 
 ////// PLACE
 type AvailableUnits = {
-    [index in UnitListWithArchers]: number
+    [index in UnitListWithArchers]: number;
+};
+
+////// MERCADO
+type MerchantAmount = {
+    available: number | null;
+    total: number | null;
+    carry: number | null;
+};
+
+type PremiumExchangeData = {
+    constants: typeof PremiumExchange.data.constants | null;
+    rates: typeof PremiumExchange.data.rates | null;
+    tax: typeof PremiumExchange.data.tax | null;
+
+    average_wood_rate: [number, string][] | null;
+    average_stone_rate: [number, string][] | null;
+    average_iron_rate: [number, string][] | null;
 };

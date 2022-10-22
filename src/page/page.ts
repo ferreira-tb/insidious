@@ -15,8 +15,6 @@ class PageScript {
         switch (reason) {
             case 'get-game-data': PageScript.postGameData()
                 break;
-            case 'get-premium-exchange': PageScript.postPremiumExchangeData()
-                break;
         };
     };
 
@@ -25,15 +23,6 @@ class PageScript {
             direction: 'from-tribalwars',
             game_data: new TribalWarsGameData(),
             premium: premium
-        };
-
-        window.postMessage(message);
-    };
-
-    private static postPremiumExchangeData() {
-        const message: WindowMessageFromPage = {
-            direction: 'from-tribalwars',
-            premium_exchange: new PremiumExchangeData(),
         };
 
         window.postMessage(message);
@@ -61,11 +50,28 @@ class TribalWarsGameData {
     readonly world: string;
 
     // Timing
-    readonly added_server_time: number;
-    readonly initial_server_time: number;
-    readonly offset_from_server: number;
-    readonly offset_to_server: number;
-    readonly tick_interval: number;
+    readonly added_server_time = Timing.added_server_time;
+    readonly initial_server_time = Timing.initial_server_time;
+    readonly offset_from_server = Timing.offset_from_server;
+    readonly offset_to_server = Timing.offset_to_server;
+    readonly tick_interval = Timing.tick_interval;
+
+    ////// NÃO DISPONÍVEIS GLOBALMENTE
+    // Market
+    readonly trader_amount = window.Market?.Data.Trader.amount ?? null;
+    readonly trader_carry = window.Market?.Data.Trader.carry ?? null;
+    readonly trader_total = window.Market?.Data.Trader.total ?? null;
+
+    // PremiumExchange
+    readonly premium_exchange: PremiumExchangeData = {
+        constants: window.PremiumExchange?.data.constants ?? null,
+        rates: window.PremiumExchange?.data.rates ?? null,
+        tax: window.PremiumExchange?.data.tax ?? null,
+
+        average_wood_rate: null,
+        average_stone_rate: null,
+        average_iron_rate: null
+    };
 
     constructor() {
         const game_data = TribalWars.getGameData();
@@ -88,37 +94,20 @@ class TribalWarsGameData {
         this.village = game_data.village;
         this.world = game_data.world;
 
-        // Timing
-        this.added_server_time = Timing.added_server_time;
-        this.initial_server_time = Timing.initial_server_time;
-        this.offset_from_server = Timing.offset_from_server;
-        this.offset_to_server = Timing.offset_to_server;
-        this.tick_interval = Timing.tick_interval;
-    };
-};
-
-class PremiumExchangeData {
-    readonly constants = PremiumExchange.data.constants;
-    readonly rates = PremiumExchange.data.rates;
-    readonly tax = PremiumExchange.data.tax;
-
-    readonly average_wood_rate!: [number, string][];
-    readonly average_stone_rate!: [number, string][];
-    readonly average_iron_rate!: [number, string][];
-
-    constructor() {
-        for (const resource of PremiumExchange.graph.data) {
-            switch (resource.label) {
-                case 'Madeira':
-                    this.average_wood_rate = resource.data;
-                    break;
-                case 'Argila':
-                    this.average_stone_rate = resource.data;
-                    break;
-                case 'Ferro':
-                    this.average_iron_rate = resource.data;
-                    break;
-                default: throw new Error('Não foi possível obter o histórico da Troca Premium.');
+        if (window.PremiumExchange) {
+            for (const resource of window.PremiumExchange.graph.data) {
+                switch (resource.label) {
+                    case 'Madeira':
+                        this.premium_exchange.average_wood_rate = resource.data;
+                        break;
+                    case 'Argila':
+                        this.premium_exchange.average_stone_rate = resource.data;
+                        break;
+                    case 'Ferro':
+                        this.premium_exchange.average_iron_rate = resource.data;
+                        break;
+                    default: throw new Error('Não foi possível obter o histórico da Troca Premium.');
+                };
             };
         };
     };
