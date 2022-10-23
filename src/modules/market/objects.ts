@@ -74,7 +74,7 @@ class Transaction extends ExchangeRate {
     readonly sell_iron: HTMLInputElement;
 
     /** Botão para calcular a melhor oferta. */
-    private readonly submit: HTMLInputElement;
+    readonly submit: HTMLInputElement;
 
     constructor() {
         super();
@@ -159,10 +159,6 @@ class Transaction extends ExchangeRate {
         const submitSelector = 'input[class*="btn-premium-exchange-buy"][type="submit"][value*="Calcular" i]';
         this.submit = document.querySelector(submitSelector) as HTMLInputElement;
         if (!this.submit) throw new InsidiousError(`DOM: ${submitSelector}`);
-    };
-
-    finish() {
-        this.submit.click();
     };
 };
 

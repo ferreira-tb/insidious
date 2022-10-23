@@ -22,7 +22,8 @@ class Assets {
     };
 
     static readonly options: AssetsOptions = {
-        plunder: ['ignore_wall', 'destroy_wall', 'group_attack', 'use_c', 'no_delay']
+        plunder: ['ignore_wall', 'destroy_wall', 'group_attack', 'use_c', 'no_delay'],
+        player_radio: ['show_distance', 'hide_all']
     };
 
     static readonly misc: AssetsMisc = {

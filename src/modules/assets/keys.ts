@@ -45,6 +45,10 @@ class Keys {
     /** CHAVE: retorna true se a criação do grupo Insidious usado pelo Plunder estiver pendente (farmGroupCreation). */
     static readonly farmGroupCreation = `farmGroupCreation_${Game.world}`;
 
+    ////// JOGADOR
+    /** CHAVE: opções da página do jogador. (playerOptions). */
+    static readonly playerOptions = `playerOptions_${Game.world}`;
+
     ////// SHIELD
     /** CHAVE: status atual do Shield (isShieldActive). */
     static readonly shield = `isShieldActive_${Game.world}`;

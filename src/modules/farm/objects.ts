@@ -31,7 +31,7 @@ class PlunderStatus {
         this.#firstAttack = false;
     };
 
-    get firstAttack() {return this.#firstAttack};
+    get firstAttack() { return this.#firstAttack };
 };
 
 class PlunderButtons {
@@ -45,14 +45,13 @@ class PlunderButtons {
         if (!plunderFilters) throw new InsidiousError('DOM: #plunder_list_filters');
 
         // Elementos da extensão.
-        this.section.main = new Manatsu({ id: 'insidious_farmMenuArea' }).createBefore(plunderFilters.nextElementSibling);
-        this.section.button = new Manatsu({ id: 'insidious_farmButtonArea' }, this.section.main).create();
-        this.section.action = new Manatsu({ id: 'insidious_farmActionArea' }, this.section.main).create();
+        this.section.main = new Manatsu({ class: 'ins_menu_area' }).createBefore(plunderFilters.nextElementSibling);
+        this.section.button = new Manatsu({ class: 'ins_button_area' }, this.section.main).create();
+        this.section.action = new Manatsu({ class: 'ins_action_area' }, this.section.main).create();
 
-        const buttonClass = 'insidious_farmAreaBtn';
-        this.button.plunder = new Manatsu('button', { class: buttonClass, id: 'insidious_plunderButton' }).create();
-        this.button.options = new Manatsu('button', { class: buttonClass, text: 'Opções' }).create();
-        this.button.info = new Manatsu('button', { class: buttonClass, text: 'Informações' }).create();
+        this.button.plunder = new Manatsu('button', { class: 'ins_button', id: 'ins_plunderButton' }).create();
+        this.button.options = new Manatsu('button', { class: 'ins_button', text: 'Opções' }).create();
+        this.button.info = new Manatsu('button', { class: 'ins_button', text: 'Informações' }).create();
 
         ////// EVENTOS
         this.button.plunder.addEventListener('click', TWFarm.togglePlunder);

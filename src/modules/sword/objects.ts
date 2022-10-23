@@ -95,10 +95,10 @@ class ScheduledAttack {
         this.submit = document.querySelector('#troop_confirm_submit') as HTMLInputElement;
         if (!this.submit) throw new InsidiousError('DOM: #troop_confirm_submit');
 
-        this.date_input = document.querySelector('#insidious_schedule_date') as HTMLInputElement;
-        if (!this.date_input) throw new InsidiousError('DOM: #insidious_schedule_date');
+        this.date_input = document.querySelector('#ins_schedule_date') as HTMLInputElement;
+        if (!this.date_input) throw new InsidiousError('DOM: #ins_schedule_date');
 
-        this.toggle_schedule = document.querySelector('#insidious_toggle_schedule') as HTMLButtonElement;
-        if (!this.toggle_schedule) throw new InsidiousError('DOM: #insidious_toggle_schedule');
+        this.toggle_schedule = document.querySelector('#ins_toggle_schedule') as HTMLButtonElement;
+        if (!this.toggle_schedule) throw new InsidiousError('DOM: #ins_toggle_schedule');
     };
 };

@@ -197,3 +197,9 @@ declare namespace Accountmanager.farm {
 
     function init(): void;
 }
+
+declare namespace InfoPlayer {
+    const player_id: number;
+
+    function init(): void;
+}

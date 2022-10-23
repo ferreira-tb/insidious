@@ -26,7 +26,7 @@ class TWSword {
 
         const dateString = Utils.getDateString(this.confirm_screen.travel_time);
         const dateInputOptions = {
-            id: 'insidious_schedule_date',
+            id: 'ins_schedule_date',
             style: 'vertical-align: middle;',
             type: 'datetime-local',
             step: '0.001',
@@ -35,7 +35,7 @@ class TWSword {
         };
 
         schedulerField.appendManatsu('input', dateInputOptions) as HTMLInputElement;
-        schedulerField.appendManatsu('button', { id: 'insidious_toggle_schedule', text: 'OK', style: 'margin-left: 5px' })
+        schedulerField.appendManatsu('button', { id: 'ins_toggle_schedule', text: 'OK', style: 'margin-left: 5px' })
             .addEventListener('click', (e) => {
                 e.preventDefault();
                 this.handleScheduledCommand()

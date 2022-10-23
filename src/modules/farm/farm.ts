@@ -3,7 +3,7 @@ class TWFarm {
     static menu: PlunderButtons;
     /** Mapa com as informações sobre cada aldeia da tabela. */
     static readonly village_info: Map<string, PlunderVillageInfo> = new Map();
-    /** Mapa com os elementos que constituem o menu de configurações do Plunder. */
+    /** Mapa com os elementos que constituem o menu de opções do Plunder. */
     private static readonly config: Map<string, Manatsu[]> = new Map();
 
     static async open() {
@@ -90,7 +90,7 @@ class TWFarm {
                 Plunder.eventTarget.dispatchEvent(new Event('cancelautoreload'));
 
                 // Horário do próximo recarregamento automático da página.
-                const nextAutoReloadDate = document.querySelector('#insidious_nextAutoReloadDate');
+                const nextAutoReloadDate = document.querySelector('#ins_next_auto_reload');
                 if (nextAutoReloadDate) Manatsu.remove(nextAutoReloadDate);
 
             // Caso contrário, ativa-o.
@@ -111,45 +111,50 @@ class TWFarm {
 
     /** Abre um modal que exibe as opções do Plunder. */
     static async toggleOptions() {
-        // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options será undefined.
-        if (!Plunder.options) Plunder.options = await Store.get(Keys.plunderOptions) as PlunderOptions ?? {};
+        try {
+            // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options será undefined.
+            if (!Plunder.options) Plunder.options = await Store.get(Keys.plunderOptions) as PlunderOptions ?? {};
 
-        // Abre a janela modal.
-        Utils.createModal('Opções', true, { caller: 'plunder_options' });
-        const modalWindow = document.querySelector('#insidious_modal');
-        if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
+            // Abre a janela modal.
+            Utils.createModal('Opções', true, { caller: 'plunder_options' });
+            const modalWindow = document.querySelector('#ins_modal');
+            if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
-        // Adiciona as opções disponíveis.
-        if (this.config.size === 0) this.createOptions();
-        const styleList = { style: 'text-align: left;' };
-        this.config.forEach((option) => Manatsu.createAllInside(option, 2, [modalWindow, styleList]));
+            // Adiciona as opções disponíveis.
+            if (this.config.size === 0) this.createOptions();
+            const styleList = { style: 'text-align: left;' };
+            this.config.forEach((option) => Manatsu.createAllInside(option, 2, [modalWindow, styleList]));
 
-        const optionsCtrl = new AbortController();
+            const optionsCtrl = new AbortController();
 
-        Assets.options.plunder.forEach((option) => {
-            const checkbox = modalWindow.querySelector(`#insidious_${option}`) as HTMLInputElement;
-            if (Plunder.options[option] === true) checkbox.checked = true;
+            Assets.options.plunder.forEach((option) => {
+                const checkbox = modalWindow.querySelector(`#ins_${option}`) as HTMLInputElement;
+                if (Plunder.options[option] === true) checkbox.checked = true;
 
-            if (option === 'group_attack') {
-                checkbox.addEventListener('change', async (e) => {
+                if (option === 'group_attack') {
+                    checkbox.addEventListener('change', async (e) => {
+                        optionsCtrl.abort();
+                        await this.saveOptions(e.target, option);
+                        setTimeout(() => window.location.reload(), Utils.responseTime);
+                    });
+
+                } else {
+                    checkbox.addEventListener('change', (e) => {
+                        this.saveOptions(e.target, option);
+                    }, { signal: optionsCtrl.signal });
+                };
+            }, this);
+
+            // Fecha a janela modal.
+            new Manatsu('button', modalWindow, { class: 'ins_modal_btn', text: 'Fechar' }).createInside('div')
+                .addEventListener('click', () => {
                     optionsCtrl.abort();
-                    await this.saveOptions(e.target, option);
-                    setTimeout(() => window.location.reload(), Utils.responseTime);
-                });
-
-            } else {
-                checkbox.addEventListener('change', (e) => {
-                    this.saveOptions(e.target, option);
+                    Utils.closeModal();
                 }, { signal: optionsCtrl.signal });
-            };
-        }, this);
-
-        // Fecha a janela modal.
-        new Manatsu('button', modalWindow, { class: 'insidious_modalButton', text: 'Fechar' }).createInside('div')
-            .addEventListener('click', () => {
-                optionsCtrl.abort();
-                Utils.closeModal();
-            }, { signal: optionsCtrl.signal });
+                
+        } catch (err) {
+            InsidiousError.handle(err);
+        };
     };
 
     static async toggleInfo() {
@@ -161,7 +166,7 @@ class TWFarm {
 
         // Abre a janela modal.
         Utils.createModal('Informações', true);
-        const modalWindow = document.querySelector('#insidious_modal');
+        const modalWindow = document.querySelector('#ins_modal');
         if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
         const containers = Manatsu.repeat(2, modalWindow, false, { class: 'nowrap' }) as Manatsu[];
@@ -173,7 +178,7 @@ class TWFarm {
         Utils.showResourceIcons(globalPlundered, containers[1].create(), true);
         
         // Fecha a janela modal.
-        new Manatsu('button', modalWindow, { class: 'insidious_modalButton', text: 'Fechar' }).createInside('div')
+        new Manatsu('button', modalWindow, { class: 'ins_modal_btn', text: 'Fechar' }).createInside('div')
             .addEventListener('click', () => Utils.closeModal());
     };
 
@@ -410,7 +415,7 @@ class TWFarm {
                 case 'no_delay': label = 'Ignorar delay';
             };
 
-            const attributes = { id: `insidious_${option}`, label: label };
+            const attributes = { id: `ins_${option}`, label: label };
             this.config.set(option, Manatsu.createCheckbox(attributes, false) as Manatsu[]);
         });
     };

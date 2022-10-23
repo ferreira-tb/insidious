@@ -53,14 +53,14 @@ class Utils {
      * @param options - Atributos para se adicionar à janela modal.
      */
     static createModal(modalTitle: string, clickOutside: boolean = true, options?: SSObject) {
-        const blurBG = new Manatsu({ id: 'insidious_blurBG' }, document.body).create();
+        const blurBG = new Manatsu({ id: 'ins_blurBG' }, document.body).create();
         let modalWindow: HTMLElement;
 
         if (options) {
             const beforeCreating = new Manatsu(options, document.body);
-            modalWindow = beforeCreating.addOptions({ id: 'insidious_modal' }, true).create();
+            modalWindow = beforeCreating.addOptions({ id: 'ins_modal' }, true).create();
         } else {
-            modalWindow = new Manatsu({ id: 'insidious_modal' }, document.body).create();
+            modalWindow = new Manatsu({ id: 'ins_modal' }, document.body).create();
         };
 
         const modalCtrl = new AbortController();
@@ -81,13 +81,13 @@ class Utils {
      * @returns Retorna `true` caso o modal tenha sido fechado, do contrário, retorna `false`.
      */
     static closeModal(): boolean {
-        const blurBG = document.querySelector('#insidious_blurBG');
+        const blurBG = document.querySelector('#ins_blurBG');
         if (!blurBG) return false;
 
         blurBG.dispatchEvent(new Event('closemodal'));
 
         // Verifica se o elemento ainda existe.
-        if (document.querySelector('#insidious_blurBG')) return false;
+        if (document.querySelector('#ins_blurBG')) return false;
         return true;
     };
 
@@ -120,14 +120,14 @@ class Utils {
             if (Assets.list.resources.includes(key as ResourceList)) {
                 const amount = value.toLocaleString('pt-br')
                 new Manatsu('span', parent, { class: `ins_icon ins_${key}` }).create();
-                new Manatsu('span', parent, { class: 'res', id: `insidious_plundered_${key}`, text: amount }).create();
+                new Manatsu('span', parent, { class: 'res', id: `ins_plundered_${key}`, text: amount }).create();
             };
         };
 
         if (total === true) {
             const totalAmount = resources.total.toLocaleString('pt-br');
             new Manatsu('span', parent, { class: 'ins_icon ins_storage' }).create();
-            new Manatsu('span', parent, { class: 'res', id: 'insidious_plundered_total', text: totalAmount }).create();
+            new Manatsu('span', parent, { class: 'res', id: 'ins_plundered_total', text: totalAmount }).create();
         };
     };
 

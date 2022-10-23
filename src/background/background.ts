@@ -41,11 +41,12 @@ class Background {
     private static readonly scripts: ScriptList = {
         assets: ['./modules/assets/game.js', './modules/assets/keys.js'],
         am_farm: ['./modules/farm/objects.js', './modules/farm/plunder.js', './modules/farm/group.js', './modules/farm/farm.js'],
+        info_player: ['./modules/player/player.js'],
         market: ['./modules/market/objects.js', './modules/market/dealer.js', './modules/market/market.js'],
         overview: [],
         overview_villages: ['./modules/overview/overview.js'],
         place: ['./modules/sword/objects.js', './modules/sword/sword.js'],
-        report: ['./modules/report/report.js']
+        report: ['./modules/report/report.js'],
     };
 };
 

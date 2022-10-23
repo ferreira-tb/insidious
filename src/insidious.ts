@@ -5,17 +5,17 @@ class Insidious {
             // Inicia os scripts de apoio.
             await browser.runtime.sendMessage({ type: 'start' });
             Game.verifyIntegrity();
+
             // Faz download dos dados necessários para executar a extensão.
             await this.fetchWorldConfig();
             // Armazena as informações obtidas em propriedades da classe Game.
             await Game.setWorldConfig();
 
+            // Define o mundo atual como ativo e o registra como sendo o último acessado.
+            if (Game.screen === 'overview') await this.setAsActiveWorld();
+
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
-            switch (Game.screen) {
-                case 'overview': await this.setAsActiveWorld();
-                    break;
-                default: await this.requestScript(Game.screen);
-            };
+            await this.requestScript(Game.screen);
 
             // Executa operações que estejam pendentes.
             await Defer.promises();
@@ -131,6 +131,7 @@ class Insidious {
     private static loadScript(screen: GameScreen): Promise<void> {
         switch(screen) {
             case 'am_farm': return TWFarm.open();
+            case 'info_player': return TWPlayer.open();
             case 'market': return TWMarket.open();
             case 'overview_villages': return TWOverview.open();
             case 'place': return TWSword.open();
@@ -185,14 +186,14 @@ class Insidious {
     /** Avisa ao jogador que não é possível utilizar o Insidious sem uma conta premium ativa.  */
     private static warnAboutPremiumStatus() {
         Utils.createModal('Insidious', true);
-        const modalWindow = document.querySelector('#insidious_modal');
+        const modalWindow = document.querySelector('#ins_modal');
         if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
         const warningMessage = 'Não é possível utilizar o Insidious sem uma conta premium ativa.';
-        new Manatsu(modalWindow, { class: 'insidious_modalMessage', text: warningMessage }).create();
+        new Manatsu(modalWindow, { class: 'ins_modal_msg', text: warningMessage }).create();
 
-        const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
-        new Manatsu('button', { class: 'insidious_modalButton', text: 'OK' }, modalButtonArea).create()
+        const modalButtonArea = new Manatsu(modalWindow, { class: 'ins_modalButtonArea' }).create();
+        new Manatsu('button', { class: 'ins_modal_btn', text: 'OK' }, modalButtonArea).create()
             .addEventListener('click', Utils.closeModal);
     };
 

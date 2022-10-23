@@ -469,7 +469,7 @@ class Plunder {
             };
 
             [...Assets.list.resources, 'total'].forEach((item: keyof TotalPlundered) => {
-                const label = document.querySelector(`#insidious_plundered_${item}`);
+                const label = document.querySelector(`#ins_plundered_${item}`);
                 if (label) label.textContent = this.plundered![item].toLocaleString('pt-br');
             });
 
@@ -495,11 +495,11 @@ class Plunder {
             const spanMessage = `A página será recarregada automaticamente em ${dateString} às ${hourString}`;
 
             // Apenas substitui o texto caso o elemento já exista.
-            const spanElement = document.querySelector('#insidious_nextAutoReloadDate');
+            const spanElement = document.querySelector('#ins_next_auto_reload');
             if (spanElement) {
                 spanElement.textContent = spanMessage;
             } else {
-                new Manatsu('span', plunderListTitle, { text: spanMessage, id: 'insidious_nextAutoReloadDate' }).create();
+                new Manatsu('span', plunderListTitle, { text: spanMessage, id: 'ins_next_auto_reload' }).create();
             };
             
             const autoReloadCtrl = new AbortController();
@@ -728,7 +728,7 @@ class Plunder {
         return new Promise<boolean>((resolve) => {
             if (includeVillagesUnderAttack.checked === true) {
                 Utils.createModal('Insidious', false);
-                const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
+                const modalWindow = document.querySelector('#ins_modal') as HTMLDivElement | null;
                 if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
                 const warningMessages = [
@@ -738,16 +738,16 @@ class Plunder {
                     'Em caso negativo, o Insidious será encerrado.'
                 ];
 
-                const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'insidious_modalMessage' }, true);
+                const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'ins_modal_msg' }, true);
                 Manatsu.addTextContent(warningMessageElements, warningMessages);
 
                 const messageModalCtrl = new AbortController();
-                const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
+                const modalButtonArea = new Manatsu(modalWindow, { class: 'ins_modalButtonArea' }).create();
 
-                new Manatsu('button', { class: 'insidious_modalButton', text: 'Sim' }, modalButtonArea).create()
+                new Manatsu('button', { class: 'ins_modal_btn', text: 'Sim' }, modalButtonArea).create()
                     .addEventListener('click', async () => {
                         messageModalCtrl.abort();
-                        Manatsu.removeChildren(modalWindow, ['.insidious_modalMessage', '.insidious_modalButtonArea']);
+                        Manatsu.removeChildren(modalWindow, ['.ins_modal_msg', '.ins_modalButtonArea']);
                         new Manatsu({ text: 'A página será recarregada em alguns instantes. Por favor, aguarde.'}, modalWindow).create();
                         includeVillagesUnderAttack.click();
 
@@ -755,7 +755,7 @@ class Plunder {
                         window.location.reload();
                     }, { signal: messageModalCtrl.signal });
 
-                new Manatsu('button', { class: 'insidious_modalButton', text: 'Não' }, modalButtonArea).create()
+                new Manatsu('button', { class: 'ins_modal_btn', text: 'Não' }, modalButtonArea).create()
                     .addEventListener('click', () => {
                         messageModalCtrl.abort();
                         Utils.closeModal();

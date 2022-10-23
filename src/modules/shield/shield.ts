@@ -201,7 +201,7 @@ class TWShield {
             };
 
             Utils.createModal('Ataque a caminho!', false, { caller: 'tw_shield' });
-            const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
+            const modalWindow = document.querySelector('#ins_modal') as HTMLDivElement | null;
             if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
             const warningMessages = [
@@ -211,21 +211,21 @@ class TWShield {
                 'caso não queira recebê-los.'
             ];
 
-            const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'insidious_modalMessage' }, true);
+            const warningMessageElements = Manatsu.repeat(3, modalWindow, { class: 'ins_modal_msg' }, true);
             Manatsu.addTextContent(warningMessageElements, warningMessages);
 
             const messageModalCtrl = new AbortController();
-            const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
+            const modalButtonArea = new Manatsu(modalWindow, { class: 'ins_modalButtonArea' }).create();
 
             const warningTimeout = setTimeout(() => redirectToIncomingsScreen(), 5000);
 
-            new Manatsu('button', { class: 'insidious_modalButton', text: 'Sim' }, modalButtonArea).create()
+            new Manatsu('button', { class: 'ins_modal_btn', text: 'Sim' }, modalButtonArea).create()
                 .addEventListener('click', () => {
                     clearTimeout(warningTimeout);
                     redirectToIncomingsScreen();
                 }, { signal: messageModalCtrl.signal });
             
-            new Manatsu('button', { class: 'insidious_modalButton', text: 'Não' }, modalButtonArea).create()
+            new Manatsu('button', { class: 'ins_modal_btn', text: 'Não' }, modalButtonArea).create()
                 .addEventListener('click', async () => {
                     clearTimeout(warningTimeout);
                     messageModalCtrl.abort();
@@ -233,7 +233,7 @@ class TWShield {
                     Utils.closeModal();
                 }, { signal: messageModalCtrl.signal });
 
-            new Manatsu('button', { class: 'insidious_modalButton', text: 'Desativar' }, modalButtonArea).create()
+            new Manatsu('button', { class: 'ins_modal_btn', text: 'Desativar' }, modalButtonArea).create()
                 .addEventListener('click', () => {
                     clearTimeout(warningTimeout);
                     messageModalCtrl.abort();
@@ -269,7 +269,7 @@ class TWShield {
      * A função entende que ataques a caminho possuem prioridade superior a qualquer outra ocorrência.
      */
      private static modalAlreadyExists(): boolean {
-        const modalWindow = document.querySelector('#insidious_modal');
+        const modalWindow = document.querySelector('#ins_modal');
         if (!modalWindow) return false;
         if (modalWindow.getAttribute('caller') === 'tw_shield') return true;
     
@@ -321,7 +321,7 @@ class TWShield {
         };
 
         Utils.createModal('Insidious', false);
-        const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
+        const modalWindow = document.querySelector('#ins_modal') as HTMLDivElement | null;
         if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
         const warningMessages = [
@@ -329,21 +329,21 @@ class TWShield {
             'Após cinco segundos, você será redirecionado de volta para a página na qual estava.'
         ];
 
-        const warningMessageElements = Manatsu.repeat(2, modalWindow, { class: 'insidious_modalMessage' }, true);
+        const warningMessageElements = Manatsu.repeat(2, modalWindow, { class: 'ins_modal_msg' }, true);
         Manatsu.addTextContent(warningMessageElements, warningMessages);
 
         const messageModalCtrl = new AbortController();
-        const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
+        const modalButtonArea = new Manatsu(modalWindow, { class: 'ins_modalButtonArea' }).create();
 
         const warningTimeout = setTimeout(() => goBack(), 5000);
 
-        new Manatsu('button', { class: 'insidious_modalButton', text: 'Ir agora' }, modalButtonArea).create()
+        new Manatsu('button', { class: 'ins_modal_btn', text: 'Ir agora' }, modalButtonArea).create()
             .addEventListener('click', () => {
                 clearTimeout(warningTimeout);
                 goBack();
             }, { signal: messageModalCtrl.signal });
 
-        new Manatsu('button', { class: 'insidious_modalButton', text: 'Cancelar' }, modalButtonArea).create()
+        new Manatsu('button', { class: 'ins_modal_btn', text: 'Cancelar' }, modalButtonArea).create()
             .addEventListener('click', () => {
                 clearTimeout(warningTimeout);
                 messageModalCtrl.abort();

@@ -32,7 +32,7 @@ class GroupAttack {
 
             // Caso o grupo não exista, emite uma mensagem solicitando sua criação.
             Utils.createModal('Insidious', false);
-            const modalWindow = document.querySelector('#insidious_modal') as HTMLDivElement | null;
+            const modalWindow = document.querySelector('#ins_modal') as HTMLDivElement | null;
             if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
             const warningMessages = [
@@ -42,11 +42,11 @@ class GroupAttack {
                 'processo, já que evita navegação desnecessária entre as aldeias.'
             ];
 
-            const warningMessageElements = Manatsu.repeat(2, modalWindow, { class: 'insidious_modalMessage' }, true);
+            const warningMessageElements = Manatsu.repeat(2, modalWindow, { class: 'ins_modal_msg' }, true);
             Manatsu.addTextContent(warningMessageElements, warningMessages);
 
             const messageModalCtrl = new AbortController();
-            const modalButtonArea = new Manatsu(modalWindow, { class: 'insidious_modalButtonArea' }).create();
+            const modalButtonArea = new Manatsu(modalWindow, { class: 'ins_modalButtonArea' }).create();
             
             new Manatsu('button', { style: 'margin: 10px 5px 5px 5px;', text: 'Criar' }, modalButtonArea).create()
                 .addEventListener('click', () => {

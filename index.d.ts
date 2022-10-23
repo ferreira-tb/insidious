@@ -50,6 +50,7 @@ type UnitListWithArchers =
 /** Janelas do jogo. */
 type GameScreen =
     | 'am_farm'
+    | 'info_player'
     | 'market'
     | 'overview'
     | 'overview_villages'
@@ -147,7 +148,8 @@ type AssetsList = {
 };
 
 type AssetsOptions = {
-    plunder: (keyof PlunderOptions)[]
+    plunder: (keyof PlunderOptions)[];
+    player_radio: PlayerOptions['radio_options'][];
 };
 
 type AssetsMisc = {
@@ -232,4 +234,9 @@ type PremiumExchangeData = {
     average_wood_rate: [number, string][] | null;
     average_stone_rate: [number, string][] | null;
     average_iron_rate: [number, string][] | null;
+};
+
+////// JOGADOR
+type PlayerOptions = {
+    radio_options: 'hide_all' | 'show_distance';
 };
