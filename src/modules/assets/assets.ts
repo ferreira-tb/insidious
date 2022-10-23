@@ -31,6 +31,7 @@ class Assets {
 
     /** Aríetes e bárbaros, respectivamente. */
     static readonly unitsToDestroyWall = {
+        0: [0, 0],
         1: [3, 50],
         2: [5, 50],
         3: [8, 50],

@@ -1,10 +1,33 @@
+class PlunderVillageInfo {
+    last_attack: number = 0;
+    spy_status: boolean = false;
+    wall: WallLevel = 0;
+
+    // Recursos
+    wood: number = 0;
+    stone: number = 0;
+    iron: number = 0;
+    /** Total de recursos disponíveis na aldeia. */
+    total: number = 0;
+
+    // Botões
+    a_button: HTMLElement | null = null;
+    b_button: HTMLElement | null = null;
+    c_button: HTMLElement | null = null;
+    place: HTMLElement | null = null;
+
+    /** Indica se o botão C está ativo ou não. */
+    c_status: boolean = false;
+};
+
 class PlunderStatus {
+    readonly #date = Date.now(); 
     #firstAttack: boolean = true;
     active: boolean = false;
 
     /** Atrasa o envio do ataque caso seja o primeiro após o carregamento da página. */
     async waitAsFirstAttack() {
-        await Utils.wait();
+        if ((Date.now() - this.#date) < 3000) await Utils.wait();
         this.#firstAttack = false;
     };
 
@@ -193,18 +216,16 @@ class ExpectedResources {
     /**
      * Calcula a quantidade recursos esperada no saque.
      * Sempre presume carga total.
-     * @param village - Elemento representando a aldeia atual.
-     * @param model - Modelo usado no ataque.
+     * @param villageID ID da aldeia-alvo.
+     * @param model Modelo usado no ataque.
      */
-    constructor(village: HTMLElement, model: ABC) {
-        // Um erro será emitido posteriormente caso os valores não sejam strings.
-        const woodAmount = village.getAttribute('insidious-wood') as string;
-        const stoneAmount = village.getAttribute('insidious-stone') as string;
-        const ironAmount = village.getAttribute('insidious-iron') as string;
+    constructor(villageID: string, model: ABC) {
+        const info = TWFarm.village_info.get(villageID);
+        if (!info) throw new InsidiousError(`Não foi possível obter informações sobre a aldeia ${villageID}.`);
 
-        this.wood = Number.parseInt(woodAmount, 10);
-        this.stone = Number.parseInt(stoneAmount, 10);
-        this.iron = Number.parseInt(ironAmount, 10);
+        this.wood = info.wood;
+        this.stone = info.stone;
+        this.iron = info.iron;
 
         // Atribuir Infinity impede divisões por zero.
         let totalAmount = this.wood + this.stone + this.iron;
@@ -212,12 +233,12 @@ class ExpectedResources {
 
         this.model = model;
         // Se a capacidade de carga for zero, o valor de carry será Infinity.
-        const carry = (model !== 'c') ? Plunder.carry[model] : Plunder.getCModelCarryCapacity(village);
+        const carry = (model !== 'c') ? Plunder.carry[model] : Plunder.getCModelCarryCapacity(villageID);
 
         [this.wood, this.stone, this.iron].forEach((amount, index) => {
             // Se houver mais recursos do que a carga suporta, calcula quanto de cada recurso deve ser saqueado.
             if (totalAmount > carry) amount = Math.floor((amount / totalAmount) * carry);
-            if (!Number.isInteger(amount)) throw new InsidiousError('A quantia de recursos não é válida.');
+            if (!Number.isInteger(amount)) throw new InsidiousError('A quantidade de recursos esperada não é válida.');
 
             switch (index) {
                 case 0: this.wood = amount;
@@ -406,39 +427,5 @@ class PlunderPageURL {
                 throw new InsidiousError('A página atual é inválida (PlunderPageURL).');
             };
         };
-    };
-};
-
-class PlunderAttack {
-    /** ID da aldeia atual. */
-    readonly id: string;
-    /** Quantidade total de recursos disponíveis na aldeia alvo. */
-    readonly resources: number;
-    /** Nível da muralha. */
-    readonly wall_level: number;
-    /** Estado do botão C. */
-    readonly c_button: OnOff;
-
-    /**
-     * Cria um objeto com informações sobre o ataque a ser enviado.
-     * @param village Elemento correspondente à linha na qual a aldeia se encontra na tabela.
-     */
-    constructor(village: HTMLElement) {
-        const villageID = village.getAttribute('insidious-village');
-        if (!villageID) throw new InsidiousError('Não foi possível obter o id da aldeia.');
-        this.id = villageID;
-
-        const cFarmBtnStatus = village.getAttribute('insidious-c-btn') as OnOff | null;
-        if (!cFarmBtnStatus) throw new InsidiousError('Não foi possível determinar o estado do botão C.');
-        this.c_button = cFarmBtnStatus;
-
-        const resourceAmount = Number.parseInt(village.getAttribute('insidious-resources') as string, 10);
-        if (Number.isNaN(resourceAmount)) throw new InsidiousError('Não foi possível obter a quantidade de recursos da aldeia.');
-        this.resources = resourceAmount;
-
-        const wallLevel = village.getAttribute('insidious-wall');
-        if (!wallLevel) throw new InsidiousError('Não foi possível determinar o nível da muralha.');
-        this.wall_level = Number.parseInt(wallLevel, 10);
-        if (Number.isNaN(this.wall_level)) throw new InsidiousError('O nível da muralha é inválido.');
     };
 };

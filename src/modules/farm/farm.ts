@@ -1,6 +1,8 @@
 class TWFarm {
     /** Botões do Plunder. */
     static menu: PlunderButtons;
+    /** Mapa com as informações sobre cada aldeia da tabela. */
+    static readonly village_info: Map<string, PlunderVillageInfo> = new Map();
     /** Mapa com os elementos que constituem o menu de configurações do Plunder. */
     private static readonly config: Map<string, Manatsu[]> = new Map();
 
@@ -233,13 +235,13 @@ class TWFarm {
              * É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
              */
             const attackHistory = await Store.get(Keys.alreadyPlundered) as string[] ?? [];
-            const alreadyPlunderedVillages: Set<string> = new Set(attackHistory);
+            const alreadyPlundered: Set<string> = new Set(attackHistory);
     
             /** Ajuda a controlar o MutationObserver. */
             const infoEventTarget = new EventTarget();
     
-            /** Adiciona informações úteis às tags HTML originais da página. */
-            const addInfo = async () => {
+            /** Salva informações úteis a respeito de cada aldeia da tabela. */
+            const getInfo = () => {
                 // Desconecta qualquer observer que esteja ativo.
                 infoEventTarget.dispatchEvent(new Event('stopinfoobserver'));
 
@@ -252,40 +254,25 @@ class TWFarm {
                             villageID = villageID.replace(/\D/g, '');
 
                             // Salva a aldeia na lista de aldeias já atacadas.
-                            alreadyPlunderedVillages.add(villageID);
+                            alreadyPlundered.add(villageID);
 
+                            // Armazena as informações sobre a aldeia.
+                            const info = new PlunderVillageInfo();
+
+                            // Facilita o acesso ao id da aldeia.
                             row.setAttribute('insidious-village', villageID);
-                            // Esse atributo é utilizado pela função sendAttack() do Plunder.
-                            // É selecionando ele que o Plunder tem acesso às linhas da tabela.
-                            row.setAttribute('insidious-tr-farm', 'true');
-
-                            // Relatório.
-                            const reportLink = row.querySelector('td a[href*="screen=report" i]');
-                            if (!reportLink) throw new InsidiousError(`Não foi possível encontrar o link do relatório (${villageID}).`);
-                            reportLink.setAttribute('insidious-td-type', 'report');
-                            
+               
                             // Data do último ataque.
-                            /**
-                             * Vasculha as células da linha até encontrar a que contém a data.
-                             * @returns A célula com a data do último ataque.
-                             */
-                            const findDateField = (): HTMLTableCellElement | null => {
-                                const fields = row.querySelectorAll('td');
-                                for (const field of Array.from(fields)) {
-                                    if (!field.textContent) continue;
-                                    const date = this.decipherPlunderListDate(field.textContent);
-                                    if (!date) continue;
+                            const fields = row.querySelectorAll('td');
+                            for (const field of Array.from(fields)) {
+                                if (!field.textContent) continue;
+                                const date = this.decipherPlunderListDate(field.textContent);
+                                if (!date) continue;
 
-                                    row.setAttribute('insidious-date', String(date));
-                                    return field;
-                                };
-
-                                return null;
+                                info.last_attack = date;
                             };
 
-                            const lastBattleDate = findDateField();
-                            if (!lastBattleDate) throw new InsidiousError(`Não foi possível encontrar o campo com a data do último ataque (${villageID}).`);
-                            lastBattleDate.setAttribute('insidious-td-type', 'date');
+                            if (!info.last_attack) throw new InsidiousError(`Não foi possível determinar a data do último ataque (${villageID}).`);
         
                             // Quantidade de recursos.
                             const findResourcesField = (): HTMLElement | null => {
@@ -296,24 +283,24 @@ class TWFarm {
                                     const ironField = field.querySelector('span span[class*="iron"] + span');
                                     if (!woodField || !stoneField || !ironField) continue;
 
-                                    let totalAmount: number = 0;
                                     [woodField, stoneField, ironField].forEach((resField) => {
-                                        let resAmount: string | null = resField.textContent;
-                                        if (resAmount === null) throw new InsidiousError(`Os campos de recursos foram encontrados, mas estão vazios (${villageID}).`);
+                                        let resAmount = resField.textContent;
+                                        if (!resAmount) throw new InsidiousError(`A quantidade de recursos é inválida (${villageID}).`);
                                         resAmount = resAmount.replace(/\D/g, '');
 
                                         // Adiciona o valor à quantia total.
                                         const parsedResAmount = Number.parseInt(resAmount, 10);
                                         if (!Number.isNaN(parsedResAmount)) {
-                                            totalAmount += parsedResAmount;
+                                            info.total += parsedResAmount;
                                         } else {
-                                            throw new InsidiousError(`A quantia de recursos calculada não é válida (${villageID}).`);
+                                            throw new InsidiousError(`A quantidade de recursos calculada não é válida (${villageID}).`);
                                         };
 
-                                        // A coerção é possível pois a existência já foi verificada ao usar querySelector com o seletor "+".
-                                        let resType = resField.previousElementSibling!.getAttribute('class') as string;
+                                        // A coerção é possível pois a existência já foi verificada ao usar querySelector com "+".
+                                        const className = resField.previousElementSibling!.getAttribute('class') as string;
+                                        let resType!: ResourceList;
                                         const resName = Assets.list.resources.some((name) => {
-                                            if (resType.includes(name)) {
+                                            if (className.includes(name)) {
                                                 resType = name;
                                                 return true;
                                             };
@@ -322,20 +309,14 @@ class TWFarm {
                                         });
 
                                         if (resName === false) throw new InsidiousError(`Não foi possível determinar o tipo de recurso (${villageID}).`);
-                                        row.setAttribute(`insidious-${resType}`, resAmount);  
+                                        info[resType] = parsedResAmount;
                                     });
 
-                                    field.setAttribute('insidious-td-type', 'resources');
-                                    row.setAttribute('insidious-resources', String(totalAmount));
-
                                     // Indica que exploradores obtiveram informações sobre a aldeia.
-                                    row.setAttribute('insidious-spy-status', 'true');
+                                    info.spy_status = true;
                                     return field;
                                 };
                           
-                                // Caso não hajam informações de exploradores, marca com os atributos adequados.
-                                row.setAttribute('insidious-resources', 'unknown');
-                                row.setAttribute('insidious-spy-status', 'false');
                                 return null;
                             };
 
@@ -347,15 +328,12 @@ class TWFarm {
                                 if (!wallLevelField) throw new InsidiousError(`O campo com o nível da muralha não foi encontrado (${villageID}).`);
 
                                 // Verifica se o elemento irmão ao de recursos realmente descreve o nível da muralha.
-                                let wallLevel: string | null = wallLevelField.textContent;
-                                if (wallLevel !== null) {
-                                    const parsed = Number.parseInt(wallLevel, 10);
-                                    if (!Number.isInteger(parsed)) {
+                                const wallLevel = wallLevelField.textContent?.replace(/\D/g, '');
+                                if (wallLevel) {
+                                    info.wall = Number.parseInt(wallLevel, 10) as WallLevel;
+                                    if (!Number.isInteger(info.wall)) {
                                         throw new InsidiousError(`O valor encontrado não corresponde ao nível da muralha (${villageID}).`);
                                     };
-
-                                    row.setAttribute('insidious-wall', wallLevel);
-                                    wallLevelField.setAttribute('insidious-td-type', 'wall');
                                 } else {
                                     throw new InsidiousError(`O nível da muralha não foi encontrado (${villageID}).`);
                                 };
@@ -363,39 +341,29 @@ class TWFarm {
 
                             // Não pode haver emissão de erro caso os botões não forem encontrados.
                             // Isso porquê eles naturalmente não estarão presentes caso não haja modelo registrado.
-                            // A
-                            const aFarmBtn = row.querySelector('td a[class*="farm_icon_a" i]:not([class*="disabled" i])');
-                            if (aFarmBtn) aFarmBtn.setAttribute('insidious-farm-btn', `a_${villageID}`);
-                                    
-                            // B
-                            const bFarmBtn = row.querySelector('td a[class*="farm_icon_b" i]:not([class*="disabled" i])');
-                            if (bFarmBtn) bFarmBtn.setAttribute('insidious-farm-btn', `b_${villageID}`);
+                            info.a_button = row.querySelector('td a[class*="farm_icon_a" i]:not([class*="disabled" i])');      
+                            info.b_button = row.querySelector('td a[class*="farm_icon_b" i]:not([class*="disabled" i])');
         
                             // C
-                            const cFarmBtn = row.querySelector('td a[class*="farm_icon_c" i][onclick]');
-                            if (cFarmBtn) {
-                                cFarmBtn.setAttribute('insidious-farm-btn', `c_${villageID}`);
-
+                            info.c_button = row.querySelector('td a[class*="farm_icon_c" i][onclick]');
+                            if (info.c_button) {
                                 // Verifica o status do botão C.
-                                const cFarmBtnStatus = cFarmBtn.getAttribute('class');
-                                if (cFarmBtnStatus?.includes('disabled')) {
-                                    row.setAttribute('insidious-c-btn', 'off');
-                                } else {
-                                    row.setAttribute('insidious-c-btn', 'on');
-                                };
+                                const cFarmBtnStatus = info.c_button.getAttribute('class');
+                                if (!(cFarmBtnStatus?.includes('disabled'))) info.c_status = true;
                             };
 
                             // Praça de reunião.
-                            const placeButton = row.querySelector('td a[href*="screen=place" i][onclick]');
-                            if (!placeButton) throw new InsidiousError(`O botão para praça de reunião não foi encontrado. ${villageID}`);
-                            placeButton.setAttribute('insidious-td-type', 'place');
-                            placeButton.setAttribute('insidious-place-btn', `place_${villageID}`);
+                            info.place = row.querySelector('td a[href*="screen=place" i][onclick]');
+                            if (!info.place) throw new InsidiousError(`O botão para praça de reunião não foi encontrado. ${villageID}`);
+
+                            // Armazena os dados obtidos.
+                            TWFarm.village_info.set(villageID, info);
                         };
                     };
 
                     // Se novas aldeias foram encontradas, salva-as no banco de dados.
-                    if (alreadyPlunderedVillages.size > attackHistory.length) {
-                        Store.set({ [Keys.alreadyPlundered]: Array.from(alreadyPlunderedVillages) })
+                    if (alreadyPlundered.size > attackHistory.length) {
+                        Store.set({ [Keys.alreadyPlundered]: Array.from(alreadyPlundered) })
                             .catch((err: unknown) => InsidiousError.handle(err));
                     };
 
@@ -408,7 +376,7 @@ class TWFarm {
                 if (!plunderList) throw new InsidiousError('DOM: table#plunder_list.');
 
                 // Dispara a função novamente caso surjam alterações na tabela.
-                const observeTable = new MutationObserver(() => addInfo());
+                const observeTable = new MutationObserver(() => getInfo());
                 observeTable.observe(plunderList, { subtree: true, childList: true });
     
                 // Caso a função seja chamada novamente, desconecta o observer ativo.
@@ -419,8 +387,8 @@ class TWFarm {
                 }, { signal: farmTableCtrl.signal });
             };
     
-            // Inicia a adição dos dados.
-            await addInfo();
+            // Inicia a obtenção dos dados.
+            getInfo();
 
         } catch (err) {
             InsidiousError.handle(err);

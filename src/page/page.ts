@@ -9,6 +9,10 @@ class PageScript {
 
         const insidious = document.createElement('insidious');
         document.head.appendChild(insidious);
+
+        // Diferença entre a hora local e a do servidor.
+        const time_diff = Timing.getCurrentServerTime() - Date.now();
+        insidious.setAttribute('time_diff', String(time_diff));
     };
 
     private static handleMessage(reason: WindowMessageReason) {

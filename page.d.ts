@@ -180,3 +180,20 @@ declare namespace Market.Data {
     const Res: ResourceAmount;
     const Trader: MarketTrader;
 }
+
+declare namespace Accountmanager.farm {
+    const current_units: {
+        [index in UnitListWithArchers | 'militia']: string;
+    };
+
+    const extended: boolean;
+    const hide_attacked: boolean;
+    const last_click: number;
+    const page: number;
+    const page_size: number;
+    const plunders_exhausted: boolean;
+    const should_update_queue: boolean;
+    const waiting_for_display_queue_load: boolean;
+
+    function init(): void;
+}

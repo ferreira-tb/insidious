@@ -20,29 +20,31 @@ class ConfirmScreenCommandDetails implements AvailableUnits {
     #slowest_speed: number = 0;
     /** Tempo de viagem em milisegundos. */
     readonly travel_time: number;
+    /** Diferença entre a hora local e a do servidor. */
+    readonly time_diff: number;
 
     /** Cria um objeto com informações sobre o comando sendo enviado no momento. */
     constructor() {
         // Linha com a quantidade de cada unidade.
-        const unitsRow = document.querySelector('table#place_confirm_units tr.units-row');
-        if (!unitsRow) throw new InsidiousError('DOM: table#place_confirm_units tr.units-row');
+        const units_row = document.querySelector('table#place_confirm_units tr.units-row');
+        if (!units_row) throw new InsidiousError('DOM: table#place_confirm_units tr.units-row');
 
-        const unitFields = Array.from(unitsRow.querySelectorAll('td.unit-item'));
+        const units_fields = Array.from(units_row.querySelectorAll('td.unit-item'));
         Assets.list.all_units_archer.forEach((unit) => {
-            unitFields.some((field) => {
-                const className = field.getAttribute('class');
-                if (className?.includes(unit)) {
-                    const unitAmount = field.textContent?.trim();
-                    if (!unitAmount) {
+            units_fields.some((field) => {
+                const class_name = field.getAttribute('class');
+                if (class_name?.includes(unit)) {
+                    const unit_amount = field.textContent?.trim();
+                    if (!unit_amount) {
                         throw new InsidiousError(`Não foi possível determinar a quantidade de unidades (${unit})`);
                     };
 
-                    this[unit] = Number.parseInt(unitAmount, 10);
+                    this[unit] = Number.parseInt(unit_amount, 10);
                     if (Number.isNaN(this[unit])) throw new InsidiousError(`A quantidade de unidades é inválida ${unit}`);
 
-                    const unitSpeed = Game.unitInfo[unit].speed;
-                    if (unitSpeed > this.#slowest_speed && this[unit] > 0) {
-                        this.#slowest_speed = unitSpeed;
+                    const unit_speed = Game.unitInfo[unit].speed;
+                    if (unit_speed > this.#slowest_speed && this[unit] > 0) {
+                        this.#slowest_speed = unit_speed;
                     };
 
                     return true;
@@ -68,9 +70,19 @@ class ConfirmScreenCommandDetails implements AvailableUnits {
         const coords = targetCoords[0].split('\|').map(value => Number.parseInt(value, 10));
         this.distance = Utils.calcDistance(Game.x, Game.y, coords[0], coords[1]);
 
+        // Tempo de viagem até o alvo.
         const worldUnitSpeed = Game.worldInfo.unit_speed;
         const millisecondsPerField = 60000 * (this.#slowest_speed * worldUnitSpeed);
         this.travel_time = millisecondsPerField * this.distance;
+
+        // Diferença entre a hora local e a do servidor.
+        const insidious = document.head.querySelector('insidious') as HTMLElement;
+        const raw_time_diff = insidious.getAttribute('time_diff') as string;
+        this.time_diff = Number.parseInt(raw_time_diff, 10);
+
+        if (Number.isNaN(this.time_diff)) {
+            throw new InsidiousError('Não foi possível determinar a diferença entre a hora local e a do servidor.');
+        };
     };
 };
 

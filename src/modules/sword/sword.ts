@@ -60,8 +60,10 @@ class TWSword {
                 attack.toggle_schedule.textContent = 'Cancelar';
 
                 // Tempo, em milisegundos, até o envio do ataque.
-                const travel = Date.now() + this.confirm_screen.travel_time - Game.offset_from_server;
-                const timeUntil = Date.parse(attack.date_input.value) - travel;
+                const parsedDate = Date.parse(attack.date_input.value);
+                const arrivalTime = Date.now() + this.confirm_screen.travel_time + this.confirm_screen.time_diff;
+                const timeUntil = parsedDate - arrivalTime;
+
                 if (timeUntil <= 0) {
                     this.waiting_schedule = false;
                     attack.toggle_schedule.textContent = 'OK';
