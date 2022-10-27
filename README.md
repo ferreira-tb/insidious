@@ -16,7 +16,7 @@ Ao contrário de algumas outras ferramentas que existem mundo afora, Insidious t
     - Derruba muralhas.
 
 - Ataque e apoio:
-    - Envia ataque ou apoio para chegar no horário indicado.
+    - Envia ataque ou apoio que chega no horário indicado (experimental).
     - Etiqueta automaticamente.
 
 - Relatórios:
