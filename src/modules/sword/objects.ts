@@ -26,25 +26,25 @@ class ConfirmScreenCommandDetails implements AvailableUnits {
     /** Cria um objeto com informações sobre o comando sendo enviado no momento. */
     constructor() {
         // Linha com a quantidade de cada unidade.
-        const units_row = document.querySelector('table#place_confirm_units tr.units-row');
-        if (!units_row) throw new InsidiousError('DOM: table#place_confirm_units tr.units-row');
+        const unitsRow = document.querySelector('table#place_confirm_units tr.units-row');
+        if (!unitsRow) throw new InsidiousError('DOM: table#place_confirm_units tr.units-row');
 
-        const units_fields = Array.from(units_row.querySelectorAll('td.unit-item'));
+        const unitsFields = Array.from(unitsRow.querySelectorAll('td.unit-item'));
         Assets.list.all_units_archer.forEach((unit) => {
-            units_fields.some((field) => {
-                const class_name = field.getAttribute('class');
-                if (class_name?.includes(unit)) {
-                    const unit_amount = field.textContent?.trim();
-                    if (!unit_amount) {
+            unitsFields.some((field) => {
+                const className = field.getAttribute('class');
+                if (className?.includes(unit)) {
+                    const unitAmount = field.textContent?.trim();
+                    if (!unitAmount) {
                         throw new InsidiousError(`Não foi possível determinar a quantidade de unidades (${unit})`);
                     };
 
-                    this[unit] = Number.parseInt(unit_amount, 10);
+                    this[unit] = Number.parseInt(unitAmount, 10);
                     if (Number.isNaN(this[unit])) throw new InsidiousError(`A quantidade de unidades é inválida ${unit}`);
 
-                    const unit_speed = Game.unitInfo[unit].speed;
-                    if (unit_speed > this.#slowest_speed && this[unit] > 0) {
-                        this.#slowest_speed = unit_speed;
+                    const unitSpeed = Game.unitInfo[unit].speed;
+                    if (unitSpeed > this.#slowest_speed && this[unit] > 0) {
+                        this.#slowest_speed = unitSpeed;
                     };
 
                     return true;

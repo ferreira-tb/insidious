@@ -12,7 +12,7 @@ class Insidious {
             await Game.setWorldConfig();
 
             // Define o mundo atual como ativo e o registra como sendo o último acessado.
-            if (Game.screen === 'overview') await this.setAsActiveWorld();
+            this.setAsActiveWorld();
 
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
             await this.requestScript(Game.screen);
@@ -50,9 +50,8 @@ class Insidious {
                     // Não continua caso o mundo esteja em fase de pré-registro.
                     if (e.data.game_data.pregame === true) return reject();
 
-                    // Se o jogador não possuir conta premium, o Insidious é desativado.
+                    // Se o jogador não possuir conta premium, o Insidious não é iniciado.
                     if (e.data.premium === false) {
-                        await Store.set({ insidiousStatus: false });
                         this.warnAboutPremiumStatus();
                         reject();
 
@@ -77,9 +76,9 @@ class Insidious {
                 const sources = new SourceList();
                 const worldConfigData = await this.requestConfigData(sources);
 
-                await Promise.all(worldConfigData.map((config: WorldInfo | UnitInfo) => {
-                    if (config instanceof WorldInfo) return Store.set({ [Keys.config]: config }); 
-                    return Store.set({ [Keys.unit]: config });
+                await Promise.all(worldConfigData.map((info: WorldInfo | UnitInfo) => {
+                    if (info instanceof WorldInfo) return Store.set({ [Keys.config]: info });
+                    return Store.set({ [Keys.unit]: info });
                 }));
 
                 await Store.set({ [Keys.worldConfig]: true });
@@ -173,7 +172,7 @@ class Insidious {
     private static async setAsActiveWorld() {
         try {
             const activeWorlds = await Store.get(Keys.activeWorlds) as SNObject ?? { };
-            activeWorlds[Game.world] = Date.now();
+            Reflect.set(activeWorlds, Game.world, Date.now());
 
             await Store.set({ [Keys.activeWorlds]: activeWorlds });
             await Store.set({ [Keys.lastWorld]: Game.world });
@@ -185,16 +184,11 @@ class Insidious {
 
     /** Avisa ao jogador que não é possível utilizar o Insidious sem uma conta premium ativa.  */
     private static warnAboutPremiumStatus() {
-        Utils.createModal('Insidious', true);
-        const modalWindow = document.querySelector('#ins_modal');
-        if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
+        const serverInfo = document.querySelector('td.maincell > p.server_info');
+        if (!serverInfo) throw new InsidiousError('DOM: td.maincell > p.server_info');
 
-        const warningMessage = 'Não é possível utilizar o Insidious sem uma conta premium ativa.';
-        new Manatsu(modalWindow, { class: 'ins_modal_msg', text: warningMessage }).create();
-
-        const modalButtonArea = new Manatsu(modalWindow, { class: 'ins_modalButtonArea' }).create();
-        new Manatsu('button', { class: 'ins_modal_btn', text: 'OK' }, modalButtonArea).create()
-            .addEventListener('click', Utils.closeModal);
+        const warning = { text: 'Não é possível utilizar o Insidious sem uma conta premium ativa.' };
+        new Manatsu('span', warning).createBefore(serverInfo.firstChild);
     };
 
     /** Dados, ainda sem tratamento, obtidos diretamente do jogo. */

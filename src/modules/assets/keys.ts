@@ -48,6 +48,8 @@ class Keys {
     ////// JOGADOR
     /** CHAVE: opções da página do jogador. (playerOptions). */
     static readonly playerOptions = `playerOptions_${Game.world}`;
+    /** CHAVE: última unidade escolhida na opção "Mostrar tempo". */
+    static readonly playerTravelTime = `playerTravelTime_${Game.world}`;
 
     ////// SHIELD
     /** CHAVE: status atual do Shield (isShieldActive). */

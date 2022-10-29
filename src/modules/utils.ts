@@ -16,6 +16,24 @@ class Utils {
         return Math.sqrt(((destinationX - originX) ** 2) + ((destinationY - originY) ** 2));
     };
 
+    /** Cria uma string representando o tempo de viagem de uma unidade. */
+    static getFullHours(travelTime: number): string {
+        // É necessário usar Math.trunc(), pois toFixed() arredonda o número.
+        let hours = String(Math.trunc(travelTime / 3600000));
+        let remainder = travelTime % 3600000;
+        if (hours.length === 1) hours = hours.padStart(2, '0');
+
+        let minutes = String(Math.trunc(remainder / 60000));
+        remainder = remainder % 60000;
+        if (minutes.length === 1) minutes = minutes.padStart(2, '0');
+
+        // No entanto, no caso dos segundos, o arredondamento é desejado.
+        let seconds = (remainder / 1000).toFixed(0);
+        if (seconds.length === 1) seconds = seconds.padStart(2, '0');
+
+        return `${hours}:${minutes}:${seconds}`;
+    };
+
     /** Gera um número inteiro entre dois outros inteiros. */
     static generateIntegerBetween(min: number, max: number) {
         return Math.floor(Math.random() * (max - min) + min);

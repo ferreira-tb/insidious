@@ -149,7 +149,7 @@ type AssetsList = {
 
 type AssetsOptions = {
     plunder: (keyof PlunderOptions)[];
-    player_radio: PlayerOptions['radio_options'][];
+    player_radio: PlayerOptions['radio_option'][];
 };
 
 type AssetsMisc = {
@@ -238,5 +238,8 @@ type PremiumExchangeData = {
 
 ////// JOGADOR
 type PlayerOptions = {
-    radio_options: 'hide_all' | 'show_distance';
+    radio_option:
+        | 'hide_all'
+        | 'show_distance'
+        | 'show_time';
 };

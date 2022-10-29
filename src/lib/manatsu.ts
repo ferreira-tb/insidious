@@ -630,33 +630,33 @@ class Manatsu {
             if (!(referenceElement instanceof Element)) throw new ManatsuError('O elemento é inválido.');
  
             // Muda o comportamento da função de acordo com o tipo chamado.
-            const parent = type === 'child' ? referenceElement : referenceElement.parentElement;
-            if (!parent) throw new InsidiousError('O elemento não possui um pai.');
+            const element = type === 'child' ? referenceElement : referenceElement.parentElement;
+            if (!element) throw new InsidiousError('O elemento não possui um pai.');
 
             if (typeof selector === 'string' && Validation.isSelectorValid(selector)) {
-                const children = parent.querySelectorAll(selector);
+                const children = element.querySelectorAll(selector);
                 children.forEach((child: Element) => {
                     if (type === 'sibling' && child === referenceElement) return;
-                    parent.removeChild(child);
+                    child.parentElement?.removeChild(child);
                 });
 
             } else if (Array.isArray(selector)) {
                 for (const key of selector) {
                     if (typeof key !== 'string' || !Validation.isSelectorValid(key)) continue;
 
-                    const children = parent.querySelectorAll(key);
+                    const children = element.querySelectorAll(key);
                     children.forEach((child: Element) => {
                         if (type === 'sibling' && child === referenceElement) return;
-                        parent.removeChild(child);
+                        child.parentElement?.removeChild(child);
                     });
                 };
 
             } else if (type === 'child') {
-                while (parent.firstChild) parent.removeChild(parent.firstChild);
+                while (element.firstChild) element.removeChild(element.firstChild);
 
             } else if (type === 'sibling') {
-                while (referenceElement.previousElementSibling) parent.removeChild(referenceElement.previousElementSibling);
-                while (referenceElement.nextElementSibling) parent.removeChild(referenceElement.nextElementSibling);
+                while (referenceElement.previousElementSibling) element.removeChild(referenceElement.previousElementSibling);
+                while (referenceElement.nextElementSibling) element.removeChild(referenceElement.nextElementSibling);
             };
         };
     };
@@ -771,7 +771,7 @@ class Manatsu {
         };
     };
 
-    // É necessário trocar para um Proxy.
+    // É necessário trocar por um Proxy.
     set options(item: Option | null) {
         if (Validation.isOptionValid(item)) {
             this.#options = item;
@@ -835,7 +835,10 @@ class ManatsuError extends Error {
 HTMLElement.prototype.appendManatsu = function(...args: HTMLConstructorArgs): HTMLElement {
     // Se for houver um objeto Manatsu entre os argumentos, ele é usado e todos os outros são ignorados.
     for (const arg of args) {
-        if (arg instanceof Manatsu) return arg.create();
+        if (arg instanceof Manatsu) {
+            arg.parent = this;
+            return arg.create();
+        };
     };
 
     const newElement = new Manatsu(...args as ConstructorArgs);
