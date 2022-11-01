@@ -108,10 +108,21 @@ class Manatsu {
     };
 
     /**
+     * Cria um elemento a partir do objeto Manatsu e o adiciona como primeiro filho do elemento pai indicado.
+     * @returns Elemento criado.
+     */
+    public createAsFirstChild(): HTMLElement {
+        const newElement = this.#createElement();
+        if (this.#parent) this.#parent.prepend(newElement);
+
+        return newElement;
+    };
+
+    /**
      * Cria um elemento a partir do objeto Manatsu e o insere antes ou depois do elemento indicado como referência.
      * Se o elemento de referência for `null`, o método tem o mesmo efeito de `create()`.
      * Além disso, se o objeto Manatsu possuir um pai, ele é trocado pelo pai do elemento de referência.
-     * @param type Define se o elemento deve ser inserido antes ou depois do elemento de referência.
+     * @param type Define onde o elemento deve ser inserido.
      * @returns O elemento criado a partir do objeto Manatsu.
      */
     #createThere(type: ElementPosition) {

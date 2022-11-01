@@ -13,13 +13,12 @@ class TWShield {
             if (Date.now() - shieldStatus.date > 60000 * 3) shieldStatus = await this.resetShieldStatus();
 
             if (this.isOverviewIncomingsScreen(location.search)) {
-                if (shieldStatus.next === null) return;
+                const next = shieldStatus.next;
+                if (!next) return;
 
-                if (shieldStatus.next === 'group') {
-                    // Caso o grupo já seja "todos", ele executará o mesmo switch existente no próximo IF.
-                    await this.switchToDefaultGroup();
+                if (next === 'group' || next === 'rename') {
+                    if (next === 'group') await this.switchToDefaultGroup();
 
-                } else if (shieldStatus.next === 'rename') {
                     // this.wereAllRenamed() só pode ser chamado dentro da janela de ataques a caminho.
                     // Do contrário, a ausência da tabela de ataques causará a emissão de um erro.
                     // Se o grupo atual não for "todos", também há a possibilidade de a tabela estar ausente.
@@ -31,7 +30,7 @@ class TWShield {
                             break;
                     };
 
-                } else if (shieldStatus.next === 'go_back') {
+                } else if (next === 'go_back') {
                     // Após renomear os ataques, verifica se deve voltar para a página anterior.
                     const shieldNavigation = await Store.get(Keys.shieldNavigation) as ShieldNavigation | undefined;
                     if (shieldNavigation?.go_back === true) await this.goBackToPreviousScreen(shieldNavigation);
@@ -368,18 +367,13 @@ class TWShield {
         await Store.set({ [Keys.shieldStatus]: shieldStatus });
 
         if (Game.group !== '0') {
-            switch (location.href.includes('group=')) {
-                case true: return location.assign(location.href.replace(`&group=${Game.group}`, '&group=0'));
-                case false: return location.assign(`${location.href}&group=0`);
+            if (location.href.includes('group=')) {
+                location.assign(location.href.replace(`&group=${Game.group}`, '&group=0'));
+            } else {
+                location.assign(`${location.href}&group=0`);
             };
 
-        } else {
-            switch (this.wereAllRenamed()) {
-                case true: await this.resetShieldStatus();
-                    break;
-                case false: await this.renameAttacks();
-                    break;
-            };
+            await Utils.wait(1000);
         };
     };
 

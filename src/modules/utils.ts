@@ -57,11 +57,10 @@ class Utils {
 
     /** Cria um breve atraso tendo como base o tempo de resposta do servidor. */
     static wait(extra?: number) {
-        if (extra && Number.isInteger(extra)) {
-            return new Promise((stopWaiting) => setTimeout(stopWaiting, this.responseTime + extra));
-        } else {
-            return new Promise((stopWaiting) => setTimeout(stopWaiting, this.responseTime));
-        };
+        let time = this.responseTime;
+        if (extra && Number.isInteger(extra)) time += extra;
+        
+        return new Promise((resolve) => setTimeout(resolve, time));
     };
 
     /**

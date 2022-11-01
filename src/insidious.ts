@@ -193,5 +193,5 @@ class Insidious {
 
     /** Dados, ainda sem tratamento, obtidos diretamente do jogo. */
     static #raw_game_data: TribalWarsGameData;
-    static get raw_game_data() {return this.#raw_game_data};
+    static get raw_game_data() { return this.#raw_game_data };
 };

@@ -226,16 +226,6 @@ type MerchantAmount = {
     carry: number | null;
 };
 
-type PremiumExchangeData = {
-    constants: typeof PremiumExchange.data.constants | null;
-    rates: typeof PremiumExchange.data.rates | null;
-    tax: typeof PremiumExchange.data.tax | null;
-
-    average_wood_rate: [number, string][] | null;
-    average_stone_rate: [number, string][] | null;
-    average_iron_rate: [number, string][] | null;
-};
-
 ////// JOGADOR
 type PlayerOptions = {
     radio_option:

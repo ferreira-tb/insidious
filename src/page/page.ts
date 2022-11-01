@@ -62,20 +62,8 @@ class TribalWarsGameData {
 
     ////// NÃO DISPONÍVEIS GLOBALMENTE
     // Market
-    readonly trader_amount = window.Market?.Data.Trader.amount ?? null;
-    readonly trader_carry = window.Market?.Data.Trader.carry ?? null;
-    readonly trader_total = window.Market?.Data.Trader.total ?? null;
-
-    // PremiumExchange
-    readonly premium_exchange: PremiumExchangeData = {
-        constants: window.PremiumExchange?.data.constants ?? null,
-        rates: window.PremiumExchange?.data.rates ?? null,
-        tax: window.PremiumExchange?.data.tax ?? null,
-
-        average_wood_rate: null,
-        average_stone_rate: null,
-        average_iron_rate: null
-    };
+    readonly trader_amount = window.Market?.Data.Trader.amount;
+    readonly trader_carry = window.Market?.Data.Trader.carry;
 
     constructor() {
         const game_data = TribalWars.getGameData();
@@ -97,23 +85,6 @@ class TribalWarsGameData {
         this.version = game_data.version;
         this.village = game_data.village;
         this.world = game_data.world;
-
-        if (window.PremiumExchange) {
-            for (const resource of window.PremiumExchange.graph.data) {
-                switch (resource.label) {
-                    case 'Madeira':
-                        this.premium_exchange.average_wood_rate = resource.data;
-                        break;
-                    case 'Argila':
-                        this.premium_exchange.average_stone_rate = resource.data;
-                        break;
-                    case 'Ferro':
-                        this.premium_exchange.average_iron_rate = resource.data;
-                        break;
-                    default: throw new Error('Não foi possível obter o histórico da Troca Premium.');
-                };
-            };
-        };
     };
 };
 
