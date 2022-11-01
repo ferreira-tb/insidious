@@ -6,7 +6,7 @@ Insidious é destinado para uso apenas no Mozilla Firefox (versão 105 ou superi
 
 Sendo assim, para usá-lo, é preciso ativar manualmente o suporte ao Manifest V3 nas configurações do navegador. Para fazer isso, acesse `about:config` e então altere o valor de `extensions.manifestV3.enabled` para `true`. Se quiser saber mais detalhes, acesse o [guia da Mozilla sobre o Manifest V3](https://extensionworkshop.com/documentation/develop/manifest-v3-migration-guide/).
 
-Em seguida, faça download da [release](https://github.com/ferreira-tb/insidious/releases) mais recente do Insidious e então instale como extensão temporária acessando `about:debugging` em seu Firefox. *Observação: no momento, ainda não há release estável disponível. A primeira versão beta será publicada em 01 de novembro de 2022.*
+Em seguida, faça download da [release](https://github.com/ferreira-tb/insidious/releases) mais recente do Insidious e então instale como extensão temporária acessando `about:debugging` em seu Firefox. *Observação: no momento, ainda não há release estável disponível.*
 
 Insidious tem código aberto e é distribuído gratuitamente. Ajude no desenvolvimento enviando **feedback** sobre a extensão. Se encontrar bugs, tiver alguma sugestão ou simplesmente estiver com dúvida sobre algo, crie uma [issue](https://github.com/ferreira-tb/insidious/issues) aqui no repositório.
 
