@@ -26,6 +26,12 @@ class TWMarket {
     };
 
     private static async balanceResourcesCreatingOffers() {
+        // Retorna caso não existam mercadores disponíveis.
+        if (this.status.trader_amount === 0) {
+            const message = new UIMessage('Não há mercadores disponíveis.', 'error');
+            return Insidious.showUIMessage(message);
+        };
+
         await Insidious.updateGameData();
         const resources = new OwnMarketOffers();
 
@@ -65,10 +71,12 @@ class TWMarket {
 
         // Quantidade de ofertas que serão criadas.
         let amount = Math.floor(diffSurplusToMean / this.status.trader_carry);
+        // Ajusta caso a quantidade de ofertas seja maior do que o número de mercadores disponíveis.
         if (amount > this.status.trader_amount) amount = this.status.trader_amount;
+        // Não cria ofertas caso a diferença entre o excesso e a média seja muito pequena.
         if (amount < 1) amount = 0;
 
-        // Impede que o recurso em escassez supere a mediana.
+        // Impede que o recurso em escassez supere a média.
         const updatedShortageAmount = () => (amount * this.status.trader_carry) + resources.shortage.amount;
         while (updatedShortageAmount() > resources.mean) amount--;
 

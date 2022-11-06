@@ -17,10 +17,8 @@ class PageScript {
 
     private static handleMessage(data: WindowMessageFromInsidious) {
         switch (data.reason) {
-            case 'get-game-data': PageScript.postGameData()
-                break;
-            case 'ui-message': PageScript.showUIMessage(data.message);
-                break;
+            case 'get-game-data': return PageScript.postGameData()
+            case 'ui-message': return PageScript.showUIMessage(data.message);
         };
     };
 

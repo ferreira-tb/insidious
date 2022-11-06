@@ -17,6 +17,9 @@ Em seguida, faça download da [release](https://github.com/ferreira-tb/insidious
     - Envia ataque ou apoio que chega no horário indicado (experimental).
     - Etiqueta automaticamente.
 
+- Mercado:
+    - Cria ofertas para balancear os recursos da aldeia.
+
 - Relatórios:
     - Exibe a quantidade de lealdade atual da aldeia-alvo, com base no último valor conhecido.
 

@@ -127,7 +127,7 @@ class TWFarm {
 
             const optionsCtrl = new AbortController();
 
-            Assets.options.plunder.forEach((option) => {
+            Assets.options.plunder_checkbox.forEach((option) => {
                 const checkbox = modalWindow.querySelector(`#ins_${option}`) as HTMLInputElement;
                 if (Plunder.options[option] === true) checkbox.checked = true;
 
@@ -339,6 +339,7 @@ class TWFarm {
                                     if (!Number.isInteger(info.wall)) {
                                         throw new InsidiousError(`O valor encontrado não corresponde ao nível da muralha (${villageID}).`);
                                     };
+                                    
                                 } else {
                                     throw new InsidiousError(`O nível da muralha não foi encontrado (${villageID}).`);
                                 };
@@ -401,7 +402,7 @@ class TWFarm {
     };
 
     private static createOptions() {
-        Assets.options.plunder.forEach((option) => {
+        Assets.options.plunder_checkbox.forEach((option) => {
             let label: string;
             switch (option) {
                 case 'group_attack': label = 'Usar grupo';

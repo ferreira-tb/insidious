@@ -25,6 +25,37 @@ class MarketStatus {
     };
 };
 
+class MarketIncomingResources extends ResourceAmount {
+    constructor() {
+        super();
+
+        const selector = 'div#market_status_bar table th';
+        const incomingField = Manatsu.getElementByTextContent('Entrada', selector, false, false);
+        if (!incomingField) return;
+
+        const spanElements = Array.from(incomingField.children);
+        for (const span of spanElements) {
+            const iconClass = span.querySelector('span.icon[data-title]')?.getAttribute('class');
+            if (!iconClass) continue;
+
+            const content = span.textContent?.replace(/\D/g, '');
+            if (!content) continue;
+
+            const resType = () => {
+                for (const res of Assets.list.resources) {
+                    if (iconClass.includes(res)) return res;
+                };
+
+                throw new InsidiousError('Não foi possível determinar o tipo de recurso a caminho.');
+            };
+
+            const amount = Number.parseInt(content, 10);
+            if (Number.isNaN(amount)) throw new InsidiousError('A quantidade de recursos a caminho é inválida.');
+            this[resType()] = amount;
+        };
+    };
+};
+
 class OwnMarketOffers implements ResourceRatio {
     readonly wood!: number;
     readonly stone!: number;
@@ -37,8 +68,8 @@ class OwnMarketOffers implements ResourceRatio {
     readonly shortage!: ResourceNameAndAmount;
     
     constructor() {
-        // Recursos procurados.
-        const wantedResources = new ResourceAmount();
+        // MarketIncomingResources estende ResourceAmount e inclui os recursos a caminho da aldeia.
+        const wantedResources = new MarketIncomingResources();
 
         const selector = '#own_offers_table tr.offer_container[id^="offer_"]';
         const ownOffersRows = Array.from(document.querySelectorAll(selector)) as HTMLTableRowElement[];

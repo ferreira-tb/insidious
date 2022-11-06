@@ -153,7 +153,7 @@ type AssetsList = {
 };
 
 type AssetsOptions = {
-    plunder: (keyof PlunderOptions)[];
+    plunder_checkbox: (keyof PlunderOptions)[];
     player_radio: PlayerOptions['radio_option'][];
 };
 
