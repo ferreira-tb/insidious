@@ -59,7 +59,7 @@ class TWReport {
                 const month = field.replace(/\W/g, '').slice(0, 3) as Months;
                 if (!month || !Assets.misc.months.includes(month)) throw new InsidiousError('O mês obtido é inválido.');
 
-                // No método setFullYear() é usado índice zero para meses.
+                // Date.prototype.setFullYear() usa índice zero para os meses.
                 return Assets.misc.months.indexOf(month);
 
             } else if (index === 3) {

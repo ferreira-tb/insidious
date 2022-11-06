@@ -54,8 +54,23 @@ class UnitInfo {
 class Bridge implements WindowMessage {
     readonly direction = 'from-insidious';
     readonly reason: WindowMessageReason;
+    readonly message?: UIMessage;
 
-    constructor(reason: WindowMessageReason) {
+    constructor(reason: WindowMessageReason, ...args: unknown[]) {
         this.reason = reason;
+
+        for (const arg of args) {
+            if (arg instanceof UIMessage) this.message = arg;
+        };
+    };
+};
+
+class UIMessage {
+    readonly type: UIMessageType;
+    readonly content: string;
+
+    constructor(content: string, type: UIMessageType = 'success') {
+        this.content = content;
+        this.type = type;
     };
 };

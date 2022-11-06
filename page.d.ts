@@ -203,3 +203,9 @@ declare namespace InfoPlayer {
 
     function init(): void;
 }
+
+declare namespace UI {
+    function ErrorMessage(message: string): void;
+    function InfoMessage(message: string): void;
+    function SuccessMessage(message: string): void;
+}

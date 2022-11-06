@@ -2,7 +2,7 @@ class PageScript {
     static start() {
         window.addEventListener('message', (e) => {
             if (e?.data?.direction === 'from-insidious') {
-                PageScript.handleMessage(e.data.reason);
+                PageScript.handleMessage(e.data as WindowMessageFromInsidious);
                 return;
             };
         });
@@ -15,9 +15,11 @@ class PageScript {
         insidious.setAttribute('time_diff', String(time_diff));
     };
 
-    private static handleMessage(reason: WindowMessageReason) {
-        switch (reason) {
+    private static handleMessage(data: WindowMessageFromInsidious) {
+        switch (data.reason) {
             case 'get-game-data': PageScript.postGameData()
+                break;
+            case 'ui-message': PageScript.showUIMessage(data.message);
                 break;
         };
     };
@@ -30,6 +32,21 @@ class PageScript {
         };
 
         window.postMessage(message);
+    };
+
+    private static showUIMessage(message?: UIMessage) {
+        if (!message) return PageScript.handleError('showUIMessage');
+
+        switch (message.type) {
+            case 'error': return UI.ErrorMessage(message.content);
+            case 'info': return UI.InfoMessage(message.content);
+            case 'success': return UI.SuccessMessage(message.content);
+        };
+    };
+
+    private static handleError(err: string | Error) {
+        const message = typeof err === 'string' ? err : err.message;
+        UI.ErrorMessage(`PAGESCRIPT ERROR: ${message}.`);
     };
 };
 

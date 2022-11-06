@@ -732,8 +732,8 @@ class Plunder {
                 if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
 
                 const warningMessages = [
-                    'Não é possível atacar com o Insidious enquanto a opção \"incluir relatórios de aldeias ' +
-                    'que você está atacando\" estiver ativada.',
+                    'Não é possível atacar enquanto a opção \"incluir relatórios de aldeias ' +
+                    'que você está atacando\" estiver ativa.',
                     'Deseja desativá-la?',
                     'Em caso negativo, o Insidious será encerrado.'
                 ];

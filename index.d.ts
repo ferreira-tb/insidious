@@ -70,7 +70,9 @@ type WindowMessageDirection =
     | 'from-insidious' 
     | 'from-tribalwars';
     
-type WindowMessageReason = 'get-game-data';
+type WindowMessageReason = 
+    | 'get-game-data'
+    | 'ui-message';
 
 interface WindowMessage {
     direction: WindowMessageDirection;
@@ -80,6 +82,12 @@ interface WindowMessage {
 interface WindowMessageFromPage extends WindowMessage {
     game_data?: TribalWarsGameData;
     premium?: boolean;
+}
+
+type UIMessageType = 'error' | 'info' | 'success';
+
+interface WindowMessageFromInsidious extends WindowMessage {
+    message?: UIMessage;
 }
 
 /** Histórico de navegação entre páginas do jogo. */
@@ -93,9 +101,6 @@ type NavigationHistory = {
     /** Indica se o Insidious deve ou não redirecionar o usuário de volta para a página na qual estava. */
     go_back: boolean;
 };
-
-/** Quantia de recursos. */
-type ResourceAmount = { [index in ResourceList]: number };
 
 /** Edifícios. */
 type BuildingName = keyof Buildings;
@@ -154,6 +159,14 @@ type AssetsOptions = {
 
 type AssetsMisc = {
     months: Months[];
+};
+
+type ResourcesObjectProperties =
+    | ResourceList
+    | 'storage_max';
+
+type ResourcesObject = {
+    [index in ResourcesObjectProperties]: number;
 };
 
 ////// UTILS
@@ -217,13 +230,6 @@ type ShieldOperations = null | 'redirect' | 'group' | 'rename' | 'go_back';
 ////// PLACE
 type AvailableUnits = {
     [index in UnitListWithArchers]: number;
-};
-
-////// MERCADO
-type MerchantAmount = {
-    available: number | null;
-    total: number | null;
-    carry: number | null;
 };
 
 ////// JOGADOR

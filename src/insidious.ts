@@ -67,6 +67,12 @@ class Insidious {
         });
     };
 
+    /** Exibe uma notificação usando função nativa do jogo. */
+    static showUIMessage(message: UIMessage) {
+        const bridge = new Bridge('ui-message', message);
+        window.postMessage(bridge);
+    };
+
     private static async fetchWorldConfig() {
         try {
             // Verifica se as configurações do mundo atual foram salvas.
