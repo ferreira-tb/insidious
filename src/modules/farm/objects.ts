@@ -34,11 +34,18 @@ class PlunderStatus {
     get firstAttack() { return this.#firstAttack };
 };
 
+class PlunderData {
+    readonly current_units = Plunder.raw_plunder_data.current_units;
+    readonly hide_attacked = Plunder.raw_plunder_data.hide_attacked;
+    readonly page = Plunder.raw_plunder_data.page;
+    readonly page_size = Plunder.raw_plunder_data.page_size;
+};
+
 class PlunderButtons {
     /** Seções do menu do Plunder. */
-    readonly section: SHTMLObject = { };
+    readonly section: StandardObject<HTMLElement> = { };
     /** Botões do Plunder. */
-    readonly button: SHTMLObject = { };
+    readonly button: StandardObject<HTMLElement> = { };
 
     constructor() {
         const plunderFilters = document.querySelector('#plunder_list_filters');
@@ -314,34 +321,40 @@ class LastPlundered extends NothingPlundered {
     };
 };
 
-class PlunderAvailableTroops {
-    spear?: number;
-    sword?: number;
-    axe?: number;
-    spy?: number;
-    light?: number;
-    heavy?: number;
-    knight?: number;
+class AvailableFarmUnits {
+    spear!: number;
+    sword!: number;
+    axe!: number;
+    spy!: number;
+    light!: number;
+    heavy!: number;
+    knight!: number;
+    
     archer?: number;
     marcher?: number;
 
-    /**
-     * Cria um objeto com a quantidade de tropas disponíveis para uso no Plunder.
-     * @param units - Lista de unidades.
-     */
-    constructor(units: FarmUnitsWithArchers[]) {
-        units.forEach((unit) => {
-            const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
-            if (!unitElem || unitElem.textContent === null) {
-                throw new InsidiousError(`DOM: #farm_units #units_home tbody tr td#${unit}`);
-            };
+    /**Cria um objeto com a quantidade de tropas disponíveis para uso no Plunder. */
+    constructor() {
+        if (!Game.worldInfo.game) {
+            Store.remove(Keys.worldConfig)
+                .catch((err: unknown) => InsidiousError.handle(err));
 
-            const amount = Number.parseInt(unitElem.textContent, 10);
-            if (Number.isNaN(amount)) throw new InsidiousError(`A quantidade de unidades obtida é inválida ${unit}.`);
+            throw new InsidiousError('Não foi possível obter as configurações do mundo.');
+        };
+
+        const units = Game.worldInfo.game.archer === 1 ?
+            Assets.list.farm_units_archer : Assets.list.farm_units;
+
+        const keys = Object.keys(Plunder.data.current_units);
+        for (const unit of units) {
+            if (!keys.includes(unit)) continue;
+
+            const value = Plunder.data.current_units[unit];
+            const amount = Number.parseInt(value, 10);
+            if (Number.isNaN(amount)) throw new InsidiousError(`A quantidade de unidades obtida é inválida (${value.toUpperCase()}).`);
 
             this[unit] = amount;
-            
-        }, this);   
+        };  
     };
 };
 
@@ -389,11 +402,8 @@ class PlunderPageURL {
     /** URL da próxima página. */
     readonly next: string | null = null;
     
-    /**
-     * Cria um objeto contendo as URLs para navegação entre páginas do Plunder.
-     * @param currentPage Numeração da página atual.
-     */
-    constructor(currentPage?: number) {
+    /** Cria um objeto contendo as URLs para navegação entre páginas do Plunder. */
+    constructor() {
         // Linha da tabela com os números das páginas.
         const plunderListNav = document.querySelector('#plunder_list_nav table tbody tr td');
         if (!plunderListNav) throw new InsidiousError('DOM: #plunder_list_nav table tbody tr td');
@@ -412,19 +422,11 @@ class PlunderPageURL {
         arbitraryPage = arbitraryPage[0].replace(/\D/g, '');
         if (!arbitraryPage) throw new InsidiousError('Não foi possível determinar uma página arbitrária.');
 
-        // Ao contrário de como acontece na lista, as páginas no link começam no índice zero.
+        // As páginas tem índice zero.
         // Ou seja, no link, a página 2 é representada por "Farm_page=1", e a página 5 por "Farm_page=4".
         this.first = pageURL.replace(`Farm_page=${arbitraryPage}`, 'Farm_page=0');
 
-        if (typeof currentPage === 'number') {
-            // Para navegar para a próxima página, é preciso usar currentPage ao atribuir o link.
-            // Isso porquê currentPage é a numeração na lista (começa no indíce 1), mas o link em si começa no índice zero.
-            // Logo, se a página atual é a 3, seu link é "Farm_page=2", com o link da próxima sendo "Farm_page=3".
-            if (Number.isInteger(currentPage)) {
-                this.next = pageURL.replace(`Farm_page=${arbitraryPage}`, `Farm_page=${String(currentPage)}`);
-            } else {
-                throw new InsidiousError('A página atual é inválida (PlunderPageURL).');
-            };
-        };
+        const page = (Plunder.data.page + 1).toString(10);
+        this.next = pageURL.replace(`Farm_page=${arbitraryPage}`, `Farm_page=${page}`);
     };
 };

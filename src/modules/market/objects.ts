@@ -1,13 +1,13 @@
-class MarketStatus {
+class MarketData {
     /** Mercadores fora da aldeia. */
-    readonly trader_away = Insidious.raw_game_data.village.trader_away;
-    /** Quantidade de mercadores na aldeia. */
-    readonly trader_amount = Insidious.raw_game_data.trader_amount;
+    readonly trader_away = TWMarket.raw_market_data.trader_away;
+    /** Quantidade de mercadores disponíveis na aldeia. */
+    readonly trader_amount = TWMarket.raw_market_data.trader_amount;
     /** Quantidade total de mercadores. */
     readonly trader_total = this.trader_away + this.trader_amount;
 
     /** Capacidade individual do mercador. */
-    readonly trader_carry = Insidious.raw_game_data.trader_carry;
+    readonly trader_carry = TWMarket.raw_market_data.trader_carry;
     /** Capacidade total de carga dos mercadores. */
     readonly trader_capacity = this.trader_amount * this.trader_carry;
 

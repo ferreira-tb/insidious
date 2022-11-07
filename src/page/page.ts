@@ -17,8 +17,9 @@ class PageScript {
 
     private static handleMessage(data: WindowMessageFromInsidious) {
         switch (data.reason) {
-            case 'get-game-data': return PageScript.postGameData()
+            case 'get-game-data': return PageScript.postGameData();
             case 'ui-message': return PageScript.showUIMessage(data.message);
+            default: return PageScript.postData(data.reason);
         };
     };
 
@@ -27,6 +28,22 @@ class PageScript {
             direction: 'from-tribalwars',
             game_data: new TribalWarsGameData(),
             premium: premium
+        };
+
+        window.postMessage(message);
+    };
+
+    private static postData(reason?: WindowMessageReason) {
+        const message: WindowMessageFromPage = {
+            direction: 'from-tribalwars',
+        };
+
+        switch (reason) {
+            case 'get-plunder-data': message.plunder_data = new TribalWarsPlunderData();
+                break;
+            case 'get-market-data': message.market_data = new TribalWarsMarketData();
+                break;
+            default: return;
         };
 
         window.postMessage(message);
@@ -75,11 +92,6 @@ class TribalWarsGameData {
     readonly offset_to_server = Timing.offset_to_server;
     readonly tick_interval = Timing.tick_interval;
 
-    ////// NÃO DISPONÍVEIS GLOBALMENTE
-    // Market
-    readonly trader_amount = window.Market?.Data.Trader.amount;
-    readonly trader_carry = window.Market?.Data.Trader.carry;
-
     constructor() {
         const game_data = TribalWars.getGameData();
 
@@ -100,6 +112,24 @@ class TribalWarsGameData {
         this.version = game_data.version;
         this.village = game_data.village;
         this.world = game_data.world;
+    };
+};
+
+class TribalWarsPlunderData {
+    readonly current_units = Accountmanager.farm.current_units;
+    readonly hide_attacked = Accountmanager.farm.hide_attacked;
+    readonly page = Accountmanager.farm.page;
+    readonly page_size = Accountmanager.farm.page_size;
+};
+
+class TribalWarsMarketData {
+    readonly trader_amount = Market.Data.Trader.amount;
+    readonly trader_carry = Market.Data.Trader.carry;
+    readonly trader_away: number;
+
+    constructor() {
+        const game_data = TribalWars.getGameData();
+        this.trader_away = game_data.village.trader_away;
     };
 };
 

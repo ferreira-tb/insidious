@@ -21,7 +21,7 @@ Em seguida, faça download da [release](https://github.com/ferreira-tb/insidious
     - Cria ofertas para balancear os recursos da aldeia.
 
 - Relatórios:
-    - Exibe a quantidade de lealdade atual da aldeia-alvo, com base no último valor conhecido.
+    - Exibe a lealdade atual da aldeia-alvo, com base no último valor conhecido.
 
 - Perfil:
     - Distância e tempo de viagem até cada aldeia do jogador.

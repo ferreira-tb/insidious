@@ -93,6 +93,9 @@ class TWFarm {
                 const nextAutoReloadDate = document.querySelector('#ins_next_auto_reload');
                 if (nextAutoReloadDate) Manatsu.remove(nextAutoReloadDate);
 
+                const message = new UIMessage('O saque foi interrompido.');
+                Insidious.showUIMessage(message);
+
             // Caso contrário, ativa-o.
             } else if (Plunder.status.active === false) {
                 await Store.remove(Keys.totalPlundered);
@@ -100,6 +103,9 @@ class TWFarm {
                 TWFarm.menu.button.plunder.textContent = 'Parar';
                 Plunder.status.active = true;
                 Plunder.start();
+
+                const message = new UIMessage('Saque iniciado.');
+                Insidious.showUIMessage(message);
             };
 
             TWFarm.menu.button.plunder.addEventListener('click', TWFarm.togglePlunder);
@@ -117,25 +123,37 @@ class TWFarm {
 
             // Abre a janela modal.
             Utils.createModal('Opções', true, { caller: 'plunder_options' });
-            const modalWindow = document.querySelector('#ins_modal');
+            const modalWindow = document.querySelector('#ins_modal') as HTMLDivElement | null;
             if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
+
+            // Áreas do modal.
+            const containerStyle = 'display: flex; text-align: left;';
+            const container = modalWindow.appendManatsu({ style: containerStyle });
+
+            const checkboxArea = new Manatsu(container, { style: 'padding-right: 5px;' }).create();
+            const inputArea = new Manatsu(container, { style: 'padding-left: 5px;' }).create();
 
             // Adiciona as opções disponíveis.
             if (this.config.size === 0) this.createOptions();
-            const styleList = { style: 'text-align: left;' };
-            this.config.forEach((option) => Manatsu.createAllInside(option, 2, [modalWindow, styleList]));
+            this.config.forEach((value, key) => {
+                if (Assets.options.plunder_input.includes(key as keyof PlunderInputOptions)) {
+                    Manatsu.createAllInside(value, 2, [inputArea, { style: 'padding-top: 2px;' }]);
+                } else {
+                    Manatsu.createAllInside(value, 2, [checkboxArea]);
+                };
+            });
 
             const optionsCtrl = new AbortController();
 
             Assets.options.plunder_checkbox.forEach((option) => {
-                const checkbox = modalWindow.querySelector(`#ins_${option}`) as HTMLInputElement;
+                const checkbox = checkboxArea.querySelector(`#ins_${option}`) as HTMLInputElement;
                 if (Plunder.options[option] === true) checkbox.checked = true;
 
                 if (option === 'group_attack') {
                     checkbox.addEventListener('change', async (e) => {
                         optionsCtrl.abort();
                         await this.saveOptions(e.target, option);
-                        setTimeout(() => window.location.reload(), Utils.responseTime);
+                        location.reload();
                     });
 
                 } else {
@@ -143,6 +161,18 @@ class TWFarm {
                         this.saveOptions(e.target, option);
                     }, { signal: optionsCtrl.signal });
                 };
+
+            }, this);
+
+            Assets.options.plunder_input.forEach((option) => {
+                const inputElement = inputArea.querySelector(`#ins_${option}`) as HTMLInputElement;
+                const value = Plunder.options[option];
+                if (typeof value === 'number') inputElement.value = value.toFixed(0);
+
+                inputElement.addEventListener('change', (e) => {
+                    this.saveOptions(e.target, option);
+                }, { signal: optionsCtrl.signal });
+
             }, this);
 
             // Fecha a janela modal.
@@ -188,16 +218,24 @@ class TWFarm {
      * @param name - Nome da opção.
      */
     private static async saveOptions(target: EventTarget | null, name: keyof PlunderOptions) {
+        if (!(target instanceof HTMLInputElement)) return;
+
         try {
-            if (target instanceof HTMLInputElement) {
-                switch (target.checked) {
-                    case true: Plunder.options[name] = true;
-                        break;
-                    default: Plunder.options[name] = false;
-                };
+            if (target.getAttribute('type') === 'checkbox') {
+                const status = target.checked === true ? true : false;
+                Plunder.options[name as keyof PlunderCheckboxOptions] = status;
+
+            } else if (target.getAttribute('type') === 'number') {
+                let value = Number.parseInt(target.value, 10);
+                if (Number.isNaN(value)) value = 0;
+                if (Math.sign(value) === -1) value = Math.abs(value);
+                Plunder.options[name as keyof PlunderInputOptions] = value;
             };
 
             await Store.set({ [Keys.plunderOptions]: Plunder.options });
+
+            const message = new UIMessage('Salvo.');
+            Insidious.showUIMessage(message);
 
         } catch (err) {
             InsidiousError.handle(err);
@@ -206,35 +244,6 @@ class TWFarm {
 
     private static async info() {
         try {
-            // Célula usada como referência.
-            const spearElem = document.querySelector('#farm_units #units_home tbody tr td#spear');
-            if (!spearElem) throw new InsidiousError('DOM: #farm_units #units_home tbody tr td#spear');
-    
-            // Tabela com as tropas disponíveis.
-            if (!spearElem.parentElement) throw new InsidiousError('Não foi possível encontrar a linha que abriga a lista de tropas disponíveis.');
-            spearElem.parentElement.setAttribute('insidious-available-unit-table', 'true');
-    
-            // É necessário verificar se o mundo possui arqueiros.
-            if (!Game.worldInfo.game) {
-                await Store.remove(Keys.worldConfig);
-                throw new InsidiousError('Não foi possível obter as configurações do mundo.');
-            };
-    
-            /** Retorna uma array com as tropas disponíveis no mundo atual (aquelas que podem saquear). */
-            const getFarmUnits = () => {
-                switch (Game.worldInfo.game.archer) {
-                    case 0: return Assets.list.farm_units;
-                    case 1: return Assets.list.farm_units_archer;
-                    default: return Assets.list.farm_units;
-                };
-            };
-    
-            getFarmUnits().forEach((unit) => {
-                const unitElem = document.querySelector(`#farm_units #units_home tbody tr td#${unit}`);
-                if (!unitElem) throw new InsidiousError(`DOM: #farm_units #units_home tbody tr td#${unit}`);
-                unitElem.setAttribute('insidious-available-units', unit);
-            });
-
             /** 
              * Lista das aldeias que já foram atacadas alguma vez.
              * É usado no mapa para marcar as aldeias que ainda não foram alguma vez atacadas.
@@ -402,23 +411,30 @@ class TWFarm {
     };
 
     private static createOptions() {
-        Assets.options.plunder_checkbox.forEach((option) => {
-            let label: string;
+        const label = (option: keyof PlunderOptions): string => {
             switch (option) {
-                case 'group_attack': label = 'Usar grupo';
-                    break;
-                case 'ignore_wall': label = 'Ignorar muralha';
-                    break;
-                case 'destroy_wall': label = 'Destruir muralha';
-                    break;
-                case 'use_c': label = 'Usar modelo C';
-                    break;
-                case 'no_delay': label = 'Ignorar delay';
-            };
+                case 'group_attack': return 'Usar grupo';
+                case 'ignore_wall': return 'Ignorar muralha';
+                case 'destroy_wall': return 'Destruir muralha';
+                case 'use_c': return 'Usar modelo C';
+                case 'no_delay': return 'Ignorar delay';
 
-            const attributes = { id: `ins_${option}`, label: label };
-            this.config.set(option, Manatsu.createCheckbox(attributes, false) as Manatsu[]);
-        });
+                case 'max_distance': return 'Distância máxima';
+                case 'ignore_older_than': return 'Idade máxima (em horas)';
+            };
+        };
+
+        Assets.options.plunder_checkbox.forEach((option) => {
+            const attributes = { id: `ins_${option}`, label: label(option) };
+            const checkbox = Manatsu.createLabeledInputElement('checkbox', attributes, false) as Manatsu[];
+            this.config.set(option, checkbox);
+        }, this);
+
+        Assets.options.plunder_input.forEach((option) => {
+            const attributes: InputOptions = { id: `ins_${option}`, label: label(option), min: '0', placeholder: '0' };
+            const numberInput = Manatsu.createLabeledInputElement('number', attributes, false) as Manatsu[];
+            this.config.set(option, numberInput);
+        }, this);
     };
 
     /**

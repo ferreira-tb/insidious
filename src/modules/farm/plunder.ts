@@ -1,6 +1,8 @@
 class Plunder {
     /** Status do Plunder. */
     static readonly status = new PlunderStatus();
+    /** Dados sobre o Plunder. */
+    static data: PlunderData;
     /** Modelo A do assistente de saque. */
     static amodel: AvailableFarmUnits;
     /** Modelo B do assistente de saque. */
@@ -11,8 +13,6 @@ class Plunder {
     static carry: CarryCapacity;
     /** Quantia saqueada durante o processo atual do Plunder. */
     private static plundered: TotalPlundered | undefined;
-    /** Quantidade de aríetes disponível na aldeia. */
-    private static ram: number | null = null;
 
     /** Opções de configuração do Plunder. */
     static options: PlunderOptions;
@@ -27,6 +27,9 @@ class Plunder {
 
     static async start() {
         try {
+            await this.updatePlunderData();
+            this.data = new PlunderData();
+            
             const isFirstPage = await this.checkIfIsFirstPage();
             if (isFirstPage === false) return location.assign(new PlunderPageURL().first);
 
@@ -79,6 +82,26 @@ class Plunder {
         } catch (err) {
             InsidiousError.handle(err);
         };
+    };
+
+    /** Atualiza os dados sobre o Plunder. */
+    private static updatePlunderData() {
+        return new Promise<void>((resolve) => {
+            const request = async (e: MessageEvent<WindowMessageFromPage>) => {
+                if (e?.data?.direction === 'from-tribalwars') {
+                    window.removeEventListener('message', request);
+                    
+                    if (!e.data.plunder_data) throw new InsidiousError('Não foi possível obter informações sobre o Plunder.');
+
+                    this.#raw_plunder_data = e.data.plunder_data;
+                    resolve();
+                };
+            };
+
+            const bridge = new Bridge('get-plunder-data');
+            window.addEventListener('message', request);
+            window.postMessage(bridge);
+        });
     };
 
     /** Envia um ataque usando os modelos A e B. */
@@ -137,7 +160,7 @@ class Plunder {
                     const cmodel = this.cmodel.get(villageID);
                     if (!cmodel) throw new InsidiousError('Não foi possível obter o modelo C armazenado no mapa.');
 
-                    const checkAvailability = this.getAvailableTroops();
+                    const checkAvailability = await this.getAvailableFarmUnits();
                     if (!checkAvailability(cmodel)) continue;
 
                     // Adiciona o ID da aldeia atual ao Set que controla os ataques usando o modelo C.
@@ -159,7 +182,7 @@ class Plunder {
 
                     // Retorna uma função, que então é guardada em checkAvailability.
                     // Essa nova função guarda o escopo de this.getAvailableTroops.
-                    const checkAvailability = this.getAvailableTroops();
+                    const checkAvailability = await this.getAvailableFarmUnits();
                     // Esse boolean determina se o ataque pode ser enviado ou não.
                     let attackIsPossible: boolean = checkAvailability(bestModel);
 
@@ -243,8 +266,9 @@ class Plunder {
                 resolve();
             });
 
-            const unitTable = document.querySelector('tr[insidious-available-unit-table="true"]');
-            if (!unitTable) throw new InsidiousError('DOM: tr[insidious-available-unit-table]');
+            const selector = 'form#farm_units table#units_home';
+            const unitTable = document.querySelector(selector);
+            if (!unitTable) throw new InsidiousError(`DOM: ${selector}`);
             observeTroops.observe(unitTable, { subtree: true, childList: true });
 
             const attackButton = TWFarm.village_info.get(villageID)?.[`${model}_button`];
@@ -294,26 +318,12 @@ class Plunder {
     };
 
     /** Retorna uma função que permite verificar a quantidade de tropas disponíveis. */
-    private static getAvailableTroops() {
-        if (!Game.worldInfo.game) {
-            Store.remove(Keys.worldConfig)
-                .catch((err: unknown) => InsidiousError.handle(err));
+    private static async getAvailableFarmUnits() {
+        await this.updatePlunderData();
+        Plunder.data = new PlunderData();
 
-            throw new InsidiousError('Não foi possível obter as configurações do mundo.');
-        };
-
-        /** Lista das tropas disponíveis. */
-        let available: AvailableFarmUnits;
-
-        // Caso o mundo tenha arqueiros, adiciona-os à lista.
-        switch (Game.worldInfo.game.archer) {
-            case 1:
-                available = new PlunderAvailableTroops(Assets.list.farm_units_archer) as AvailableFarmUnits;
-                break;
-            default:
-                available = new PlunderAvailableTroops(Assets.list.farm_units) as AvailableFarmUnits;
-                break;
-        };
+        /** Lista com as tropas disponíveis para saque. */
+        const available = new AvailableFarmUnits();
 
         return function(model: AvailableFarmUnits): boolean {
             // Se houver menos tropas do que consta no modelo, a função deve ser interrompida.
@@ -332,7 +342,7 @@ class Plunder {
     private static async navigateToNextPlunderPage() {
         try {
             // Antes de ir para a próxima página, verifica se há tropas disponíveis em algum dos modelos.
-            const checkAvailability = this.getAvailableTroops();
+            const checkAvailability = await this.getAvailableFarmUnits();
             // this.getCarryCapacity atribui Infinity caso a capacidade seja igual a zero.
             // Isso é feito para evitar divisões por zero.
             let statusA: boolean = false, statusB: boolean = false;
@@ -353,24 +363,19 @@ class Plunder {
             const plunderListNav = document.querySelector('#plunder_list_nav table tbody tr td');
 
             if (plunderListNav) {
-                const currentPageElement = plunderListNav.querySelector('strong.paged-nav-item');
-
                 // Analisa os links disponíveis para determinar quantos existem.
                 const getPageNumber = (element: Element) => Number.parseInt(element.textContent?.replace(/\D/g, '') as string, 10);
                 // A função getPageNumber é invocada em todos os elementos durante a formação da array.
                 let plunderPages: number[] = Array.from(plunderListNav.querySelectorAll('a.paged-nav-item'), getPageNumber);
                 plunderPages = plunderPages.filter((item) => !Number.isNaN(item));
 
-                if (!currentPageElement?.textContent || plunderPages.length === 0) {
+                if (plunderPages.length === 0) {
                     if (this.options.group_attack === true) this.navigateToNextVillage();
                     return;
                 };
 
-                // Identifica a página atual.
-                const currentPage = Number.parseInt(currentPageElement.textContent.replace(/\D/g, ''), 10);
-                if (Number.isNaN(currentPage)) throw new InsidiousError('Não foi possível identificar a página atual.');
                 // Anexa a página atual na array e em seguida a ordena.
-                plunderPages.push(currentPage);
+                plunderPages.push(Plunder.data.page);
                 plunderPages.sort((a, b) => a - b);
 
                 // Registra os detalhes sobre a troca de página.
@@ -378,14 +383,14 @@ class Plunder {
                 await Store.set({ [Keys.plunderPage]: plunderPageNavigation });
 
                 /** URL para navegação entre as páginas. */
-                const pageURL = new PlunderPageURL(currentPage);
+                const pageURL = new PlunderPageURL();
 
                 // Caso a página atual seja a última página, volta para a primeira.
-                switch (currentPage === plunderPages.at(-1)) {
-                    case true: return location.assign(pageURL.first);
-                    case false:
-                        if (!pageURL.next) throw new InsidiousError('Não foi possível determinar a URL da próxima página.');
-                        return location.assign(pageURL.next);
+                if (Plunder.data.page === plunderPages.at(-1)) {
+                    return location.assign(pageURL.first);
+                } else {
+                    if (!pageURL.next) throw new InsidiousError('Não foi possível determinar a URL da próxima página.');
+                    return location.assign(pageURL.next);
                 };
             };
 
@@ -403,16 +408,9 @@ class Plunder {
         const plunderListNav = document.querySelector('#plunder_list_nav table tbody tr td');
 
         if (plunderListNav) {
-            const currentPageElement = plunderListNav.querySelector('strong.paged-nav-item');
-            if (!currentPageElement?.textContent) throw new InsidiousError('DOM: strong.paged-nav-item');
-
-            // Identifica a página atual.
-            const currentPage = Number.parseInt(currentPageElement.textContent.replace(/\D/g, ''), 10);
-            if (Number.isNaN(currentPage)) throw new InsidiousError('Não foi possível identificar a página atual.');
-
             // Caso não seja a primeira página, a função verifica de onde partiu a última navegação.
             // Ela é ignorada caso tenha sido entre páginas da aldeia atual.
-            if (currentPage !== 1) {
+            if (Plunder.data.page !== 0) {
                 const lastPageNavigation = await Store.get(Keys.plunderPage) as PlunderPageNavigation | undefined;
                 if (lastPageNavigation) {  
                     if (lastPageNavigation.village === Game.village) return true;
@@ -527,104 +525,80 @@ class Plunder {
      */
     private static destroyWall(villageID: string, wall: WallLevel) {
         return new Promise<boolean>(async (resolve, reject) => {
-            // Quantidade de bárbaros.
-            const axeField = document.querySelector('td[insidious-available-units="axe"]');
-            if (!axeField) throw new InsidiousError('Não foi possível determinar a quantidade de bárbaros disponíveis.');
+            await this.updatePlunderData();
+            Plunder.data = new PlunderData();
 
-            const axeAmount = Number.parseInt(axeField.textContent as string, 10);
-            if (Number.isNaN(axeAmount)) throw new InsidiousError('A quantidade de bárbaros obtida é inválida.');
-
-            // Quantidade de exploradores.
-            const spyField = document.querySelector('td[insidious-available-units="spy"]');
-            if (!spyField) throw new InsidiousError('Não foi possível determinar a quantidade de exploradores disponíveis.')
-
-            const spyAmount = Number.parseInt(spyField.textContent as string, 10);
-            if (Number.isNaN(spyAmount)) throw new InsidiousError('A quantidade de exploradores obtida é inválida.');
+            const axe = Number.parseInt(Plunder.data.current_units.axe, 10);
+            const spy = Number.parseInt(Plunder.data.current_units.spy, 10);
+            const ram = Number.parseInt(Plunder.data.current_units.ram, 10);
 
             /** Verifica se há tropas disponíveis para destruir a muralha. */
             const canDestroy = (neededRams: number, neededAxes: number): boolean => {
-                if (this.ram === null) throw new InsidiousError('A quantidade de aríetes não está determinada.');
-                if (neededRams > this.ram || neededAxes > axeAmount || spyAmount < 1) return false;
+                if (neededRams > ram || neededAxes > axe || spy < 1) return false;
                 return true;
             };
 
             /** Tropas necessárias para cada nível possível da muralha. */
             const neededUnits = Assets.unitsToDestroyWall[wall] as [number, number];
 
-            // Caso a quantidade de aríetes já esteja salva, verifica se há tropas suficientes.
-            // Em caso negativo, resolve a promise.
-            if (typeof this.ram === 'number' && !canDestroy(...neededUnits)) {
-                resolve(false);
-                return;
-            };
+            // Se não houverem unidades o suficiente, resolve a promise.
+            if (!canDestroy(...neededUnits)) return resolve(false);
 
             try {
                 // Abre a janela de comando e obtém a quantidade de aríetes.
-                this.ram = await this.openPlace(villageID);
+                await this.openPlace(villageID);
 
                 const closeButton = document.querySelector('#popup_box_popup_command a.popup_box_close') as HTMLElement | null;
                 if (!closeButton) throw new InsidiousError('Não foi possível encontrar o botão para fechar a janela de comando.');
 
-                // Caso o valor obtido seja inválido, reseta this.ram e emite um erro.
-                if (Number.isNaN(this.ram)) {
-                    this.ram = null;
-                    closeButton.click();
-                    throw new InsidiousError('A quantidade de aríetes obtida é inválida.');
+                const commandForm = document.querySelector('form#command-data-form');
+                if (!commandForm) throw new InsidiousError('A janela de comando não está presente.');
 
-                } else if (canDestroy(...neededUnits)) {
-                    const commandForm = document.querySelector('form#command-data-form');
-                    if (!commandForm) throw new InsidiousError('A janela de comando não está presente.');
+                const ramInputField = commandForm.querySelector('#unit_input_ram.unitsInput') as HTMLInputElement | null;
+                if (!ramInputField) throw new InsidiousError('DOM: #unit_input_ram.unitsInput');
 
-                    const ramInputField = commandForm.querySelector('#unit_input_ram.unitsInput') as HTMLInputElement | null;
-                    if (!ramInputField) throw new InsidiousError('DOM: #unit_input_ram.unitsInput');
+                const axeInputField = commandForm.querySelector('#unit_input_axe.unitsInput') as HTMLInputElement | null;
+                if (!axeInputField) throw new InsidiousError('DOM: #unit_input_axe.unitsInput');
 
-                    const axeInputField = commandForm.querySelector('#unit_input_axe.unitsInput') as HTMLInputElement | null;
-                    if (!axeInputField) throw new InsidiousError('DOM: #unit_input_axe.unitsInput');
+                const spyInputField = commandForm.querySelector('#unit_input_spy.unitsInput') as HTMLInputElement | null;
+                if (!spyInputField) throw new InsidiousError('DOM: #unit_input_spy.unitsInput');
 
-                    const spyInputField = commandForm.querySelector('#unit_input_spy.unitsInput') as HTMLInputElement | null;
-                    if (!spyInputField) throw new InsidiousError('DOM: #unit_input_spy.unitsInput');
+                // Preenche os campos com a quantidade de tropas necessária.
+                const [neededRams, neededAxes] = neededUnits.map(amount => String(amount));
+                ramInputField.value = neededRams;
+                axeInputField.value = neededAxes;
+                spyInputField.value = '1';
 
-                    // Preenche os campos com a quantidade de tropas necessária.
-                    const [neededRams, neededAxes] = neededUnits.map(amount => String(amount));
-                    ramInputField.value = neededRams;
-                    axeInputField.value = neededAxes;
-                    spyInputField.value = '1';
+                // Observa até aparecer a janela de confirmação de ataque.
+                const observeCommandForm = new MutationObserver(async (mutationList) => {
+                    for (const mutation of mutationList) {
+                        for (const node of Array.from(mutation.addedNodes)) {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                const form = node as Element;
+                                if (form.getAttribute('id') !== 'command-data-form') continue;
 
-                    // Observa até aparecer a janela de confirmação de ataque.
-                    const observeCommandForm = new MutationObserver(async (mutationList) => {
-                        for (const mutation of mutationList) {
-                            for (const node of Array.from(mutation.addedNodes)) {
-                                if (node.nodeType === Node.ELEMENT_NODE) {
-                                    const form = node as Element;
-                                    if (form.getAttribute('id') !== 'command-data-form') continue;
-
-                                    observeCommandForm.disconnect();
-                                    await this.sendRamAttack(neededRams, neededAxes, wall);
-                                    return resolve(true);
-                                };
+                                observeCommandForm.disconnect();
+                                await this.sendRamAttack(neededRams, neededAxes, wall);
+                                return resolve(true);
                             };
                         };
-                    });
+                    };
+                });
 
-                    observeCommandForm.observe(document.body, { subtree: true, childList: true });
-                    
-                    const formAttackButton = commandForm.querySelector('#target_attack') as HTMLInputElement | null;
-                    if (!formAttackButton) throw new InsidiousError('DOM: #target_attack');
+                observeCommandForm.observe(document.body, { subtree: true, childList: true });
+                
+                const formAttackButton = commandForm.querySelector('#target_attack') as HTMLInputElement | null;
+                if (!formAttackButton) throw new InsidiousError('DOM: #target_attack');
 
-                    // É preciso esperar um breve intervalo antes de emitir o clique.
-                    // Do contrário, o servidor não tem tempo suficiente para processar o comando.
-                    await Utils.wait();
-                    formAttackButton.click();
+                // É preciso esperar um breve intervalo antes de emitir o clique.
+                // Do contrário, o servidor não tem tempo suficiente para processar o comando.
+                await Utils.wait();
+                formAttackButton.click();
 
-                    /** Caso o observer não perceber mudanças mesmo após três segundos, emite um erro. */
-                    Utils.wait(3000)
-                        .then(() => observeCommandForm.disconnect())
-                        .then(() => reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.')));
-
-                } else {
-                    closeButton.click();
-                    resolve(false);
-                };
+                /** Caso o observer não perceber mudanças mesmo após três segundos, emite um erro. */
+                Utils.wait(3000)
+                    .then(() => observeCommandForm.disconnect())
+                    .then(() => reject(new InsidiousError('TIMEOUT: O servidor demorou demais para responder.')));
 
             } catch (err) {
                 const closeButton = document.querySelector('#popup_box_popup_command a.popup_box_close');
@@ -637,10 +611,9 @@ class Plunder {
     /**
      * Abre a janela para envio de comandos.
      * @param villageID ID da aldeia.
-     * @returns A quantidade de aríetes disponíveis.
      */
     private static openPlace(villageID: string) {
-        return new Promise<number>((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             const placeButton = TWFarm.village_info.get(villageID)?.place;
             if (!placeButton) throw new InsidiousError(`Não foi possível encontrar o botão da praça de reunião (${villageID}).`);
 
@@ -651,18 +624,7 @@ class Plunder {
                         if (node.nodeType === Node.ELEMENT_NODE) {
                             if ((node as Element).getAttribute('id') !== 'command-data-form') continue;
                             observeRams.disconnect();
-
-                            const ramField = (node as Element).querySelector('#units_entry_all_ram');
-                            if (!ramField || !ramField.textContent) {
-                                throw new InsidiousError('O campo com a quantidade de aríetes não está presente.');
-                            };
-
-                            let ramAmount: string | null = ramField.textContent;
-                            if (!ramAmount) throw new InsidiousError('Não foi possível determinar a quantidade de aríetes disponíveis.');
-                            ramAmount = ramAmount.replace(/\D/g, '');
-
-                            resolve(Number.parseInt(ramAmount, 10));
-                            return;
+                            return resolve();
                         };
                     };
                 };
@@ -722,11 +684,11 @@ class Plunder {
      * @returns Boolean indicando se a opção está ativada ou não.
      */
     private static areThereVillagesUnderAttack() {
-        const includeVillagesUnderAttack = document.querySelector('input#attacked_checkbox') as HTMLInputElement | null;
-        if (!includeVillagesUnderAttack) throw new InsidiousError('DOM: input#attacked_checkbox');
+        const showAttacked = document.querySelector('input#attacked_checkbox') as HTMLInputElement | null;
+        if (!showAttacked) throw new InsidiousError('DOM: input#attacked_checkbox');
 
         return new Promise<boolean>((resolve) => {
-            if (includeVillagesUnderAttack.checked === true) {
+            if (Plunder.data.hide_attacked === false) {
                 Utils.createModal('Insidious', false);
                 const modalWindow = document.querySelector('#ins_modal') as HTMLDivElement | null;
                 if (!modalWindow) throw new InsidiousError('Não foi possível criar a janela modal.');
@@ -749,7 +711,7 @@ class Plunder {
                         messageModalCtrl.abort();
                         Manatsu.removeChildren(modalWindow, ['.ins_modal_msg', '.ins_modalButtonArea']);
                         new Manatsu({ text: 'A página será recarregada em alguns instantes. Por favor, aguarde.'}, modalWindow).create();
-                        includeVillagesUnderAttack.click();
+                        showAttacked.click();
 
                         await Utils.wait();
                         window.location.reload();
@@ -782,4 +744,7 @@ class Plunder {
     };
 
     static get amount() { return this.plundered };
+
+    static #raw_plunder_data: TribalWarsPlunderData;
+    static get raw_plunder_data() { return this.#raw_plunder_data };
 };

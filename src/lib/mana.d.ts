@@ -6,15 +6,30 @@ type RepeatConstructor = (AcceptableProperty | number | string[] | boolean | nul
 type ElementHierarchy = 'child' | 'sibling';
 type ElementPosition = 'after' | 'before';
 
-type InputElements = 'checkbox' | 'radio';
+type InputElement =
+    | 'checkbox'
+    | 'radio'
+    | 'number'
+    | 'text';
 
-type RadioAndBoxOptions = {
+type InputOptions = {
     id: string,
     label: string,
-    name?: string
+
+    list?: string,
+    max?: string,
+    maxlength?: string,
+    min?: string,
+    minlength?: string,
+    name?: string, 
+    placeholder?: string,
+    readonly?: string,
+    size?: string,
+    spellcheck?: string,
+    step?: string
 };
 
-type RadioAndBoxReturnValue = [HTMLElement, HTMLElement] | [Manatsu, Manatsu];
+type InputReturnValue = [HTMLElement, HTMLElement] | [Manatsu, Manatsu];
 
 // Global
 type HTMLConstructorArgs = (string | Option | Manatsu)[];

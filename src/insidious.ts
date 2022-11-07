@@ -62,12 +62,13 @@ class Insidious {
                 };
             };
 
+            const bridge = new Bridge('get-game-data');
             window.addEventListener('message', request);
-            window.postMessage(new Bridge('get-game-data'));
+            window.postMessage(bridge);
         });
     };
 
-    /** Exibe uma notificação usando função nativa do jogo. */
+    /** Exibe uma notificação nativa do jogo. */
     static showUIMessage(message: UIMessage) {
         const bridge = new Bridge('ui-message', message);
         window.postMessage(bridge);
@@ -177,7 +178,7 @@ class Insidious {
     /** Define o mundo atual como ativo e o registra como sendo o último acessado. */
     private static async setAsActiveWorld() {
         try {
-            const activeWorlds = await Store.get(Keys.activeWorlds) as SNObject ?? { };
+            const activeWorlds = await Store.get(Keys.activeWorlds) as StandardObject<number> ?? { };
             Reflect.set(activeWorlds, Game.world, Date.now());
 
             await Store.set({ [Keys.activeWorlds]: activeWorlds });

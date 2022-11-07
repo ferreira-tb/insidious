@@ -242,8 +242,8 @@ class TWPlayer {
             };
 
             const attributes = { id: `ins_${option}`, name: 'ins_player_option', label: label() };
-            this.config.set(option, Manatsu.createRadio(attributes, false) as Manatsu[]);
-        });
+            this.config.set(option, Manatsu.createLabeledInputElement('radio', attributes, false) as Manatsu[]);
+        }, this);
     };
 
     /**

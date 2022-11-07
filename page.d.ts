@@ -196,6 +196,8 @@ declare namespace Accountmanager.farm {
     const waiting_for_display_queue_load: boolean;
 
     function init(): void;
+
+    function setPageSize(size: number): boolean;
 }
 
 declare namespace InfoPlayer {

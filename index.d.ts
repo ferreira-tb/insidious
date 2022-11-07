@@ -1,7 +1,5 @@
 // Global
-type SSObject = { [index: string]: string };
-type SNObject = { [index: string]: number };
-type SHTMLObject  = { [index: string]: HTMLElement };
+type StandardObject<T> = { [index: string]: T };
 
 /** Os três recursos do jogo: madeira, argila e ferro. */
 type ResourceList = 
@@ -72,6 +70,8 @@ type WindowMessageDirection =
     
 type WindowMessageReason = 
     | 'get-game-data'
+    | 'get-plunder-data'
+    | 'get-market-data'
     | 'ui-message';
 
 interface WindowMessage {
@@ -81,6 +81,8 @@ interface WindowMessage {
 
 interface WindowMessageFromPage extends WindowMessage {
     game_data?: TribalWarsGameData;
+    plunder_data?: TribalWarsPlunderData;
+    market_data?: TribalWarsMarketData;
     premium?: boolean;
 }
 
@@ -153,7 +155,8 @@ type AssetsList = {
 };
 
 type AssetsOptions = {
-    plunder_checkbox: (keyof PlunderOptions)[];
+    plunder_checkbox: (keyof PlunderCheckboxOptions)[];
+    plunder_input: (keyof PlunderInputOptions)[];
     player_radio: PlayerOptions['radio_option'][];
 };
 
@@ -183,20 +186,6 @@ type ABNull = AB | null;
 type ABC = AB | 'c';
 type OnOff = 'on' | 'off';
 
-/** Quantidade de unidades disponíveis para uso nos modelos do assistente de saque. */
-type AvailableFarmUnits = {
-    spear: number;
-    sword: number;
-    axe: number;
-    spy: number;
-    light: number;
-    heavy: number;
-    knight: number;
-
-    archer?: number;
-    marcher?: number;
-};
-
 /** Quantia de recursos saqueados e ataques enviados pelo Plunder. */
 type TotalPlundered = {
     [index in ResourceList | 'total' | 'attack_amount']: number
@@ -205,7 +194,9 @@ type TotalPlundered = {
 type TotalPlunderedEntries = [ResourceList | 'total' | 'attack_amount', number][];
 
 /** Status das diferentes opções do plunder. */
-type PlunderOptions = {
+type PlunderOptions = PlunderCheckboxOptions & PlunderInputOptions;
+
+type PlunderCheckboxOptions = {
     /** Determina se o Plunder deve atacar aldeias com muralha. */
     ignore_wall: boolean;
     /** Determina se o Plunder deve demolir a muralha das aldeias. */
@@ -216,6 +207,13 @@ type PlunderOptions = {
     use_c: boolean;
     /** Se ativado, o Plunder não terá delay entre os ataques. */
     no_delay: boolean;
+};
+
+type PlunderInputOptions = {
+    /** Distância máxima para os ataques do Plunder. */
+    max_distance: number;
+    /** Ignora relatórios antigos. */
+    ignore_older_than: number;
 };
 
 ////// SHIELD

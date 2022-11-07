@@ -6,7 +6,7 @@ class InsidiousConfig {
 
     static async start() {
         try {
-            const activeWorlds = await Store.get(this.activeWorldsKey) as SNObject ?? { };
+            const activeWorlds = await Store.get(this.activeWorldsKey) as StandardObject<number> ?? { };
             const activeWorldsEntries = Object.entries(activeWorlds);
             if (activeWorldsEntries.length > 0) {
                 const div = document.querySelector('#active-worlds') as HTMLDivElement;

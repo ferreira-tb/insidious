@@ -69,7 +69,7 @@ class Utils {
      * @param clickOutside - Se `true`, um clique fora do modal o fechará.
      * @param options - Atributos para se adicionar à janela modal.
      */
-    static createModal(modalTitle: string, clickOutside: boolean = true, options?: SSObject) {
+    static createModal(modalTitle: string, clickOutside: boolean = true, options?: StandardObject<string>) {
         const blurBG = new Manatsu({ id: 'ins_blurBG' }, document.body).create();
         let modalWindow: HTMLElement;
 
@@ -86,8 +86,8 @@ class Utils {
             Manatsu.remove([blurBG, modalWindow]);
         };
 
-        blurBG.addEventListener('closemodal', closeIt, {signal: modalCtrl.signal});
-        if (clickOutside === true) blurBG.addEventListener('click', closeIt, {signal: modalCtrl.signal});
+        blurBG.addEventListener('closemodal', closeIt, { signal: modalCtrl.signal });
+        if (clickOutside === true) blurBG.addEventListener('click', closeIt, { signal: modalCtrl.signal });
 
         const titleContainer = new Manatsu(modalWindow).create();
         new Manatsu('h1', { text: modalTitle }, titleContainer).create();
