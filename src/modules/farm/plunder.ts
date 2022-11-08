@@ -137,6 +137,14 @@ class Plunder {
                 // Caso não hajam informações obtidas por exploradores, a linha é ignorada.
                 if (info.spy_status === false) continue;
 
+                // Ignora a aldeia caso o último ataque tenha sido há mais horas do que o indicado.
+                // Zero indica que nenhuma aldeia deve ser ignorada por causa disso.
+                if (this.options.ignore_older_than > 0) {
+                    if (info.last_attack === 0) throw new InsidiousError(`Não foi possível determinar a data do último ataque (${villageID}).`);
+                    const hoursSinceLast = (Date.now() - info.last_attack) / 3600000;
+                    if (hoursSinceLast > this.options.ignore_older_than) continue;
+                };
+
                 // Envia aríetes caso a aldeia possua muralha e "demolir muralha" esteja ativo.
                 // Se o ataque for enviado com sucesso, pula para a próxima aldeia.
                 // Em hipótese alguma "destroy_wall" pode estar após "ignore_wall".

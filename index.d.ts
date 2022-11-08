@@ -212,7 +212,7 @@ type PlunderCheckboxOptions = {
 type PlunderInputOptions = {
     /** Distância máxima para os ataques do Plunder. */
     max_distance: number;
-    /** Ignora relatórios antigos. */
+    /** Ignora aldeias cujo último ataque ocorreu há uma quantidade de horas superior à indicada. */
     ignore_older_than: number;
 };
 

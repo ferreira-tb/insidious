@@ -64,10 +64,8 @@ class ConfirmScreenCommandDetails implements AvailableUnits {
         if (!targetCoordsField) throw new InsidiousError('DOM: td span.village_anchor[data-player] a[href*=\"village\"]');
 
         // Coordenadas da aldeia-alvo.
-        const targetCoords = targetCoordsField.textContent?.match(/\d\d\d\|\d\d\d/m);
-        if (!targetCoords || targetCoords.length === 0) throw new InsidiousError('Não foi possível obter as coordenadas do alvo.');
-
-        const coords = targetCoords[0].split('\|').map(value => Number.parseInt(value, 10));
+        const coords = Utils.getCoordsFromTextContent(targetCoordsField.textContent);
+        if (!coords) throw new InsidiousError('Não foi possível obter as coordenadas do alvo.');
         this.distance = Utils.calcDistance(Game.x, Game.y, coords[0], coords[1]);
 
         // Tempo de viagem até o alvo.

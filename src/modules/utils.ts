@@ -158,4 +158,18 @@ class Utils {
         const ISODate = Date.now() - timezoneOffset + extra;
         return new Date(ISODate).toISOString().split('Z')[0];
     };
+
+    static getCoordsFromTextContent(text: string | null): [number, number] | null {
+        if (!text) return null;
+
+        const targetCoords = text.match(/\d\d\d\|\d\d\d/m);
+        if (!targetCoords) return null;
+
+        const coords = targetCoords[0].split('\|')
+            .map(value => Number.parseInt(value, 10))
+            .filter(value => !Number.isNaN(value)) as [number, number];
+
+        if (coords.length !== 2) throw new InsidiousError('As coordenadas são inválidas.');
+        return coords;
+    };
 };

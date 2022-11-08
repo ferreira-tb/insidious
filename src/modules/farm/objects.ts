@@ -1,19 +1,29 @@
 class PlunderVillageInfo {
+    /** Data do último ataque contra a aldeia. */
     last_attack: number = 0;
+    /** Indica se há informações obtidas por exploradores. */
     spy_status: boolean = false;
+    /** Nível da muralha. */
     wall: WallLevel = 0;
+    /** Distância até à aldeia. */
+    distance: number = Infinity;
 
-    // Recursos
+    /** Estimativa da quantidade de madeira disponível na aldeia. */
     wood: number = 0;
+    /** Estimativa da quantidade de argila disponível na aldeia. */
     stone: number = 0;
+    /** Estimativa da quantidade de ferro disponível na aldeia. */
     iron: number = 0;
     /** Total de recursos disponíveis na aldeia. */
     total: number = 0;
 
-    // Botões
+    /** Botão A do assistente de saque. */
     a_button: HTMLElement | null = null;
+    /** Botão B do assistente de saque. */
     b_button: HTMLElement | null = null;
+    /** Botão C do assistente de saque. */
     c_button: HTMLElement | null = null;
+    /** Botão para abrir a janela de comandos no assistente de saque. */
     place: HTMLElement | null = null;
 
     /** Indica se o botão C está ativo ou não. */
@@ -260,27 +270,22 @@ class ExpectedResources {
 };
 
 class NothingPlundered implements TotalPlundered {
-    readonly wood: number = 0;
-    readonly stone: number = 0;
-    readonly iron: number = 0;
-    readonly total: number = 0;
-    readonly attack_amount: number = 0;
+    wood: number = 0;
+    stone: number = 0;
+    iron: number = 0;
+    total: number = 0;
+    attack_amount: number = 0;
 };
 
 class PlunderedAmount extends NothingPlundered {
-    override readonly wood: number;
-    override readonly stone: number;
-    override readonly iron: number;
-    override readonly total: number;
-    override readonly attack_amount: number;
-
     /**
      * Cria um objeto representando a quantidade de recursos saqueados pelo processo atual do Plunder.
      * @param expected - Estimativa de saque do ataque atual.
      * @param firstAttack - Indica se esse é ou não o primeiro ataque;
      */
     constructor(expected: ExpectedResources, firstAttack: boolean) {
-        super()
+        super();
+
         if (firstAttack === false) {
             const plundered = Plunder.amount as TotalPlundered;
             this.wood = plundered.wood + expected.wood;
@@ -300,11 +305,6 @@ class PlunderedAmount extends NothingPlundered {
 };
 
 class LastPlundered extends NothingPlundered {
-    override readonly wood: number;
-    override readonly stone: number;
-    override readonly iron: number;
-    override readonly total: number;
-    override readonly attack_amount: number;
     readonly date = Date.now();
     
     /**
@@ -313,6 +313,7 @@ class LastPlundered extends NothingPlundered {
      */
     constructor(plunderedAmount: PlunderedAmount) {
         super();
+        
         this.wood = plunderedAmount.wood;
         this.stone = plunderedAmount.stone;
         this.iron = plunderedAmount.iron;

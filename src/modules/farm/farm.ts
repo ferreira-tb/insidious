@@ -275,14 +275,21 @@ class TWFarm {
 
                             // Facilita o acesso ao id da aldeia.
                             row.setAttribute('insidious-village', villageID);
-               
-                            // Data do último ataque.
+
+                            // Relatório e data do último ataque.
                             const fields = row.querySelectorAll('td');
                             for (const field of Array.from(fields)) {
-                                if (!field.textContent) continue;
-                                const date = this.decipherPlunderListDate(field.textContent);
-                                if (!date) continue;
+                                const content = field.textContent?.trim();
+                                if (!content) continue;
 
+                                const coords = Utils.getCoordsFromTextContent(content);
+                                if (coords) {
+                                    info.distance = Utils.calcDistance(Game.x, Game.y, coords[0], coords[1]);
+                                    continue;
+                                };
+
+                                const date = this.decipherPlunderListDate(content);
+                                if (!date) continue;
                                 info.last_attack = date;
                             };
 
@@ -345,7 +352,7 @@ class TWFarm {
                                 const wallLevel = wallLevelField.textContent?.replace(/\D/g, '');
                                 if (wallLevel) {
                                     info.wall = Number.parseInt(wallLevel, 10) as WallLevel;
-                                    if (!Number.isInteger(info.wall)) {
+                                    if (Number.isNaN(info.wall)) {
                                         throw new InsidiousError(`O valor encontrado não corresponde ao nível da muralha (${villageID}).`);
                                     };
                                     
