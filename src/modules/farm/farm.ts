@@ -150,6 +150,8 @@ class TWFarm {
                 if (Plunder.options[option] === true) checkbox.checked = true;
 
                 if (option === 'group_attack') {
+                    if (Game.village_amount < 2) checkbox.setAttribute('disabled', '');
+
                     checkbox.addEventListener('change', async (e) => {
                         optionsCtrl.abort();
                         await this.saveOptions(e.target, option);

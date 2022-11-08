@@ -45,6 +45,10 @@ type UnitListWithArchers =
     | FarmUnitsWithArchers
     | OtherUnits;
 
+type CurrentUnits = {
+    [index in keyof TribalWarsPlunderData['current_units']]: number;
+};
+
 /** Janelas do jogo. */
 type GameScreen =
     | 'am_farm'

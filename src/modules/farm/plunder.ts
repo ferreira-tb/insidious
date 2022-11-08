@@ -536,9 +536,9 @@ class Plunder {
             await this.updatePlunderData();
             Plunder.data = new PlunderData();
 
-            const axe = Number.parseInt(Plunder.data.current_units.axe, 10);
-            const spy = Number.parseInt(Plunder.data.current_units.spy, 10);
-            const ram = Number.parseInt(Plunder.data.current_units.ram, 10);
+            const axe = Plunder.data.current_units.axe;
+            const spy = Plunder.data.current_units.spy;
+            const ram = Plunder.data.current_units.ram;
 
             /** Verifica se há tropas disponíveis para destruir a muralha. */
             const canDestroy = (neededRams: number, neededAxes: number): boolean => {

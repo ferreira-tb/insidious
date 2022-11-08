@@ -35,7 +35,7 @@ class Game {
     /** Nome do jogador. */
     static readonly player_name = Insidious.raw_game_data.player.name;
     /** Quantidade de aldeias do jogador. */
-    static readonly village_amount = Insidious.raw_game_data.player.villages;
+    static readonly village_amount = Number.parseInt(Insidious.raw_game_data.player.villages);
 
     /** ID da aldeia atual. */
     static readonly village = String(Insidious.raw_game_data.village.id);
@@ -70,7 +70,7 @@ class Game {
     /** Nome do jogador. */
     readonly player_name = Insidious.raw_game_data.player.name;
     /** Quantidade de aldeias do jogador. */
-    readonly village_amount = Insidious.raw_game_data.player.villages;
+    readonly village_amount =  Number.parseInt(Insidious.raw_game_data.player.villages);
 
     /** ID da aldeia atual. */
     readonly village = String(Insidious.raw_game_data.village.id);
@@ -87,10 +87,14 @@ class Game {
     readonly offset_to_server = Insidious.raw_game_data.offset_to_server;
 
     /** Verifica se os dados obtidos são válidos. */
-    static verifyIntegrity() {
-        for (const [key, value] of Object.entries(Game)) {
+    static verifyIntegrity(data?: Game) {
+        const gameData = data instanceof Game ? data : this;
+
+        for (const [key, value] of Object.entries(gameData)) {
             if (value === undefined) throw new InsidiousError(`Não foi possível obter o seguinte dado: ${key.toUpperCase()}.`);
         };
+
+        if (Number.isNaN(gameData.village_amount)) throw new InsidiousError('A quantidade de aldeias é inválida.');
     };
 
     /** Armazena as configurações do mundo para que as outras classes tenham acesso. */

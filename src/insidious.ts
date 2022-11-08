@@ -5,7 +5,7 @@ class Insidious {
             // Inicia os scripts de apoio.
             await browser.runtime.sendMessage({ type: 'start' });
             Game.verifyIntegrity();
-
+            
             // Faz download dos dados necessários para executar a extensão.
             await this.fetchWorldConfig();
             // Armazena as informações obtidas em propriedades da classe Game.
@@ -13,10 +13,8 @@ class Insidious {
 
             // Define o mundo atual como ativo e o registra como sendo o último acessado.
             this.setAsActiveWorld();
-
             // Aciona as ferramentas da extensão de acordo com a janela na qual o usuário está.
             await this.requestScript(Game.screen);
-
             // Executa operações que estejam pendentes.
             await Defer.promises();
 
@@ -85,7 +83,8 @@ class Insidious {
 
                 await Promise.all(worldConfigData.map((info: WorldInfo | UnitInfo) => {
                     if (info instanceof WorldInfo) return Store.set({ [Keys.config]: info });
-                    return Store.set({ [Keys.unit]: info });
+                    if (info instanceof UnitInfo) return Store.set({ [Keys.unit]: info });
+                    throw new InsidiousError('Os dados sobre o mundo são inválidos.');
                 }));
 
                 await Store.set({ [Keys.worldConfig]: true });

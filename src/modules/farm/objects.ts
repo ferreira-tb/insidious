@@ -45,10 +45,33 @@ class PlunderStatus {
 };
 
 class PlunderData {
-    readonly current_units = Plunder.raw_plunder_data.current_units;
+    readonly current_units: CurrentUnits = {
+        spear: 0,
+        sword: 0,
+        axe: 0,
+        spy: 0,
+        light: 0,
+        heavy: 0,
+        knight: 0,
+        archer: 0,
+        marcher: 0,
+        ram: 0,
+        catapult: 0,
+        snob: 0,
+        militia: 0
+    };
+
     readonly hide_attacked = Plunder.raw_plunder_data.hide_attacked;
     readonly page = Plunder.raw_plunder_data.page;
     readonly page_size = Plunder.raw_plunder_data.page_size;
+
+    constructor() {
+        for (const [key, value] of Object.entries(Plunder.raw_plunder_data.current_units)) {
+            const amount = Number.parseInt(value, 10);
+            if (Number.isNaN(amount)) throw new InsidiousError(`A quantidade de unidades é inválida (${key.toUpperCase()}).`);
+            this.current_units[key as keyof CurrentUnits] = amount;
+        };
+    };
 };
 
 class PlunderButtons {
@@ -349,12 +372,7 @@ class AvailableFarmUnits {
         const keys = Object.keys(Plunder.data.current_units);
         for (const unit of units) {
             if (!keys.includes(unit)) continue;
-
-            const value = Plunder.data.current_units[unit];
-            const amount = Number.parseInt(value, 10);
-            if (Number.isNaN(amount)) throw new InsidiousError(`A quantidade de unidades obtida é inválida (${value.toUpperCase()}).`);
-
-            this[unit] = amount;
+            this[unit] = Plunder.data.current_units[unit];
         };  
     };
 };
