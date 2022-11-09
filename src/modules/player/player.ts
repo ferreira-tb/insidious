@@ -71,7 +71,7 @@ class TWPlayer {
 
         const optionsCtrl = new AbortController();
 
-        Assets.options.player_radio.forEach((option) => {
+        Options.player.radio.forEach((option) => {
             const radio = modalWindow.querySelector(`#ins_${option}`) as HTMLInputElement;
             if (TWPlayer.options.radio_option === option) radio.checked = true;
                 radio.addEventListener('change', (e) => {
@@ -232,16 +232,8 @@ class TWPlayer {
 
     /** Cria as opções que serão apresentadas na janela modal. */
     private static createOptions() {
-        Assets.options.player_radio.forEach((option) => {
-            const label = (): string => {
-                switch (option) {
-                    case 'show_distance': return 'Mostrar distância';
-                    case 'show_time': return 'Mostrar tempo';
-                    case 'hide_all': return 'Ocultar informações';
-                };
-            };
-
-            const attributes = { id: `ins_${option}`, name: 'ins_player_option', label: label() };
+        Options.player.radio.forEach((option) => {
+            const attributes = new InsidiousInputAttributes(option, 'radio');
             this.config.set(option, Manatsu.createLabeledInputElement('radio', attributes, false) as Manatsu[]);
         }, this);
     };

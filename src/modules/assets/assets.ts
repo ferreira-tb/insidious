@@ -21,12 +21,6 @@ class Assets {
         resources: ['wood', 'stone', 'iron'],  
     };
 
-    static readonly options: AssetsOptions = {
-        plunder_checkbox: ['ignore_wall', 'destroy_wall', 'group_attack', 'use_c', 'no_delay'],
-        plunder_input: ['max_distance', 'ignore_older_than', 'minutes_until_reload'],
-        player_radio: ['show_distance', 'show_time', 'hide_all']
-    };
-
     static readonly misc: AssetsMisc = {
         months: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
     };

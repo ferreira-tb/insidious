@@ -12,7 +12,7 @@ type InputElement =
     | 'number'
     | 'text';
 
-type InputOptions = {
+type InputAttributes = {
     id: string,
     label: string,
 

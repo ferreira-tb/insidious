@@ -137,7 +137,7 @@ class TWFarm {
             if (this.config.size === 0) this.createOptions();
             this.config.forEach((value, key) => {
                 const callback = (item: string) => item === key;
-                if (Assets.options.plunder_input.some(callback)) {
+                if (Options.plunder.number.some(callback)) {
                     Manatsu.createAllInside(value, 2, [inputArea, { style: 'padding-top: 2px;' }]);
                 } else {
                     Manatsu.createAllInside(value, 2, [checkboxArea]);
@@ -146,7 +146,7 @@ class TWFarm {
 
             const optionsCtrl = new AbortController();
 
-            Assets.options.plunder_checkbox.forEach((option) => {
+            Options.plunder.checkbox.forEach((option) => {
                 const checkbox = checkboxArea.querySelector(`#ins_${option}`) as HTMLInputElement;
                 if (Plunder.options[option] === true) checkbox.checked = true;
 
@@ -167,7 +167,7 @@ class TWFarm {
 
             }, this);
 
-            Assets.options.plunder_input.forEach((option) => {
+            Options.plunder.number.forEach((option) => {
                 const inputElement = inputArea.querySelector(`#ins_${option}`) as HTMLInputElement;
                 inputElement.value = Plunder.options[option].toFixed(0);
 
@@ -219,7 +219,7 @@ class TWFarm {
      * @param target - Elemento correspondente à opção.
      * @param name - Nome da opção.
      */
-    private static async saveOptions(target: EventTarget | null, name: keyof PlunderOptions) {
+    private static async saveOptions(target: EventTarget | null, name: keyof PlunderOptions & string) {
         if (!(target instanceof HTMLInputElement)) return;
 
         try {
@@ -418,30 +418,14 @@ class TWFarm {
     };
 
     private static createOptions() {
-        const label = (option: keyof PlunderOptions): string => {
-            switch (option) {
-                case 'group_attack': return 'Usar grupo';
-                case 'ignore_wall': return 'Ignorar muralha';
-                case 'destroy_wall': return 'Destruir muralha';
-                case 'use_c': return 'Usar modelo C';
-                case 'no_delay': return 'Ignorar delay';
-
-                case 'max_distance': return 'Distância máxima';
-                case 'ignore_older_than': return 'Idade máxima (horas)';
-                case 'minutes_until_reload': return 'Recarregamento automático (minutos)';
-            };
-
-            throw new InsidiousError('A opção não existe no Plunder.');
-        };
-
-        Assets.options.plunder_checkbox.forEach((option) => {
-            const attributes = { id: `ins_${option}`, label: label(option) };
+        Options.plunder.checkbox.forEach((option) => {
+            const attributes = new InsidiousInputAttributes(option, 'checkbox');
             const checkbox = Manatsu.createLabeledInputElement('checkbox', attributes, false) as Manatsu[];
             this.config.set(option, checkbox);
         }, this);
 
-        Assets.options.plunder_input.forEach((option) => {
-            const attributes: InputOptions = { id: `ins_${option}`, label: label(option), min: '0', placeholder: '0' };
+        Options.plunder.number.forEach((option) => {
+            const attributes = new InsidiousInputAttributes(option, 'number');
             const numberInput = Manatsu.createLabeledInputElement('number', attributes, false) as Manatsu[];
             this.config.set(option, numberInput);
         }, this);

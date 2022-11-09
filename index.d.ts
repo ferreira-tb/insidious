@@ -108,6 +108,10 @@ type NavigationHistory = {
     go_back: boolean;
 };
 
+type AllInsidiousOptions =
+    | (keyof PlunderOptions & string)
+    | PlayerOptions['radio_option'];
+
 /** Edifícios. */
 type BuildingName = keyof Buildings;
 
@@ -158,10 +162,13 @@ type AssetsList = {
     resources: ResourceList[];
 };
 
-type AssetsOptions = {
-    plunder_checkbox: (keyof PlunderCheckboxOptions)[];
-    plunder_input: (keyof PlunderInputOptions)[];
-    player_radio: PlayerOptions['radio_option'][];
+type AssetsPlunderOptions = {
+    checkbox: (keyof PlunderCheckboxOptions)[];
+    number: (keyof PlunderInputOptions)[];
+};
+
+type AssetsPlayerOptions = {
+    radio: PlayerOptions['radio_option'][];
 };
 
 type AssetsMisc = {

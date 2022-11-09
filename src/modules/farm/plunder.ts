@@ -99,7 +99,7 @@ class Plunder {
                     };
 
                     const callback = (item: string) => item === property;
-                    if (Assets.options.plunder_checkbox.some(callback)) return false;
+                    if (Options.plunder.checkbox.some(callback)) return false;
                 };
 
                 if (property === 'minutes_until_reload' && value < 1) return 10;
@@ -109,11 +109,11 @@ class Plunder {
 
             set(target, property, value) {
                 const callback = (item: string) => item === property;
-                if (Assets.options.plunder_checkbox.some(callback)) {
+                if (Options.plunder.checkbox.some(callback)) {
                     if (typeof value !== 'boolean') return false;
                 };
 
-                if (Assets.options.plunder_input.some(callback)) {
+                if (Options.plunder.number.some(callback)) {
                     if (typeof value !== 'number') return false;
 
                     if (Number.isNaN(value)) value = 0;

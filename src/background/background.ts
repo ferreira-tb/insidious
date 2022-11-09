@@ -20,8 +20,13 @@ class Background {
     private static loadScripts(screen: GameScreen, id: number | undefined) {
         if (id === undefined) return Background.showErrorNotification(new Error('O ID da aba é inválido.'));
 
-        const files = Background.scripts[screen];
+        let files = Background.scripts[screen];
         if (!files || files.length === 0) return;
+
+        if (screen === 'am_farm' || screen === 'info_player') {
+            const options = './modules/assets/options.js';
+            files = [options, ...files];
+        };
 
         return browser.scripting.executeScript({
             files: files,

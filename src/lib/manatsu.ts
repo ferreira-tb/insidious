@@ -304,7 +304,7 @@ class Manatsu {
      */
      static createLabeledInputElement(
         type: InputElement,
-        options: InputOptions,
+        options: InputAttributes,
         create: boolean = false,
         parentElement?: Element): InputReturnValue
     {
