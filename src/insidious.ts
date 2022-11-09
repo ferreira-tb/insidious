@@ -138,6 +138,7 @@ class Insidious {
             case 'am_farm': return TWFarm.open();
             case 'info_player': return TWPlayer.open();
             case 'market': return TWMarket.open();
+            case 'overview': return TWVillage.open();
             case 'overview_villages': return TWOverview.open();
             case 'place': return TWSword.open();
             case 'report': return TWReport.open();

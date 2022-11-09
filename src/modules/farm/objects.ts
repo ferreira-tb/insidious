@@ -1,40 +1,8 @@
-class PlunderVillageInfo {
-    /** Data do último ataque contra a aldeia. */
-    last_attack: number = 0;
-    /** Indica se há informações obtidas por exploradores. */
-    spy_status: boolean = false;
-    /** Nível da muralha. */
-    wall: WallLevel = 0;
-    /** Distância até à aldeia. */
-    distance: number = Infinity;
-
-    /** Estimativa da quantidade de madeira disponível na aldeia. */
-    wood: number = 0;
-    /** Estimativa da quantidade de argila disponível na aldeia. */
-    stone: number = 0;
-    /** Estimativa da quantidade de ferro disponível na aldeia. */
-    iron: number = 0;
-    /** Total de recursos disponíveis na aldeia. */
-    total: number = 0;
-
-    /** Botão A do assistente de saque. */
-    a_button: HTMLElement | null = null;
-    /** Botão B do assistente de saque. */
-    b_button: HTMLElement | null = null;
-    /** Botão C do assistente de saque. */
-    c_button: HTMLElement | null = null;
-    /** Botão para abrir a janela de comandos no assistente de saque. */
-    place: HTMLElement | null = null;
-
-    /** Indica se o botão C está ativo ou não. */
-    c_status: boolean = false;
-};
-
 class PlunderStatus {
     readonly #date = Date.now(); 
     #firstAttack: boolean = true;
     active: boolean = false;
-
+    
     /** Atrasa o envio do ataque caso seja o primeiro após o carregamento da página. */
     async waitAsFirstAttack() {
         if ((Date.now() - this.#date) < 3000) await Utils.wait();
@@ -72,6 +40,38 @@ class PlunderData {
             this.current_units[key as keyof CurrentUnits] = amount;
         };
     };
+};
+
+class PlunderVillageInfo {
+    /** Data do último ataque contra a aldeia. */
+    last_attack: number = 0;
+    /** Indica se há informações obtidas por exploradores. */
+    spy_status: boolean = false;
+    /** Nível da muralha. */
+    wall: WallLevel = 0;
+    /** Distância até à aldeia. */
+    distance: number = Infinity;
+
+    /** Estimativa da quantidade de madeira disponível na aldeia. */
+    wood: number = 0;
+    /** Estimativa da quantidade de argila disponível na aldeia. */
+    stone: number = 0;
+    /** Estimativa da quantidade de ferro disponível na aldeia. */
+    iron: number = 0;
+    /** Total de recursos disponíveis na aldeia. */
+    total: number = 0;
+
+    /** Botão A do assistente de saque. */
+    a_button: HTMLElement | null = null;
+    /** Botão B do assistente de saque. */
+    b_button: HTMLElement | null = null;
+    /** Botão C do assistente de saque. */
+    c_button: HTMLElement | null = null;
+    /** Botão para abrir a janela de comandos no assistente de saque. */
+    place: HTMLElement | null = null;
+
+    /** Indica se o botão C está ativo ou não. */
+    c_status: boolean = false;
 };
 
 class PlunderButtons {

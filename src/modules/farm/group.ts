@@ -59,8 +59,8 @@ class GroupAttack {
                     messageModalCtrl.abort();
                     Plunder.options.group_attack = false;
 
-                    Store.set({ [Keys.plunderOptions]: Plunder.options })
-                        .then(() => setTimeout(() => window.location.reload(), Utils.responseTime))
+                    Store.set({ [Keys.plunderOptions]: Plunder.options[Keys.master] })
+                        .then(() => setTimeout(() => location.reload(), Utils.responseTime))
                         .catch((err: unknown) => InsidiousError.handle(err));
                         
                 }, { signal: messageModalCtrl.signal });

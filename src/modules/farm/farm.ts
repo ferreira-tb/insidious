@@ -119,7 +119,7 @@ class TWFarm {
     static async toggleOptions() {
         try {
             // Se o menu de opções for aberto antes que o Plunder tenha sido executado alguma vez, Plunder.options será undefined.
-            if (!Plunder.options) Plunder.options = await Store.get(Keys.plunderOptions) as PlunderOptions ?? {};
+            if (!Plunder.options) Plunder.options = await Plunder.setPlunderOptions();
 
             // Abre a janela modal.
             Utils.createModal('Opções', true, { caller: 'plunder_options' });
@@ -136,7 +136,8 @@ class TWFarm {
             // Adiciona as opções disponíveis.
             if (this.config.size === 0) this.createOptions();
             this.config.forEach((value, key) => {
-                if (Assets.options.plunder_input.includes(key as keyof PlunderInputOptions)) {
+                const callback = (item: string) => item === key;
+                if (Assets.options.plunder_input.some(callback)) {
                     Manatsu.createAllInside(value, 2, [inputArea, { style: 'padding-top: 2px;' }]);
                 } else {
                     Manatsu.createAllInside(value, 2, [checkboxArea]);
@@ -168,8 +169,7 @@ class TWFarm {
 
             Assets.options.plunder_input.forEach((option) => {
                 const inputElement = inputArea.querySelector(`#ins_${option}`) as HTMLInputElement;
-                const value = Plunder.options[option];
-                if (typeof value === 'number') inputElement.value = value.toFixed(0);
+                inputElement.value = Plunder.options[option].toFixed(0);
 
                 inputElement.addEventListener('change', (e) => {
                     this.saveOptions(e.target, option);
@@ -223,18 +223,16 @@ class TWFarm {
         if (!(target instanceof HTMLInputElement)) return;
 
         try {
-            if (target.getAttribute('type') === 'checkbox') {
-                const status = target.checked === true ? true : false;
-                Plunder.options[name as keyof PlunderCheckboxOptions] = status;
-
-            } else if (target.getAttribute('type') === 'number') {
-                let value = Number.parseInt(target.value, 10);
-                if (Number.isNaN(value)) value = 0;
-                if (Math.sign(value) === -1) value = Math.abs(value);
-                Plunder.options[name as keyof PlunderInputOptions] = value;
+            switch (target.getAttribute('type') as InputElement | null) {
+                case 'checkbox':
+                    Plunder.options[name as keyof PlunderCheckboxOptions] = target.checked;
+                    break;
+                case 'number':
+                    Plunder.options[name as keyof PlunderInputOptions] = Number.parseInt(target.value, 10);
+                    break;
             };
 
-            await Store.set({ [Keys.plunderOptions]: Plunder.options });
+            await Store.set({ [Keys.plunderOptions]: Plunder.options[Keys.master] });
 
             const message = new UIMessage('Salvo.');
             Insidious.showUIMessage(message);
@@ -429,8 +427,11 @@ class TWFarm {
                 case 'no_delay': return 'Ignorar delay';
 
                 case 'max_distance': return 'Distância máxima';
-                case 'ignore_older_than': return 'Idade máxima (em horas)';
+                case 'ignore_older_than': return 'Idade máxima (horas)';
+                case 'minutes_until_reload': return 'Recarregamento automático (minutos)';
             };
+
+            throw new InsidiousError('A opção não existe no Plunder.');
         };
 
         Assets.options.plunder_checkbox.forEach((option) => {

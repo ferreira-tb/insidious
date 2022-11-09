@@ -19,6 +19,7 @@ declare namespace browser.storage {
 
     // Valores específicos do Insidious.
     | AvailableFarmUnits
+    | PlunderOptions
     | PlunderGroupNavigation
     | PlunderPageNavigation
     | WorldInfo

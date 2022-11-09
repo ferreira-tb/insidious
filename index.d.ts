@@ -197,10 +197,7 @@ type TotalPlundered = {
 /** Pares [key, value] obtidos ao usar Object.entries(). */
 type TotalPlunderedEntries = [ResourceList | 'total' | 'attack_amount', number][];
 
-/** Status das diferentes opções do plunder. */
-type PlunderOptions = PlunderCheckboxOptions & PlunderInputOptions;
-
-type PlunderCheckboxOptions = {
+interface PlunderCheckboxOptions {
     /** Determina se o Plunder deve atacar aldeias com muralha. */
     ignore_wall: boolean;
     /** Determina se o Plunder deve demolir a muralha das aldeias. */
@@ -211,14 +208,21 @@ type PlunderCheckboxOptions = {
     use_c: boolean;
     /** Se ativado, o Plunder não terá delay entre os ataques. */
     no_delay: boolean;
-};
+}
 
-type PlunderInputOptions = {
+interface PlunderInputOptions {
     /** Distância máxima para os ataques do Plunder. */
     max_distance: number;
     /** Ignora aldeias cujo último ataque ocorreu há uma quantidade de horas superior à indicada. */
     ignore_older_than: number;
-};
+    /** Minutos até que a página seja recarregada automaticamente. */
+    minutes_until_reload: number;
+}
+
+/** Status das diferentes opções do plunder. */
+interface PlunderOptions extends PlunderCheckboxOptions, PlunderInputOptions {
+    [index: symbol]: PlunderOptions;
+}
 
 ////// SHIELD
 /** Possíveis operações executadas pelo Shield. 

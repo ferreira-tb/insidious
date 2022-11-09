@@ -1,4 +1,7 @@
 class Keys {
+    /** Símbolo usado como chave mestra. */
+    static readonly master = Symbol();
+
     ////// INSIDIOUS
     /** CHAVE: indica se o Insidious está ativado ou não (insidious). */
     static readonly insidious = 'insidiousStatus';

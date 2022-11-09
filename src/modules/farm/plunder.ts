@@ -14,7 +14,7 @@ class Plunder {
     /** Quantia saqueada durante o processo atual do Plunder. */
     private static plundered: TotalPlundered | undefined;
 
-    /** Opções de configuração do Plunder. */
+    /** Proxy com as opções de configuração do Plunder. */
     static options: PlunderOptions;
     /** Registra o histórico de navegação entre aldeias quando se está atacando com um grupo. */
     static navigation = new PlunderGroupNavigation();
@@ -44,7 +44,7 @@ class Plunder {
             };
 
             // Opções do plunder.
-            this.options = await Store.get(Keys.plunderOptions) as PlunderOptions ?? {};
+            this.options = await this.setPlunderOptions();
 
             if (this.options.group_attack === true) {
                 // Histórico de navegação entre aldeias.
@@ -82,6 +82,49 @@ class Plunder {
         } catch (err) {
             InsidiousError.handle(err);
         };
+    };
+
+    static async setPlunderOptions() {
+        const options = await Store.get(Keys.plunderOptions) as PlunderOptions ?? {};
+        return new Proxy(options, {
+            get(target, property) {
+                if (property === Keys.master) return options;
+
+                let value = Reflect.get(target, property);
+                if (value === undefined) {
+                    switch (property) {
+                        case 'max_distance': return 0;
+                        case 'ignore_older_than': return 0;
+                        case 'minutes_until_reload': return 10; 
+                    };
+
+                    const callback = (item: string) => item === property;
+                    if (Assets.options.plunder_checkbox.some(callback)) return false;
+                };
+
+                if (property === 'minutes_until_reload' && value < 1) return 10;
+
+                return value;
+            },
+
+            set(target, property, value) {
+                const callback = (item: string) => item === property;
+                if (Assets.options.plunder_checkbox.some(callback)) {
+                    if (typeof value !== 'boolean') return false;
+                };
+
+                if (Assets.options.plunder_input.some(callback)) {
+                    if (typeof value !== 'number') return false;
+
+                    if (Number.isNaN(value)) value = 0;
+                    if (Math.sign(value) === -1) value = Math.abs(value);
+
+                    if (property === 'minutes_until_reload' && value < 1) value = 10;
+                };
+
+                return Reflect.set(target, property, value);
+            }
+        });
     };
 
     /** Atualiza os dados sobre o Plunder. */
@@ -492,10 +535,10 @@ class Plunder {
             const plunderListTitle = document.querySelector('div#am_widget_Farm h4');
             if (!plunderListTitle) throw new InsidiousError('DOM: div#am_widget_Farm h4');
 
-            /** Tempo até o recarregamento automático. */
-            const timeout = Utils.generateIntegerBetween((60000 * 10), (60000 * 20));
             /** Horário do próximo recarregamento automático da página. */
+            const timeout = Plunder.options.minutes_until_reload * 60000;
             const nextAutoReloadDate = new Date(Date.now() + timeout);
+
             const dateString = nextAutoReloadDate.toLocaleDateString('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' });
             const hourString = nextAutoReloadDate.toLocaleTimeString('pt-br', { hour: '2-digit', minute: '2-digit' });
             const spanMessage = `A página será recarregada automaticamente em ${dateString} às ${hourString}`;

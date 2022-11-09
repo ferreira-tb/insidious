@@ -43,7 +43,7 @@ class Background {
         am_farm: ['./modules/farm/objects.js', './modules/farm/plunder.js', './modules/farm/group.js', './modules/farm/farm.js'],
         info_player: ['./modules/player/objects.js', './modules/player/player.js'],
         market: ['./modules/market/objects.js', './modules/market/market.js'],
-        overview: [],
+        overview: ['./modules/village/village.js'],
         overview_villages: ['./modules/overview/overview.js'],
         place: ['./modules/sword/objects.js', './modules/sword/sword.js'],
         report: ['./modules/report/report.js'],
