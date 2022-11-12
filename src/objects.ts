@@ -74,3 +74,21 @@ class UIMessage {
         this.type = type;
     };
 };
+
+class Command {
+    readonly id: string;
+    readonly type: CommandType;
+    readonly url: string;
+    readonly x: number;
+    readonly y: number;
+    readonly end: number;
+
+    constructor(id: string, type: CommandType, url: string, x: number, y: number, end: number) {
+        this.id = id;
+        this.type = type;
+        this.url = url;
+        this.x = x;
+        this.y = y;
+        this.end = end;
+    };
+};

@@ -279,16 +279,15 @@ class TWFarm {
                             // Relatório e data do último ataque.
                             const fields = row.querySelectorAll('td');
                             for (const field of Array.from(fields)) {
-                                const content = field.textContent?.trim();
-                                if (!content) continue;
+                                if (!field.textContent) continue;
 
-                                const coords = Utils.getCoordsFromTextContent(content);
+                                const coords = Utils.getCoordsFromTextContent(field.textContent);
                                 if (coords) {
                                     info.distance = Utils.calcDistance(Game.x, Game.y, coords[0], coords[1]);
                                     continue;
                                 };
 
-                                const date = this.decipherPlunderListDate(content);
+                                const date = Utils.parseGameDate(field.textContent);
                                 if (!date) continue;
                                 info.last_attack = date;
                             };
@@ -429,56 +428,6 @@ class TWFarm {
             const numberInput = Manatsu.createLabeledInputElement('number', attributes, false) as Manatsu[];
             this.config.set(option, numberInput);
         }, this);
-    };
-
-    /**
-     * Verifica se o campo corresponde à data do último ataque.
-     * Em caso positivo, converte o valor para milisegundos.
-     * 
-     * Exemplos de data: hoje às 00:05:26 | ontem às 16:29:50 | em 21.09. às 12:36:38
-     * @param date - Texto do campo a analisar.
-     * @returns Data do último ataque em milisegundos.
-     */
-    private static decipherPlunderListDate(date: string): number | null {
-        const writtenDate = date.toLowerCase();
-        if (!writtenDate.includes('às')) return null;
-
-        // splitDate representa apenas as horas, os minutos e os segundos.
-        const splitDate: string | undefined = writtenDate.split(' ').pop();
-        if (splitDate) {
-            const date = splitDate.split('\:').map((item) => Number.parseInt(item, 10));
-            if (date.length !== 3) return null;
-            if (date.some((item) => Number.isNaN(item))) return null;
-
-            // Se o ataque foi hoje, toma o horário atual e apenas ajusta a hora, os minutos e os segundos.
-            if (writtenDate.includes('hoje')) {       
-                return new Date().setHours(date[0], date[1], date[2]);
-
-            // Se foi ontem, faz a mesma coisa, mas remove 24 horas do resultado.
-            } else if (writtenDate.includes('ontem')) {
-                const yesterday = Date.now() - (3600000 * 24);
-                return new Date(yesterday).setHours(date[0], date[1], date[2]);
-
-            } else if (writtenDate.includes('em')) {
-                // Em outros cenários, também altera o dia e o mês.
-                let dayAndMonth: string | number[] = (writtenDate.split(' '))[1];
-                dayAndMonth = dayAndMonth.split('.').map((item: string) => Number.parseInt(item, 10));
-                dayAndMonth.filter((item) => !Number.isNaN(item));
-
-                let anyDay = new Date().setHours(date[0], date[1], date[2]);
-                // O valor para o mês começa com índice zero, por isso é preciso diminuir em 1.
-                anyDay = new Date(anyDay).setMonth(dayAndMonth[1] - 1, dayAndMonth[0]);
-
-                // Caso essa condição for verdadeira, há diferença de ano entre a data atual e a data do ataque.
-                if (anyDay > Date.now()) {
-                    throw new InsidiousError('Issue #2: https://github.com/ferreira-tb/insidious/issues/2#issue-1383251210');
-                };
-                
-                return anyDay;
-            };
-        };
-
-        return null;
     };
 
     /** Atualiza a quantia total de recursos saqueados e ataques enviados pelo Plunder no mundo atual. */

@@ -49,6 +49,15 @@ type CurrentUnits = {
     [index in keyof TribalWarsPlunderData['current_units']]: number;
 };
 
+type CommandType = 'support' | 'attack' | 'return' | 'cancel' | 'back';
+type CommandSet = {
+    readonly [index in CommandType]: Set<Command>;
+};
+
+interface CommandList extends CommandSet {
+    amount: number;
+}
+
 /** Janelas do jogo. */
 type GameScreen =
     | 'am_farm'
