@@ -6,8 +6,8 @@ class Insidious {
             await browser.runtime.sendMessage({ type: 'start' });
             Game.verifyIntegrity();
             
-            // Faz download dos dados necessários para executar a extensão.
-            await this.fetchWorldConfig();
+            // Verifica se as configurações do mundo já estão salvas no banco de dados local.
+            await this.verifyConfigData();
             // Armazena as informações obtidas em propriedades da classe Game.
             await Game.setWorldConfig();
 
@@ -72,14 +72,16 @@ class Insidious {
         window.postMessage(bridge);
     };
 
-    private static async fetchWorldConfig() {
+    /**
+     * Verifica se as configurações do mundo atual estão salvas.
+     * Em caso negativo, faz download dos arquivos XML.
+     */
+    private static async verifyConfigData() {
         try {
-            // Verifica se as configurações do mundo atual foram salvas.
-            // Em caso negativo, faz download dos arquivos XML.
             const worldConfigStatus = await Store.get(Keys.worldConfig);
             if (!worldConfigStatus) {
                 const sources = new SourceList();
-                const worldConfigData = await this.requestConfigData(sources);
+                const worldConfigData = await this.fetchConfigData(sources);
 
                 await Promise.all(worldConfigData.map((info: WorldInfo | UnitInfo) => {
                     if (info instanceof WorldInfo) return Store.set({ [Keys.config]: info });
@@ -96,28 +98,18 @@ class Insidious {
         };
     };
 
-    private static requestConfigData(sources: SourceList) {
+    private static fetchConfigData(sources: SourceList) {
         return Promise.all(Object.keys(sources).map((key: keyof SourceList) => {
-            return new Promise<WorldInfo | UnitInfo>((resolve, reject) => {
-                const request = new XMLHttpRequest();
-                request.timeout = 2000;
-    
-                request.addEventListener('error', () => reject(request.status));
-                request.addEventListener('timeout', () => reject(request.status));
-                request.addEventListener('load', () => {
-                    if (request.responseXML) {
-                        const configXML = request.responseXML;
-                        switch (sources[key].name) {
-                            case Keys.config: return resolve(new WorldInfo(configXML));
-                            case Keys.unit: return resolve(new UnitInfo(configXML));
-                        };
-                    };
+            const parser = new DOMParser();
+            return new Promise<WorldInfo | UnitInfo>(async (resolve) => {
+                const result = await fetch(sources[key].url);
+                const text = await result.text();
+                const htmlDocument = parser.parseFromString(text, 'text/xml');
 
-                    reject(new InsidiousError('\"XMLHttpRequest.responseXML\" não está presente.'));     
-                });
-    
-                request.open('GET', sources[key].url, true);
-                request.send();
+                switch (sources[key].name) {
+                    case Keys.config: return resolve(new WorldInfo(htmlDocument));
+                    case Keys.unit: return resolve(new UnitInfo(htmlDocument));
+                };
             });
         }));
     };
