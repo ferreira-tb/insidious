@@ -17,7 +17,7 @@ Em seguida, faça download da [release](https://github.com/ferreira-tb/insidious
     - Envia ataque ou apoio que chega no horário indicado (experimental).
     - Etiqueta automaticamente.
     
- - Aldeia:
+- Aldeia:
     - Exibe os recursos retornando dos saques.
 
 - Mercado:
