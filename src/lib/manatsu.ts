@@ -47,7 +47,7 @@ class Manatsu {
             if (name.includes('\-')) name = name.replaceAll('\-', '\_');
 
             const value = property.substring(lastIndex + 1).toLowerCase().trim();
-            if (value && this.style[name] !== value) Reflect.set(this.style, name, value);
+            if (value && this.style[name] !== value) this.style[name] = value;
         };
     };
 
@@ -296,7 +296,7 @@ class Manatsu {
     };
 
     /**
-     * Cria uma `checkbox` ou um `radio` e então associa uma `label`.
+     * Cria um elemento `input` e associa uma label a ele.
      * @param type O tipo de `input` a ser criado.
      * @param options Um objeto contendo detalhes sobre o `input`.
      * @param create Determina se os itens devem ser transformados em elementos HTML.
@@ -330,7 +330,7 @@ class Manatsu {
         };
 
         if (create === true) {
-            return [(newInput.create()) as HTMLInputElement, (newLabel.create()) as HTMLLabelElement];
+            return [newInput.create() as HTMLInputElement, newLabel.create() as HTMLLabelElement];
         } else {
             return [newInput, newLabel];
         };
@@ -566,13 +566,13 @@ class Manatsu {
      * Caso um seletor CSS seja fornecido, remove apenas os elementos que o satisfaçam.
      * @param type Indica o tipo de elemento que deve ser removido.
      */
-    static #removeElements(type: ElementHierarchy) {
+    static #removeElementsByHierarchy(type: ElementHierarchy) {
         return function(referenceElement: Element, selector?: string | string[]) {
             if (!(referenceElement instanceof Element)) throw new ManatsuError('O elemento é inválido.');
  
             // Muda o comportamento da função de acordo com o tipo chamado.
             const element = type === 'child' ? referenceElement : referenceElement.parentElement;
-            if (!element) throw new InsidiousError('O elemento não possui um pai.');
+            if (!element) throw new ManatsuError('O elemento não possui um pai.');
 
             if (typeof selector === 'string' && Validation.isSelectorValid(selector)) {
                 const children = element.querySelectorAll(selector);
@@ -726,8 +726,8 @@ class Manatsu {
     get createInsideThenAfter() { return this.#createInsideThen('after') };
     get createInsideThenBefore() { return this.#createInsideThen('before') };
 
-    static get removeChildren() { return this.#removeElements('child') };
-    static get removeSiblings() { return this.#removeElements('sibling') };
+    static get removeChildren() { return this.#removeElementsByHierarchy('child') };
+    static get removeSiblings() { return this.#removeElementsByHierarchy('sibling') };
 };
 
 class Validation {
