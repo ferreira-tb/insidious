@@ -107,7 +107,7 @@ class Plunder {
                 return value;
             },
 
-            set(target, property, value) {
+            set(target, property, value): boolean {
                 const callback = (item: string) => item === property;
                 if (Options.plunder.checkbox.some(callback)) {
                     if (typeof value !== 'boolean') return false;

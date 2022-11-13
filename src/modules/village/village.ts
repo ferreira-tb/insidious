@@ -6,6 +6,21 @@ class TWVillage {
     };
 
     static async showReturningResources() {
+        const widget = new Manatsu({ id: 'ins_show_returning', class: 'vis moveable widget' }).create();
+        const title = new Manatsu('h4', widget, { class: 'head ui-sortable-handle' }).create();
+
+        const content = widget.appendManatsu({ class: 'widget_content', style: 'display: block;' })
+        const table = content.appendManatsu('table', { style: 'width: 100%;' });
+        
+        Assets.list.resources.forEach((res) => {
+            const tr = table.appendManatsu('tr', { class: 'nowrap' });
+            const resLabel = tr.appendManatsu('td', { style: 'width: 70px;' });
+            resLabel.appendManatsu('span', { class: `icon header ${res}` });
+            resLabel.appendManatsu('span', { text: Utils.translateResourceName(res) });
+
+            new Manatsu('strong', tr, { id: `ins_returning_${res}`, text: '0' }).createInside('td');
+        });
+
         try {
             const resources = new ResourceAmount();
 
@@ -13,21 +28,7 @@ class TWVillage {
             const productionWidget = document.querySelector('#show_prod.widget');
             if (!productionWidget) throw new InsidiousError('DOM: #show_prod.widget');
     
-            const widget = new Manatsu({ id: 'ins_show_returning', class: 'vis moveable widget' }).create();
-            widget.appendManatsu('h4', { class: 'head ui-sortable-handle', text: 'Retornando' });
-    
-            const content = widget.appendManatsu({ class: 'widget_content', style: 'display: block;' })
-            const table = content.appendManatsu('table', { style: 'width: 100%;' });
-            
-            Assets.list.resources.forEach((res) => {
-                const tr = table.appendManatsu('tr', { class: 'nowrap' });
-                const resLabel = tr.appendManatsu('td', { style: 'width: 70px;' });
-                resLabel.appendManatsu('span', { class: `icon header ${res}` });
-                resLabel.appendManatsu('span', { text: Utils.translateResourceName(res) });
-    
-                new Manatsu('strong', tr, { id: `ins_returning_${res}`, text: '0' }).createInside('td');
-            });
-    
+            let commandAmount = 0;
             let widgetIsAppended = false;
             for await (const returning of this.fetchReturningResources()) {
                 Assets.list.resources.forEach((res) => {
@@ -41,10 +42,16 @@ class TWVillage {
                     if (!resField) throw new InsidiousError(`DOM: #ins_returning_${res}`);
                     resField.textContent = resources[res].toLocaleString('pt-br');
                 });
+
+                const percentage = (++commandAmount / this.commands.return.size) * 100;
+                title.textContent = `Retornando (${percentage.toFixed(1)}%)`;
             };
 
         } catch (err) {
             InsidiousError.handle(err);
+
+        } finally {
+            title.textContent = 'Retornando';
         };
     };
 
