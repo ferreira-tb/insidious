@@ -171,6 +171,8 @@ class TWFarm {
                 const inputElement = inputArea.querySelector(`#ins_${option}`) as HTMLInputElement;
                 inputElement.value = Plunder.options[option].toFixed(0);
 
+                if (option === 'max_distance') inputElement.setAttribute('disabled', '');
+
                 inputElement.addEventListener('change', (e) => {
                     this.saveOptions(e.target, option);
                 }, { signal: optionsCtrl.signal });
