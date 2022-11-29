@@ -8,6 +8,8 @@ Sendo assim, para usá-lo, é preciso ativar manualmente o suporte ao Manifest V
 
 Em seguida, faça download da [release](https://github.com/ferreira-tb/insidious/releases) mais recente do Insidious e então instale como extensão temporária acessando `about:debugging` em seu Firefox. No momento, não há release estável disponível. Antes de tentar usar a versão *alpha*, certifique-se de ler a [issue #5](https://github.com/ferreira-tb/insidious/issues/5).
 
+Lembre-se: se tiver qualquer dúvida, é só criar uma nova [issue](https://github.com/ferreira-tb/insidious/issues) e perguntar!
+
 ## Funcionalidades
 - Farm automático:
     - Não ataca às cegas: escolhe bem os alvos.
