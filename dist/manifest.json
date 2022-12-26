@@ -1,0 +1,80 @@
+{
+    "manifest_version": 3,
+    "name": "Insidious",
+    "version": "1.0.0",
+    "developer": {
+        "name": "Andrew Ferreira",
+        "url": "https://github.com/ferreira-tb"
+    },
+
+    "browser_specific_settings": {
+        "gecko": {
+          "id": "{7a0794fe-b70e-438e-aaad-84ce45b43aee}",
+          "strict_min_version": "105.0"
+        }
+    },
+
+    "permissions": [
+        "storage",
+        "notifications",
+        "scripting"
+    ],
+
+    "host_permissions": [
+        "*://*.tribalwars.com.br/*"
+    ],
+
+    "icons": {
+        "48": "assets/insidious-48.png",
+        "60": "assets/insidious-60.png"
+    },
+
+    "action": {
+        "browser_style": true,
+        "default_title": "Insidious",
+        "default_popup": "action/action.html",
+        "default_icon": {
+            "32": "assets/insidious-32.png"
+        }
+    },
+
+    "background": {
+        "scripts": [ "background/background.js" ]
+    },
+
+    "content_scripts": [
+        {
+            "matches": ["*://*.tribalwars.com.br/*"],
+            "css": ["main.css"],
+            "js": [
+                "lib/manatsu.js",
+                "global/store.js",
+                "global/error.js",
+
+                "objects.js",
+                "insidious.js",
+                
+                "modules/shield/objects.js",
+                "modules/shield/shield.js",
+
+                "modules/assets/assets.js",
+
+                "modules/utils.js",
+                "modules/defer.js",
+
+                "start.js"
+            ]
+        }
+    ],
+
+    "web_accessible_resources": [
+        {
+            "matches": [ "*://*.tribalwars.com.br/*" ],
+            "resources": [
+                "assets/*.png",
+                "lib/*.js",
+                "page/*.js"
+            ]
+        }
+    ]
+}

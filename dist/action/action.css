@@ -1,0 +1,13 @@
+body {
+    min-width: 100px;
+    background-color: #222426;
+    padding: 10px 10px 10px 10px;
+}
+
+button {
+    text-align: center;
+}
+
+button.last-button {
+    margin-bottom: 0;
+}

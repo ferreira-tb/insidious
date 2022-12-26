@@ -1,0 +1,66 @@
+body {
+    color: #ffffff;
+    background-color: #222426;
+    padding: 10px 10px 10px 10px;
+    user-select: none;
+}
+
+section {
+    margin-bottom: 10px;
+}
+
+div {
+    margin-bottom: 5px;
+}
+
+button {
+    padding: 5px 5px 5px 5px;
+}
+
+option {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+.icon {
+	width: 18px;
+	height: 18px;
+	display: inline-block;
+    margin-top: auto;
+    margin-right: 5px;
+    margin-bottom: auto;
+    margin-left: 0;
+	overflow: hidden;
+	background-repeat: no-repeat;
+	vertical-align: -4px;
+}
+
+span.wood {
+    background-image: url("../assets/wood-18.png");
+}
+
+span.stone {
+    background-image: url("../assets/stone-18.png");
+}
+
+span.iron {
+    background-image: url("../assets/iron-18.png");
+}
+
+span.storage {
+    background-image: url("../assets/storage-18.png");
+}
+
+span.wall {
+    background-image: url("../assets/wall-16.png");
+}
+
+/* MUNDO */
+div#plunder-info {
+    display: flex;
+    align-content: center;
+}

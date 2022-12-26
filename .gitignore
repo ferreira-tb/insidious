@@ -1,4 +1,9 @@
 /node_modules
-/dist
+/dist/web-ext-artifacts
 /assets
 /web-ext-artifacts
+*.js
+*.png
+*.jpg
+*.jpeg
+*.zip

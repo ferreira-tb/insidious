@@ -1,0 +1,147 @@
+@charset "UTF-8";
+
+input:out-of-range, input:invalid {
+    background-color: #fc6b37;
+}
+
+.ins_icon {
+	width: 18px;
+	height: 18px;
+	display: inline-block;
+    margin-top: auto;
+    margin-right: 5px;
+    margin-bottom: auto;
+    margin-left: 0;
+	overflow: hidden;
+	background-repeat: no-repeat;
+	vertical-align: -4px;
+}
+
+span.ins_wood {
+    background-image: url("./assets/wood-18.png");
+}
+
+span.ins_stone {
+    background-image: url("./assets/stone-18.png");
+}
+
+span.ins_iron {
+    background-image: url("./assets/iron-18.png");
+}
+
+span.ins_storage {
+    background-image: url("./assets/storage-18.png");
+}
+
+span.ins_wall {
+    background-image: url("./assets/wall-16.png");
+}
+
+/** GLOBAL */
+.ins_menu_area {
+    width: 100%;
+    display: inline-block;
+}
+
+.ins_button_area {
+    text-align: center;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.ins_action_area {
+    text-align: center;
+    padding-top: 2px;
+    padding-bottom: 5px;
+}
+
+.ins_action_area span {
+    margin-right: 3px;
+}
+
+.ins_button {
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+/** MODAL */
+#ins_blurBG {
+    background-color: rgba(0, 0, 0, 0.5);
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999998;
+
+    height: 100%;
+    width: 100%; 
+}
+
+#ins_modal {
+    background-color: #c1a264;
+    text-align: center;
+    overflow: hidden;
+    overflow-wrap: break-word;
+
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 999999;
+    transform: translate(-50%, -50%);
+
+    width: fit-content;
+    min-width: 250px;
+    max-width: 600px;
+    height: auto;
+    min-height: 100px;
+
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border: 1px solid #000000;
+    border-radius: 5px;
+}
+
+#ins_modal h1 {
+    color: #000000;
+    font-size: medium;
+}
+
+#ins_modal h2 {
+    color: #000000;
+    font-size: small;
+}
+
+.ins_modal_msg {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.ins_modal_btn {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+#ins_modal span[class^="ins_"] {
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+#ins_modal label {
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+#ins_modal input[type="number"] {
+    width: 4em;
+}
+
+/* FARM */
+#ins_next_auto_reload {
+    font-style: normal;
+    position: absolute;
+    right: 10px;
+}
